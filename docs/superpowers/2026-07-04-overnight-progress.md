@@ -12,9 +12,16 @@ Dror asked for 4 tasks, executed autonomously while he sleeps. This log is updat
 ## Status
 
 - [x] Task 1: Module 1 content — DONE. EN+HE glossaries, module.md + 5 sessions per language (12 content files). Validator passes ("✓ All content valid (14 files checked)"). Test stub removed. Committed.
-- [ ] Task 2: QA-for-AI design doc
-- [ ] Task 3: Telegram bot design doc
-- [ ] Task 4: LinkedIn series doc
+- [x] Task 2: QA-for-AI career design — DONE. `docs/superpowers/specs/2026-07-04-qa-for-ai-career-design.md`. Recommends fractional "Head of AI Quality" (Option 1) with an AI-SDLC audit as door-opener; framework "Confidence at AI Speed" (3 pillars: QA of AI-generated code / QA of AI features / organizational layer); 90-day roadmap. **6 open questions in §7 need Dror's answers.**
+- [x] Task 3: Telegram bot upgrades design — DONE. `docs/superpowers/specs/2026-07-04-telegram-bot-upgrades-design.md`. Package refactor + SQLite + JobQueue; daily geo quiz (reuses geo-kids data, streaks, inline buttons), /explain kid-mode in Hebrew, morning digest v1 (manual reminders). **6 open questions in §10 (hosting is the big one). No code written — awaiting approval per brainstorming gate.**
+- [x] Task 4: LinkedIn series — DONE. `docs/linkedin-series.md`. 10-post arc "Building With AI, Out Loud": build-credibility (1–4) → pivot to quality (5–8) → new-chapter announcement (9–10). Post 1 fully drafted. Language (EN vs HE) is Dror's call.
+
+## Morning checklist for Dror
+
+1. Review + answer open questions in the QA-for-AI design (§7) — biggest decisions: consulting vs full-time, Israel vs global.
+2. Review telegram bot design (§10) — say "go" and implementation starts (step 1: refactor + /join + SQLite).
+3. Read Post 1 draft in linkedin-series.md — edit to your voice, publish when ready.
+4. Module 1 is live in content/ and validated — read one EN + one HE session to approve tone before we build Module 2 or the website.
 
 ## Notes / decisions made autonomously
 
