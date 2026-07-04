@@ -78,6 +78,15 @@
   .game-card p { color: var(--ink-soft); font-size: .95rem; margin-top: 6px; }
   .game-card .best { margin-top: 12px; font-size: 1.05rem; letter-spacing: 2px; }
 
+  @media (max-width: 480px) {
+    .games { grid-template-columns: 1fr 1fr; gap: 12px; }
+    .game-card { padding: 16px 10px; }
+    .game-card .emoji { font-size: 2.2rem; margin-bottom: 6px; }
+    .game-card h2 { font-size: 1.05rem; }
+    .game-card p { font-size: .8rem; margin-top: 4px; }
+    .game-card .best { margin-top: 8px; font-size: .9rem; }
+  }
+
   /* ---------- atlas / map ---------- */
   .atlas { margin-top: 36px; }
   .atlas > h2 {
@@ -101,8 +110,9 @@
   .chip {
     display: flex; align-items: center; gap: 8px;
     background: var(--card); border: 2px solid var(--line); border-radius: 999px;
-    padding: 6px 14px; font-family: inherit; font-size: 1rem; font-weight: 600;
+    padding: 10px 16px; font-family: inherit; font-size: 1rem; font-weight: 600;
     cursor: pointer; transition: border-color .15s, transform .12s;
+    min-height: 44px; touch-action: manipulation;
   }
   .chip:hover { border-color: var(--coral); transform: translateY(-2px); }
   .chip img { width: 26px; border-radius: 4px; border: 1px solid var(--line); }
@@ -147,6 +157,15 @@
     background: var(--bg); border: 3px solid var(--line); border-radius: 18px;
     padding: 20px 12px; cursor: pointer; font-family: inherit;
     transition: transform .15s, border-color .15s;
+    min-height: 44px; touch-action: manipulation;
+  }
+  @media (max-width: 480px) {
+    .diff-card { padding: 22px 14px; }
+    .diff-options { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .diff-btn { padding: 14px 8px; }
+    .diff-emoji { font-size: 1.8rem; }
+    .diff-label { font-size: 1rem; }
+    .diff-desc { font-size: .78rem; }
   }
   .diff-btn:hover { transform: translateY(-3px); }
   .diff-btn.lvl-1:hover { border-color: #7DA87B; }
@@ -565,6 +584,11 @@ function renderDifficultyOptions() {
 /* ================= atlas map ================= */
 function initMap() {
   renderChipsFallback(); // show something usable immediately, no network wait
+
+  // On small screens 100 pins packed into a short map are too fiddly to tap
+  // accurately, so the flag chips (already large, easy tap targets) stay as
+  // the primary way to browse countries instead of upgrading to the pin map.
+  if (window.matchMedia("(max-width: 600px)").matches) return;
 
   if (typeof d3 === "undefined" || typeof topojson === "undefined") return;
 
