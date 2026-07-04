@@ -71,6 +71,21 @@ The announcement. Recap the journey (posts 1–9 in three sentences), name the o
 
 ---
 
+## Definition of Done — per post (QA review-pass addition)
+
+A post doesn't ship unless it has ALL of:
+1. A concrete artifact — screenshot, code snippet, or number from this repo (not a stock image, not a diagram of a concept).
+2. A fact-check pass — every claim checkable against the repo/session history.
+3. The hook works standalone — first 2 lines make sense before "…see more" on mobile.
+4. One question at the end that a target reader (VP Eng / QA lead / CTO) can answer from experience.
+5. Privacy check — no kid names, no client names, no secrets in screenshots (crop `.env`, tokens, chat ids).
+
+## Fresh story bank (real material captured 2026-07-04 — use, don't waste)
+
+- **The .env catch:** during a QA review pass of our own designs, we found the Telegram bot's `.env` (live API keys) was one `git add` away from being committed — the repo's `.gitignore` never covered it. Perfect for post 5 or a bonus post: "I put on my QA hat to review my own AI-built projects. First finding took 90 seconds and was almost my API key on GitHub." Screenshot: the one-line gitignore diff.
+- **The deleted feature:** the bot design had Claude generating fun facts per quiz question — then we looked at the actual game data and found a curated `fact` field already there. Post material: "The best AI architecture review is reading your own data. We deleted an entire AI integration before writing it." (Cheapest LLM call is the one you don't make.)
+- **The validator that reviews me:** `validate-content.mjs` blocked real mistakes while writing the bilingual curriculum — concrete post 6 material.
+
 ## Operating notes
 
 - **Truth rule:** every post is a real, checkable story from this repo. Nothing invented.

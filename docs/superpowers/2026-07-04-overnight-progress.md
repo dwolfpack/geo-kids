@@ -16,6 +16,16 @@ Dror asked for 4 tasks, executed autonomously while he sleeps. This log is updat
 - [x] Task 3: Telegram bot upgrades design — DONE. `docs/superpowers/specs/2026-07-04-telegram-bot-upgrades-design.md`. Package refactor + SQLite + JobQueue; daily geo quiz (reuses geo-kids data, streaks, inline buttons), /explain kid-mode in Hebrew, morning digest v1 (manual reminders). **6 open questions in §10 (hosting is the big one). No code written — awaiting approval per brainstorming gate.**
 - [x] Task 4: LinkedIn series — DONE. `docs/linkedin-series.md`. 10-post arc "Building With AI, Out Loud": build-credibility (1–4) → pivot to quality (5–8) → new-chapter announcement (9–10). Post 1 fully drafted. Language (EN vs HE) is Dror's call.
 
+## Review pass (engineer + QA-manager hats, same night)
+
+Dror asked to "go over ideas and make them better." Findings and fixes:
+
+1. **SECURITY: `telegram-claude-bot/.env` (live API keys) was not gitignored** — one `git add` from leaking. Fixed: root `.gitignore` now covers `.env`, `.env.local`, `*.db`.
+2. **Bot design — deleted an unnecessary AI integration:** geo-kids data (verified: `COUNTRIES` array in index.html, 108 entries) already has curated `fact` per country; the "Claude generates fun facts" feature was removed. Added §7a Engineering Hardening: Asia/Jerusalem tz for jobs, SQLite WAL + schema_version, persisted quiz questions with idempotent callbacks, confirm-first reminder parsing, dead-man's-switch for daily jobs, data drift test, /explain eval suite.
+3. **Career design — made the offer sellable:** added §3.1 maturity model (3 pillars × 5 levels — makes the audit scoreable), §3.2 engagement anatomy, §6a pricing hypotheses (₪), §6b risk register.
+4. **LinkedIn — added per-post Definition of Done + fresh story bank** (the .env catch and the deleted-AI-feature story are both post material).
+5. **Validator hardened + real bug fixed:** new checks (filename↔frontmatter session/slug/module consistency, duplicate session numbers), verified via seeded mutation; that test exposed a real bug — validator broke on CRLF line endings (any Windows checkout). Fixed; all content re-validates ✓.
+
 ## Morning checklist for Dror
 
 1. Review + answer open questions in the QA-for-AI design (§7) — biggest decisions: consulting vs full-time, Israel vs global.

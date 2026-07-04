@@ -50,12 +50,14 @@ telegram-claude-bot/
 
 ## 4. Feature: Daily Geography Quiz
 
-**Data source:** geo-kids already ships ~100 countries with 5 difficulty levels (Hebrew names, capitals, flags/emoji, continent). `geodata.py` reads the same JSON the game uses — one source of truth; new countries added to the game appear in the quiz automatically. (Implementation note: verify the exact file path/shape in `geo-kids/` before coding; if the data is embedded in JS, extract to JSON shared by both.)
+**Data source (verified 2026-07-04):** geo-kids is a single `index.html` with a `COUNTRIES` JS array (~108 entries): `code, name, capital, continent, lat, lon, pop, lang, landmark, fact` — all Hebrew, plus `LEVELS` for difficulty. Plan: a small extraction script in the bot repo parses `COUNTRIES` out of `geo-kids/index.html` into `data/countries.json` (committed), and a **drift test** re-runs the extraction in CI/pytest and fails if the committed JSON is stale. The game stays a self-contained single file; the bot gets structured data; divergence is caught automatically.
+
+**Bonus from real data:** every country already has a curated `fact` field — the quiz's fun-fact feedback needs **zero Claude calls** (the earlier "generate + cache facts" idea is deleted). `lat/lon` also enables "which is farther from Israel?" question types for free.
 
 **Flow:**
 - Each subscribed kid gets one question at a configured hour (default 16:00, post-school): e.g. "מה בירת יפן?" with 4 inline-keyboard answer buttons (Telegram `InlineKeyboardMarkup` — tap to answer, no typing).
 - Question type rotates: capital → flag-emoji → continent → "which is bigger" style. Difficulty follows the kid's `quiz_level`; 5 correct in a row at a level suggests moving up (asks the kid, doesn't force).
-- Immediate feedback with one fun fact (generated once by Claude and **cached in SQLite** so repeat questions cost nothing).
+- Immediate feedback with the country's curated `fact` from the game data (no API call).
 - **Streaks:** consecutive-day counter with milestone celebrations (3, 7, 14, 30). Parents can query `/scores` for a family leaderboard.
 - `/quiz` also works on demand for extra questions (capped at 5/day so it stays a treat).
 
@@ -84,11 +86,24 @@ telegram-claude-bot/
 - Job failures (quiz/digest) log and skip — never crash the process; polling restarts cleanly because state is in SQLite.
 - Bot answers only allowlisted user ids; others get a polite refusal, logged.
 
+## 7a. Engineering Hardening (QA review pass, 2026-07-04)
+
+Added after a software-engineer + QA-manager review of the v1 draft:
+
+- **Secrets:** `telegram-claude-bot/.env` holds live tokens and was NOT gitignored — fixed 2026-07-04 (root `.gitignore` now covers `.env` and `*.db`). Rule going forward: secrets never logged, never in error messages sent to chat.
+- **Timezones:** all scheduled jobs use `Asia/Jerusalem` tzinfo explicitly (JobQueue defaults to UTC; Israel DST would silently shift the 07:00 digest and 16:00 quiz twice a year).
+- **SQLite + async:** handlers are async; stdlib `sqlite3` is blocking. Use WAL mode + a single writer guarded by an asyncio lock, or run DB calls in a thread executor. Add a `schema_version` table from day one so later migrations are scripted, not manual.
+- **Quiz answer integrity:** the pushed question (country, correct option, options order) is **persisted** with an id; the inline-button callback carries only `question_id:option_index`. This survives restarts between question and answer, and makes double-taps idempotent (first answer wins, later taps get "כבר ענית 🙂").
+- **Reminder parsing is confirm-first:** Claude's parse of `/remind` is shown back as "יום שלישי 07:30 — להביא כובע. נכון?" with ✔/✘ buttons. A misparsed time is a *silent* failure otherwise — the worst kind for a trust-based family feature. Unparseable input degrades to asking for `DD/MM HH:MM` format.
+- **Dead-man's switch:** after each daily job runs, write `last_run` to SQLite; a watchdog job (and `/status` command for Dror) alerts if a daily push hasn't fired in >26h. A quiz that silently stops is how family habits die.
+- **Data drift test:** pytest re-extracts `COUNTRIES` from geo-kids and diffs against the committed `countries.json` (see §4).
+
 ## 8. Testing
 
 - `services/` (store, geodata, quiz-question generation, reminder parsing fallback) covered by plain pytest — no Telegram mocking needed since handlers stay thin.
 - Handler logic tested with python-telegram-bot's test utilities for the two stateful flows (quiz answer, explain-mode timeout).
 - Manual test checklist in README for the scheduled jobs (run with a 1-minute schedule locally).
+- **Eval suite for /explain (dogfooding the QA-for-AI chapter):** ~20 golden Hebrew kid-questions with an LLM-as-judge rubric — answer is in Hebrew, age-appropriate length, contains a concrete analogy, no unsafe content, asks nothing personal. Run on every system-prompt or model change. This doubles as the public eval demo (asset #2 in the career design) and the raw material for LinkedIn post 7.
 
 ## 9. Build Order (each step ships something usable)
 

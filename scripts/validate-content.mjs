@@ -79,7 +79,7 @@ function checkSections(body, file, required) {
 function loadGlossary(lang) {
   const path = join(CONTENT, "glossary", `${lang}.md`);
   try {
-    const raw = readFileSync(path, "utf8");
+    const raw = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
     return new Set([...raw.matchAll(/^##\s+(.+)$/gm)].map(m => m[1].trim()));
   } catch { return new Set(); }
 }
@@ -87,11 +87,12 @@ function loadGlossary(lang) {
 const glossaries = { en: loadGlossary("en"), he: loadGlossary("he") };
 
 const sessionsByRel = new Map();
+const seenSessionNums = new Set();
 const files = walk(CONTENT);
 
 for (const file of files) {
   if (file.includes(`${sep}glossary${sep}`)) continue;
-  const raw = readFileSync(file, "utf8");
+  const raw = readFileSync(file, "utf8").replace(/\r\n/g, "\n"); // CRLF-tolerant (Windows checkouts)
   const parsed = parseFrontmatter(raw, file);
   if (!parsed) continue;
   const { data, body } = parsed;
@@ -118,6 +119,25 @@ for (const file of files) {
       const key = `${mod}/${name}`;
       if (!sessionsByRel.has(key)) sessionsByRel.set(key, new Set());
       sessionsByRel.get(key).add(lang);
+
+      // Consistency: filename NN-slug.md must match frontmatter session + slug,
+      // and the module directory's NN- prefix must match frontmatter module.
+      const fname = name.match(/^(\d{2})-(.+)\.md$/);
+      if (!fname) {
+        fail(file, `session filename must match NN-slug.md`);
+      } else {
+        if (Number(fname[1]) !== data.session)
+          fail(file, `filename number ${fname[1]} != frontmatter session ${data.session}`);
+        if (fname[2] !== data.slug)
+          fail(file, `filename slug "${fname[2]}" != frontmatter slug "${data.slug}"`);
+      }
+      const mdir = mod.match(/^(\d{2})-/);
+      if (mdir && Number(mdir[1]) !== data.module)
+        fail(file, `module dir "${mod}" != frontmatter module ${data.module}`);
+
+      const dupKey = `${mod}/${lang}/${data.session}`;
+      if (seenSessionNums.has(dupKey)) fail(file, `duplicate session number ${data.session} in ${mod}/${lang}`);
+      seenSessionNums.add(dupKey);
     }
   }
 }

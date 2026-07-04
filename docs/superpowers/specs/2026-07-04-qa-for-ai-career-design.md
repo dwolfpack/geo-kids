@@ -51,6 +51,26 @@ The substance Dror would bring into companies, organized as a framework he can n
 
 Pillars A and B exist in the market separately. **Pillar C is what almost nobody else brings** — most AI-quality consultants are tool people, not organizational change people.
 
+### 3.1 The Maturity Model (makes the audit scoreable — added in review pass)
+
+The framework only sells if a buyer can be *scored* against it. Each pillar is assessed on a 5-level maturity scale, giving the audit a concrete deliverable (a 3×5 heat-map plus top-3 gaps):
+
+| Level | A: AI-generated code | B: AI features | C: Organization |
+|---|---|---|---|
+| 1 Ad-hoc | AI code merged like human code, no policy | "We tried the demo, it looked fine" | Nobody owns AI quality |
+| 2 Aware | Informal "look harder at AI diffs" norms | Manual spot-checks of outputs | QA anxious, roles unclear |
+| 3 Defined | Risk-based review policy, provenance tracked | Golden dataset exists, run before releases | AI-quality owner named, DoD updated |
+| 4 Managed | Gates in CI, mutation/property tests on AI-written tests | Evals in CI, model-change regression suite | Metrics reviewed by leadership, QA roles redesigned |
+| 5 Optimizing | Review depth auto-tuned by risk signals | Production monitoring feeds eval growth | Quality culture measurably improves adoption speed |
+
+Rule of thumb for the sales narrative: most AI-adopting companies today are Level 1–2 on B and C while *believing* they're at 3. The audit surfaces that gap with evidence.
+
+### 3.2 Anatomy of an Engagement (so a buyer can picture it)
+
+1. **Audit (2 weeks, fixed price):** interviews (eng lead, QA, 2 devs, PM) + artifact review (10 recent AI-heavy PRs, incident list, existing tests/evals) → scored heat-map + top-3 gaps + 90-day plan. Deliverable is valuable even if they stop here.
+2. **Transformation (90 days, fractional 1–2 days/week):** stand up the highest-leverage gate (usually: eval suite for the flagship AI feature + review policy for AI diffs), coach the QA team into the new roles, install the metrics dashboard.
+3. **Retainer (optional):** monthly health check + eval review + advisory.
+
 ---
 
 ## 4. Three Strategic Options
@@ -97,6 +117,20 @@ Credibility in this space is demonstrated, not claimed. Candidate build list, ro
 - **Weeks 8–12:** Run 1–2 paid (or heavily discounted pilot) audits. Convert at least one into an ongoing engagement. Adjust pricing and framework from real data.
 
 ---
+
+## 6a. Pricing Hypotheses (review-pass addition — validate in the weeks 5–8 conversations)
+
+Anchors for Israel-market consulting (adjust after network research): audit ₪25–40k fixed; fractional transformation ₪30–50k/month at 1–2 days/week; retainer ₪8–15k/month. Pilot audits for the first two logos can be discounted 50% in exchange for a written case study and a reference call. Do not do free pilots — free work signals hobby, and this chapter's whole point is that it isn't one.
+
+## 6b. Risk Register (review-pass addition)
+
+| Risk | Likelihood | Mitigation |
+|---|---|---|
+| "QA Manager" title reads junior to CTO buyers | Medium | Sell "AI Quality Leadership / fractional Head of AI Quality"; the QA-manager framing is the *skill*, not the package |
+| Big consultancies productize AI-SDLC audits first | Medium | Speed + Pillar C differentiation + building in public; they can't post from a real repo |
+| Evals/tooling landscape shifts under the framework | High | Keep the framework tool-agnostic (maturity levels name *capabilities*, not products); refresh examples quarterly |
+| Pipeline stalls after network exhausted | Medium | LinkedIn series is the compounding channel; posts 5–8 commenters are the lead list — work it deliberately |
+| Chapter competes with family/curriculum time | High | Capacity question (§7 Q4) decides cadence *before* commitments are made, not after |
 
 ## 7. Open Questions for Dror (answer these, then we revise)
 
