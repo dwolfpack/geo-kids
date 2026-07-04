@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>מסע סביב העולם 🌍</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F0EEE6;
+    --card: #FAF9F5;
+    --ink: #191919;
+    --ink-soft: #5E5D59;
+    --coral: #D97757;
+    --coral-dark: #C4633F;
+    --sky: #6A9BCC;
+    --leaf: #7DA87B;
+    --sun: #E8B44F;
+    --berry: #B4688F;
+    --line: #E3E0D5;
+    --radius: 20px;
+    --shadow: 0 4px 14px rgba(25,25,25,.08);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Heebo', sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+
+  /* ---------- header ---------- */
+  header { text-align: center; margin-bottom: 28px; }
+  header h1 {
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -1px;
+  }
+  header h1 .globe { display: inline-block; animation: spin 14s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  header p { color: var(--ink-soft); font-size: 1.1rem; margin-top: 6px; }
+  .stars-total {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 999px; padding: 6px 18px; margin-top: 14px;
+    font-weight: 600; box-shadow: var(--shadow);
+  }
+
+  /* ---------- home: game cards ---------- */
+  .games {
+    display: grid; gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+  .game-card {
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: var(--radius);
+    padding: 26px 20px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+    position: relative;
+    overflow: hidden;
+    font-family: inherit;
+    color: inherit;
+    width: 100%;
+  }
+  .game-card::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 8px;
+    background: var(--accent, var(--coral));
+  }
+  .game-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 24px rgba(25,25,25,.14); border-color: var(--accent, var(--coral)); }
+  .game-card .emoji { font-size: 3.2rem; display: block; margin-bottom: 10px; }
+  .game-card h2 { font-size: 1.35rem; font-weight: 800; }
+  .game-card p { color: var(--ink-soft); font-size: .95rem; margin-top: 6px; }
+  .game-card .best { margin-top: 12px; font-size: 1.05rem; letter-spacing: 2px; }
+
+  /* ---------- atlas / map ---------- */
+  .atlas { margin-top: 36px; }
+  .atlas > h2 {
+    text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: 6px;
+  }
+  .atlas > .hint { text-align: center; color: var(--ink-soft); margin-bottom: 16px; }
+  .map-card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 14px; overflow: hidden;
+  }
+  .map-card svg { display: block; width: 100%; height: auto; border-radius: 12px; }
+  .map-sea { fill: #E4EDF4; }
+  .map-land { fill: #C5D9BC; stroke: #FAF9F5; stroke-width: .6; }
+  .map-dot { fill: var(--coral); stroke: #fff; stroke-width: 2; cursor: pointer; transition: r .15s; }
+  .map-dot:hover { r: 11; fill: var(--coral-dark); }
+  .map-dot.active { fill: var(--sun); r: 11; stroke: var(--ink); }
+
+  /* fallback country chips (if map can't load) */
+  .country-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--card); border: 2px solid var(--line); border-radius: 999px;
+    padding: 6px 14px; font-family: inherit; font-size: 1rem; font-weight: 600;
+    cursor: pointer; transition: border-color .15s, transform .12s;
+  }
+  .chip:hover { border-color: var(--coral); transform: translateY(-2px); }
+  .chip img { width: 26px; border-radius: 4px; border: 1px solid var(--line); }
+
+  /* ---------- country info panel ---------- */
+  .country-panel {
+    margin-top: 16px;
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 24px 20px; animation: rise .35s ease;
+  }
+  .country-panel.placeholder { text-align: center; color: var(--ink-soft); font-size: 1.1rem; }
+  .cp-head { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  .cp-head img { width: 92px; border-radius: 10px; border: 2px solid var(--line); box-shadow: var(--shadow); }
+  .cp-head h3 { font-size: 1.9rem; font-weight: 800; }
+  .cp-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  }
+  .cp-item {
+    background: var(--bg); border: 2px solid var(--line); border-radius: 14px;
+    padding: 10px 14px; display: flex; gap: 10px; align-items: baseline;
+  }
+  .cp-item .ico { font-size: 1.3rem; }
+  .cp-item .lbl { color: var(--ink-soft); font-size: .85rem; display: block; }
+  .cp-item .val { font-weight: 700; font-size: 1.05rem; }
+  .cp-fact {
+    margin-top: 14px; background: #FBF3E4; border: 2px solid var(--sun);
+    border-radius: 14px; padding: 12px 16px; font-size: 1.05rem;
+  }
+
+  /* ---------- difficulty screen ---------- */
+  .diff-card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 36px 24px; text-align: center;
+  }
+  .diff-card h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 24px; }
+  .diff-options { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .diff-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    background: var(--bg); border: 3px solid var(--line); border-radius: 18px;
+    padding: 26px 16px; cursor: pointer; font-family: inherit;
+    transition: transform .15s, border-color .15s;
+  }
+  .diff-btn:hover { transform: translateY(-3px); }
+  .diff-easy:hover { border-color: var(--leaf); }
+  .diff-hard:hover { border-color: var(--coral); }
+  .diff-emoji { font-size: 2.4rem; }
+  .diff-label { font-size: 1.3rem; font-weight: 800; }
+  .diff-desc { color: var(--ink-soft); font-size: .95rem; }
+
+  /* ---------- game screen ---------- */
+  .hidden { display: none !important; }
+  .topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; gap: 10px;
+  }
+  .btn-back {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 999px; padding: 12px 24px;
+    font-family: inherit; font-size: 1.05rem; font-weight: 600;
+    cursor: pointer; transition: border-color .15s;
+    min-height: 44px; touch-action: manipulation;
+  }
+  .btn-back:hover { border-color: var(--coral); }
+  .progress-pill {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 999px; padding: 8px 20px; font-weight: 600;
+  }
+  .progress-track { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 24px; }
+  .progress-fill { height: 100%; width: 0; background: var(--coral); border-radius: 999px; transition: width .4s ease; }
+
+  .question-card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 30px 22px; text-align: center; margin-bottom: 20px;
+  }
+  .question-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 18px; }
+  .flag-img {
+    width: min(260px, 70vw); border-radius: 12px;
+    border: 2px solid var(--line); box-shadow: var(--shadow);
+  }
+  .big-word { font-size: 2.2rem; font-weight: 800; color: var(--coral-dark); }
+
+  .options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 480px) { .options { grid-template-columns: 1fr; } }
+  .opt-skip {
+    grid-column: 1 / -1;
+    background: transparent; border: 2px dashed var(--line); color: var(--ink-soft);
+  }
+  .opt-skip:hover:not(:disabled) { border-color: var(--ink-soft); }
+  .opt.skipped { background: #F0EEE6; border-color: var(--ink-soft); }
+  .opt {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: 16px; padding: 18px 14px;
+    font-family: inherit; font-size: 1.2rem; font-weight: 600;
+    cursor: pointer; transition: transform .12s, border-color .12s, background .2s;
+    box-shadow: var(--shadow);
+  }
+  .opt:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--sky); }
+  .opt:disabled { cursor: default; }
+  .opt.correct { background: #E4EFE0; border-color: var(--leaf); animation: pop .35s; }
+  .opt.wrong { background: #F6E2DC; border-color: var(--coral); animation: shake .35s; }
+  @keyframes pop { 50% { transform: scale(1.06); } }
+  @keyframes shake { 25% { transform: translateX(6px); } 75% { transform: translateX(-6px); } }
+
+  .reveal-chips {
+    display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+    margin-top: 16px; animation: rise .35s ease;
+  }
+  .reveal-chips .rc {
+    background: var(--bg); border: 2px solid var(--line); border-radius: 999px;
+    padding: 6px 16px; font-weight: 700; font-size: .95rem;
+  }
+  .fact-bubble {
+    background: #FBF3E4; border: 2px solid var(--sun);
+    border-radius: 16px; padding: 14px 18px; margin-top: 18px;
+    font-size: 1.05rem; text-align: center; animation: rise .35s ease;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+  .btn-next {
+    margin-top: 16px; background: var(--coral); color: #fff;
+    border: none; border-radius: 999px; padding: 12px 36px;
+    font-family: inherit; font-size: 1.15rem; font-weight: 800;
+    cursor: pointer; box-shadow: var(--shadow); transition: background .15s, transform .12s;
+  }
+  .btn-next:hover { background: var(--coral-dark); transform: translateY(-2px); }
+
+  /* ---------- memory game ---------- */
+  .memory-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  @media (max-width: 520px) { .memory-grid { gap: 8px; } }
+  .mem-card {
+    aspect-ratio: 3/2.6; border-radius: 14px; cursor: pointer;
+    perspective: 600px; background: transparent; border: none; padding: 0;
+    font-family: inherit;
+  }
+  .mem-inner {
+    width: 100%; height: 100%; position: relative;
+    transform-style: preserve-3d; transition: transform .4s;
+  }
+  .mem-card.flipped .mem-inner { transform: rotateY(180deg); }
+  .mem-face {
+    position: absolute; inset: 0; backface-visibility: hidden;
+    border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    border: 2px solid var(--line); box-shadow: var(--shadow);
+  }
+  .mem-front { background: var(--coral); color: #fff; font-size: 1.8rem; }
+  .mem-back {
+    background: var(--card); transform: rotateY(180deg);
+    font-size: .95rem; font-weight: 700; padding: 4px; text-align: center;
+  }
+  .mem-back img { width: 84%; border-radius: 8px; border: 1px solid var(--line); }
+  .mem-card.matched .mem-back { background: #E4EFE0; border-color: var(--leaf); }
+  .mem-card.matched { cursor: default; animation: pop .4s; }
+
+  /* ---------- results ---------- */
+  .result-card {
+    background: var(--card); border: 2px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    padding: 44px 24px; text-align: center; animation: rise .4s ease;
+  }
+  .result-card .big-emoji { font-size: 4rem; }
+  .result-card h2 { font-size: 2rem; font-weight: 800; margin: 12px 0 6px; }
+  .result-card .stars { font-size: 2.4rem; letter-spacing: 6px; margin: 10px 0; }
+  .result-card p { color: var(--ink-soft); font-size: 1.15rem; }
+  .result-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
+  .btn-ghost {
+    background: var(--card); color: var(--ink); border: 2px solid var(--line);
+    border-radius: 999px; padding: 12px 32px;
+    font-family: inherit; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+  }
+  .btn-ghost:hover { border-color: var(--coral); }
+
+  /* ---------- confetti ---------- */
+  .confetti {
+    position: fixed; top: -20px; border-radius: 3px;
+    pointer-events: none; z-index: 99;
+    animation: fall linear forwards;
+  }
+  @keyframes fall {
+    to { transform: translateY(110vh) rotate(720deg); opacity: .6; }
+  }
+
+  footer { text-align: center; margin-top: 40px; color: var(--ink-soft); font-size: .9rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ============ HOME ============ -->
+  <div id="screen-home">
+    <header>
+      <h1><span class="globe">🌍</span> מסע סביב העולם</h1>
+      <p>משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!</p>
+      <div class="stars-total">⭐ <span id="total-stars">0</span> כוכבים שאספתם</div>
+    </header>
+
+    <div class="games">
+      <button class="game-card" style="--accent: var(--coral)" onclick="startGame('flags')">
+        <span class="emoji">🚩</span>
+        <h2>חידון דגלים</h2>
+        <p>איזו מדינה מתחבאת מאחורי הדגל?</p>
+        <div class="best" id="best-flags"></div>
+      </button>
+      <button class="game-card" style="--accent: var(--sky)" onclick="startGame('capitals')">
+        <span class="emoji">🏙️</span>
+        <h2>ערי בירה</h2>
+        <p>מה עיר הבירה של כל מדינה?</p>
+        <div class="best" id="best-capitals"></div>
+      </button>
+      <button class="game-card" style="--accent: var(--leaf)" onclick="startGame('continents')">
+        <span class="emoji">🗺️</span>
+        <h2>לאיזו יבשת?</h2>
+        <p>מצאו באיזו יבשת נמצאת כל מדינה</p>
+        <div class="best" id="best-continents"></div>
+      </button>
+      <button class="game-card" style="--accent: var(--berry)" onclick="startGame('memory')">
+        <span class="emoji">🧠</span>
+        <h2>משחק זיכרון</h2>
+        <p>התאימו כל דגל למדינה שלו</p>
+        <div class="best" id="best-memory"></div>
+      </button>
+    </div>
+
+    <!-- ============ ATLAS ============ -->
+    <section class="atlas">
+      <h2>🗺️ מפת העולם שלנו</h2>
+      <p class="hint">לחצו על נקודה כתומה במפה כדי לגלות מדינה!</p>
+      <div class="map-card" id="map-card"></div>
+      <div class="country-panel placeholder" id="country-panel">
+        👆 לחצו על מדינה במפה ותקבלו את תעודת הזהות שלה!
+      </div>
+    </section>
+
+    <footer>נבנה באהבה ❤️ ללומדים צעירים</footer>
+  </div>
+
+  <!-- ============ DIFFICULTY ============ -->
+  <div id="screen-difficulty" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+    </div>
+    <div class="diff-card">
+      <h2>באיזו רמה רוצים לשחק?</h2>
+      <div class="diff-options">
+        <button class="diff-btn diff-easy" onclick="startQuiz(pendingGame, 'easy')">
+          <span class="diff-emoji">🟢</span>
+          <span class="diff-label">קל</span>
+          <span class="diff-desc">10 מדינות מוכרות</span>
+        </button>
+        <button class="diff-btn diff-hard" onclick="startQuiz(pendingGame, 'hard')">
+          <span class="diff-emoji">🔴</span>
+          <span class="diff-label">קשה</span>
+          <span class="diff-desc">כל 51 המדינות</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ QUIZ ============ -->
+  <div id="screen-quiz" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+      <div class="progress-pill"><span id="q-num">1</span> / <span id="q-total">8</span></div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="question-card" id="question-card"></div>
+    <div class="options" id="options"></div>
+    <div id="fact-area"></div>
+  </div>
+
+  <!-- ============ MEMORY ============ -->
+  <div id="screen-memory" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+      <div class="progress-pill">זוגות: <span id="pairs-found">0</span> / 8</div>
+    </div>
+    <div class="memory-grid" id="memory-grid"></div>
+  </div>
+
+  <!-- ============ RESULT ============ -->
+  <div id="screen-result" class="hidden">
+    <div class="result-card">
+      <div class="big-emoji" id="result-emoji">🎉</div>
+      <h2 id="result-title">כל הכבוד!</h2>
+      <div class="stars" id="result-stars"></div>
+      <p id="result-text"></p>
+      <div class="result-actions">
+        <button class="btn-next" id="btn-again">🔄 עוד פעם!</button>
+        <button class="btn-ghost" onclick="goHome()">🏠 למסך הראשי</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+<script>
+/* ================= data ================= */
+const COUNTRIES = [
+  { code:"il", name:"ישראל",        capital:"ירושלים",      continent:"אסיה",            lat:31.8,  lon:35.2,   pop:"כ-10 מיליון",    lang:"עברית",                    landmark:"הכותל המערבי 🕍",           fact:"ים המלח בישראל הוא המקום הנמוך ביותר בעולם!" },
+  { code:"us", name:"ארצות הברית",  capital:"וושינגטון",    continent:"אמריקה הצפונית", lat:38.9,  lon:-77.0,  pop:"כ-335 מיליון",   lang:"אנגלית",                   landmark:"פסל החירות 🗽",              fact:"בארצות הברית יש 50 מדינות — וכוכב אחד בדגל לכל אחת!" },
+  { code:"fr", name:"צרפת",         capital:"פריז",         continent:"אירופה",          lat:48.9,  lon:2.35,   pop:"כ-68 מיליון",    lang:"צרפתית",                   landmark:"מגדל אייפל 🗼",              fact:"מגדל אייפל בפריז נבנה לפני יותר מ-130 שנה!" },
+  { code:"it", name:"איטליה",       capital:"רומא",         continent:"אירופה",          lat:41.9,  lon:12.5,   pop:"כ-59 מיליון",    lang:"איטלקית",                  landmark:"הקולוסיאום 🏛️",             fact:"איטליה נראית במפה כמו מגף ענק! והפיצה הומצאה שם 🍕" },
+  { code:"es", name:"ספרד",         capital:"מדריד",        continent:"אירופה",          lat:40.4,  lon:-3.7,   pop:"כ-48 מיליון",    lang:"ספרדית",                   landmark:"סגרדה פמיליה ⛪",            fact:"בספרד נהוגה שנת צהריים שנקראת 'סייסטה'!" },
+  { code:"gb", name:"בריטניה",      capital:"לונדון",       continent:"אירופה",          lat:51.5,  lon:-0.13,  pop:"כ-68 מיליון",    lang:"אנגלית",                   landmark:"ביג בן 🕰️",                 fact:"בלונדון יש שעון ענק ומפורסם שנקרא ביג בן!" },
+  { code:"de", name:"גרמניה",       capital:"ברלין",        continent:"אירופה",          lat:52.5,  lon:13.4,   pop:"כ-84 מיליון",    lang:"גרמנית",                   landmark:"שער ברנדנבורג 🏛️",          fact:"בגרמניה יש יותר מ-1,500 סוגים של נקניקיות!" },
+  { code:"gr", name:"יוון",         capital:"אתונה",        continent:"אירופה",          lat:38.0,  lon:23.7,   pop:"כ-10 מיליון",    lang:"יוונית",                   landmark:"האקרופוליס 🏛️",             fact:"המשחקים האולימפיים הומצאו ביוון לפני אלפי שנים!" },
+  { code:"jp", name:"יפן",          capital:"טוקיו",        continent:"אסיה",            lat:35.7,  lon:139.7,  pop:"כ-124 מיליון",   lang:"יפנית",                    landmark:"הר פוג'י 🗻",                fact:"ביפן יש רכבות סופר-מהירות שנוסעות 320 קמ\"ש!" },
+  { code:"cn", name:"סין",          capital:"בייג'ינג",     continent:"אסיה",            lat:39.9,  lon:116.4,  pop:"כ-1.4 מיליארד",  lang:"סינית",                    landmark:"החומה הגדולה 🧱",            fact:"החומה הסינית כל כך ארוכה שאפשר ללכת עליה חודשים!" },
+  { code:"in", name:"הודו",         capital:"ניו דלהי",     continent:"אסיה",            lat:28.6,  lon:77.2,   pop:"כ-1.4 מיליארד",  lang:"הינדי ואנגלית",            landmark:"הטאג' מהאל 🕌",              fact:"בהודו חיים יותר ממיליארד אנשים — והמון פילים! 🐘" },
+  { code:"th", name:"תאילנד",       capital:"בנגקוק",       continent:"אסיה",            lat:13.75, lon:100.5,  pop:"כ-72 מיליון",    lang:"תאית",                     landmark:"הארמון הגדול 👑",            fact:"בתאילנד אומרים שלום עם הידיים צמודות — 'סוואדי!'" },
+  { code:"tr", name:"טורקיה",       capital:"אנקרה",        continent:"אסיה",            lat:39.9,  lon:32.85,  pop:"כ-85 מיליון",    lang:"טורקית",                   landmark:"איה סופיה 🕌",               fact:"בטורקיה יש עיר שנמצאת בשתי יבשות בו-זמנית!" },
+  { code:"eg", name:"מצרים",        capital:"קהיר",         continent:"אפריקה",          lat:30.0,  lon:31.2,   pop:"כ-106 מיליון",   lang:"ערבית",                    landmark:"הפירמידות 🔺",               fact:"הפירמידות במצרים נבנו לפני יותר מ-4,500 שנה!" },
+  { code:"ke", name:"קניה",         capital:"ניירובי",      continent:"אפריקה",          lat:-1.3,  lon:36.8,   pop:"כ-55 מיליון",    lang:"סוואהילית ואנגלית",        landmark:"ספארי מסאי מארה 🦁",         fact:"בקניה אפשר לראות אריות, ג'ירפות ופילים בטבע!" },
+  { code:"za", name:"דרום אפריקה",  capital:"פרטוריה",      continent:"אפריקה",          lat:-25.7, lon:28.2,   pop:"כ-60 מיליון",    lang:"11 שפות רשמיות!",          landmark:"הר השולחן ⛰️",              fact:"בדרום אפריקה חיים פינגווינים על החוף!" },
+  { code:"ma", name:"מרוקו",        capital:"רבאט",         continent:"אפריקה",          lat:34.0,  lon:-6.8,   pop:"כ-37 מיליון",    lang:"ערבית",                    landmark:"העיר הכחולה שפשאוון 💙",     fact:"במרוקו יש שוק ענק וצבעוני שנקרא 'שוק מראקש'!" },
+  { code:"br", name:"ברזיל",        capital:"ברזיליה",      continent:"אמריקה הדרומית", lat:-15.8, lon:-47.9,  pop:"כ-216 מיליון",   lang:"פורטוגזית",                landmark:"פסל ישו הגואל ⛰️",          fact:"בברזיל נמצא יער האמזונס — היער הגדול בעולם!" },
+  { code:"ar", name:"ארגנטינה",     capital:"בואנוס איירס", continent:"אמריקה הדרומית", lat:-34.6, lon:-58.4,  pop:"כ-46 מיליון",    lang:"ספרדית",                   landmark:"מפלי איגואסו 💦",            fact:"בארגנטינה רוקדים ריקוד מפורסם שנקרא טנגו!" },
+  { code:"pe", name:"פרו",          capital:"לימה",         continent:"אמריקה הדרומית", lat:-12.0, lon:-77.0,  pop:"כ-34 מיליון",    lang:"ספרדית",                   landmark:"מאצ'ו פיצ'ו ⛰️",            fact:"בפרו יש עיר עתיקה בהרים שנקראת מאצ'ו פיצ'ו!" },
+  { code:"mx", name:"מקסיקו",       capital:"מקסיקו סיטי",  continent:"אמריקה הצפונית", lat:19.4,  lon:-99.1,  pop:"כ-128 מיליון",   lang:"ספרדית",                   landmark:"פירמידות המאיה 🛕",          fact:"המקסיקנים המציאו את השוקולד לפני אלפי שנים! 🍫" },
+  { code:"ca", name:"קנדה",         capital:"אוטווה",       continent:"אמריקה הצפונית", lat:45.4,  lon:-75.7,  pop:"כ-39 מיליון",    lang:"אנגלית וצרפתית",           landmark:"מפלי הניאגרה 💦",            fact:"בקנדה יש יותר אגמים מבכל שאר העולם ביחד!" },
+  { code:"au", name:"אוסטרליה",     capital:"קנברה",        continent:"אוקיאניה",        lat:-35.3, lon:149.1,  pop:"כ-26 מיליון",    lang:"אנגלית",                   landmark:"בית האופרה של סידני 🎭",     fact:"רק באוסטרליה חיים קנגורו וקואלה בטבע!" },
+  { code:"nz", name:"ניו זילנד",    capital:"וולינגטון",    continent:"אוקיאניה",        lat:-41.3, lon:174.8,  pop:"כ-5 מיליון",     lang:"אנגלית ומאורית",           landmark:"הרי שר הטבעות 🏔️",          fact:"בניו זילנד יש יותר כבשים מאשר בני אדם!" },
+  { code:"nl", name:"הולנד",        capital:"אמסטרדם",      continent:"אירופה",          lat:52.4,  lon:4.9,    pop:"כ-18 מיליון",    lang:"הולנדית",                  landmark:"טחנות הרוח 🌬️",             fact:"בהולנד יש יותר אופניים מאשר אנשים! 🚲" },
+  { code:"ch", name:"שווייץ",       capital:"ברן",          continent:"אירופה",          lat:46.9,  lon:7.4,    pop:"כ-9 מיליון",     lang:"גרמנית, צרפתית ואיטלקית",  landmark:"הרי האלפים 🏔️",             fact:"בשווייץ מכינים את השוקולד המפורסם בעולם!" },
+  { code:"pt", name:"פורטוגל",      capital:"ליסבון",       continent:"אירופה",          lat:38.7,  lon:-9.14,  pop:"כ-10 מיליון",    lang:"פורטוגזית",                landmark:"מגדל בלם 🗼",                fact:"פורטוגל היא אחת המדינות העתיקות ביותר באירופה עם אותם גבולות!" },
+  { code:"se", name:"שוודיה",       capital:"שטוקהולם",     continent:"אירופה",          lat:59.33, lon:18.07,  pop:"כ-10.5 מיליון",  lang:"שוודית",                   landmark:"העיר העתיקה גמלה סטן 🏘️",   fact:"בשוודיה יש חוק שמאפשר לכולם לחנות ולטייל כמעט בכל מקום בטבע!" },
+  { code:"no", name:"נורווגיה",     capital:"אוסלו",        continent:"אירופה",          lat:59.91, lon:10.75,  pop:"כ-5.5 מיליון",   lang:"נורווגית",                 landmark:"הפיורדים 🏔️",               fact:"בנורווגיה יש מקומות שבהם השמש לא שוקעת בכלל בקיץ!" },
+  { code:"fi", name:"פינלנד",       capital:"הלסינקי",      continent:"אירופה",          lat:60.17, lon:24.94,  pop:"כ-5.5 מיליון",   lang:"פינית",                    landmark:"ארץ אלף האגמים 🌊",          fact:"בפינלנד יש יותר סאונות מאשר מכוניות!" },
+  { code:"pl", name:"פולין",        capital:"ורשה",         continent:"אירופה",          lat:52.23, lon:21.01,  pop:"כ-38 מיליון",    lang:"פולנית",                   landmark:"מכרה המלח וייליצ'קה 🧂",     fact:"ליד קרקוב יש מכרה מלח עתיק שהוא כמו עיר שלמה מתחת לאדמה!" },
+  { code:"at", name:"אוסטריה",      capital:"וינה",         continent:"אירופה",          lat:48.2,  lon:16.37,  pop:"כ-9 מיליון",     lang:"גרמנית",                   landmark:"ארמון שנברון 🏰",            fact:"מוצרט נולד באוסטריה והתחיל לנגן בפסנתר כשהיה בן חמש!" },
+  { code:"ie", name:"אירלנד",       capital:"דבלין",        continent:"אירופה",          lat:53.35, lon:-6.26,  pop:"כ-5 מיליון",     lang:"אירית ואנגלית",            landmark:"צוקי מוהר 🌊",               fact:"לפי אגדה אירית, מי שתופס פיה בת מזל יזכה במשאלה!" },
+  { code:"ru", name:"רוסיה",        capital:"מוסקבה",       continent:"אירופה",          lat:55.75, lon:37.62,  pop:"כ-144 מיליון",   lang:"רוסית",                    landmark:"הכיכר האדומה 🏛️",           fact:"רוסיה כל כך גדולה שיש בה 11 אזורי זמן שונים!" },
+  { code:"sa", name:"ערב הסעודית",  capital:"ריאד",         continent:"אסיה",            lat:24.71, lon:46.68,  pop:"כ-36 מיליון",    lang:"ערבית",                    landmark:"מדבר הרוב הריק 🏜️",         fact:"בערב הסעודית יש מדבר חול ענק שהוא הגדול מסוגו בעולם!" },
+  { code:"ae", name:"איחוד האמירויות", capital:"אבו דאבי",  continent:"אסיה",            lat:24.47, lon:54.37,  pop:"כ-9.5 מיליון",   lang:"ערבית",                    landmark:"מגדל בורג' חליפה 🏙️",       fact:"בדובאי נמצא הבניין הגבוה בעולם!" },
+  { code:"kr", name:"דרום קוריאה",  capital:"סיאול",        continent:"אסיה",            lat:37.57, lon:126.98, pop:"כ-52 מיליון",    lang:"קוריאנית",                 landmark:"ארמון גיונגבוקגונג 🏯",     fact:"בדרום קוריאה כמעט לכולם יש אינטרנט מהיר במיוחד!" },
+  { code:"id", name:"אינדונזיה",    capital:"ג'קרטה",       continent:"אסיה",            lat:-6.2,  lon:106.85, pop:"כ-277 מיליון",   lang:"אינדונזית",                landmark:"מקדש בורובודור 🛕",          fact:"אינדונזיה מורכבת מיותר מ-17,000 איים!" },
+  { code:"vn", name:"וייטנאם",      capital:"האנוי",        continent:"אסיה",            lat:21.03, lon:105.85, pop:"כ-98 מיליון",    lang:"וייטנאמית",                landmark:"מפרץ הלונג ביי 🚣",          fact:"בווייטנאם יש שדות אורז ירוקים שנראים כמו מדרגות ענק!" },
+  { code:"ph", name:"פיליפינים",    capital:"מנילה",        continent:"אסיה",            lat:14.6,  lon:120.98, pop:"כ-115 מיליון",   lang:"פיליפינית ואנגלית",        landmark:"מדרגות האורז של באנאווה 🌾", fact:"הפיליפינים מורכבים מיותר מ-7,000 איים!" },
+  { code:"ng", name:"ניגריה",       capital:"אבוג'ה",       continent:"אפריקה",          lat:9.08,  lon:7.4,    pop:"כ-223 מיליון",   lang:"אנגלית",                   landmark:"שוק הבלנים 🛍️",             fact:"ניגריה היא המדינה עם הכי הרבה תושבים באפריקה!" },
+  { code:"et", name:"אתיופיה",      capital:"אדיס אבבה",    continent:"אפריקה",          lat:9.03,  lon:38.74,  pop:"כ-126 מיליון",   lang:"אמהרית",                   landmark:"כנסיות הסלע בלליבלה ⛪",     fact:"באתיופיה יש לוח שנה משלהם עם 13 חודשים בשנה!" },
+  { code:"gh", name:"גאנה",         capital:"אקרה",         continent:"אפריקה",          lat:5.6,   lon:-0.19,  pop:"כ-34 מיליון",    lang:"אנגלית",                   landmark:"טירת קייפ קוסט 🏰",          fact:"גאנה הייתה המדינה הראשונה באפריקה שהשתחררה משלטון קולוניאלי!" },
+  { code:"cl", name:"צ'ילה",        capital:"סנטיאגו",      continent:"אמריקה הדרומית", lat:-33.45, lon:-70.67, pop:"כ-19.5 מיליון",  lang:"ספרדית",                   landmark:"איי הפסחא 🗿",               fact:"צ'ילה היא כל כך ארוכה וצרה שהיא נמתחת על פני 4,300 ק\"מ!" },
+  { code:"co", name:"קולומביה",     capital:"בוגוטה",       continent:"אמריקה הדרומית", lat:4.71,  lon:-74.07, pop:"כ-52 מיליון",    lang:"ספרדית",                   landmark:"העיר הצבעונית קרטחנה 🌈",    fact:"קולומביה מגדלת יותר פרחים מכל מדינה אחרת בעולם, חוץ מהולנד!" },
+  { code:"cu", name:"קובה",         capital:"הוואנה",       continent:"אמריקה הצפונית", lat:23.13, lon:-82.38, pop:"כ-11 מיליון",    lang:"ספרדית",                   landmark:"מכוניות עתיקות צבעוניות 🚗", fact:"בקובה עדיין נוהגים במכוניות צבעוניות מלפני עשרות שנים!" },
+  { code:"is", name:"איסלנד",       capital:"רייקיאוויק",   continent:"אירופה",          lat:64.15, lon:-21.94, pop:"כ-380 אלף",      lang:"איסלנדית",                 landmark:"מעיינות חמים גיאותרמיים ♨️", fact:"באיסלנד יש הרי געש וקרחונים אחד ליד השני!" },
+  { code:"dk", name:"דנמרק",        capital:"קופנהגן",      continent:"אירופה",          lat:55.68, lon:12.57,  pop:"כ-6 מיליון",     lang:"דנית",                     landmark:"פסל בת הים הקטנה 🧜‍♀️",      fact:"לגו הומצא בדנמרק!" },
+  { code:"be", name:"בלגיה",        capital:"בריסל",        continent:"אירופה",          lat:50.85, lon:4.35,   pop:"כ-11.7 מיליון",  lang:"צרפתית והולנדית",          landmark:"האטומיום 🔬",                fact:"בבלגיה יש יותר מ-1,000 סוגים שונים של בירה!" },
+  { code:"ua", name:"אוקראינה",     capital:"קייב",         continent:"אירופה",          lat:50.45, lon:30.52,  pop:"כ-38 מיליון",    lang:"אוקראינית",                landmark:"כיכר העצמאות 🏛️",           fact:"אוקראינה היא אחת מיצרניות החיטה הגדולות בעולם!" },
+  { code:"jo", name:"ירדן",         capital:"עמאן",         continent:"אסיה",            lat:31.95, lon:35.93,  pop:"כ-11 מיליון",    lang:"ערבית",                    landmark:"העיר הוורודה פטרה 🏛️",      fact:"העיר פטרה בירדן פוסלה ישירות מתוך הסלע לפני אלפי שנים!" },
+];
+const CONTINENTS = ["אסיה","אירופה","אפריקה","אמריקה הצפונית","אמריקה הדרומית","אוקיאניה"];
+const QUESTIONS_PER_ROUND = 8;
+const EASY_CODES = ["il","us","fr","it","es","gb","de","jp","cn","eg"];
+
+const flagUrl = c => `https://flagcdn.com/w320/${c}.png`;
+const flagUrlSmall = c => `https://flagcdn.com/w160/${c}.png`;
+
+/* ================= helpers ================= */
+const $ = id => document.getElementById(id);
+const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
+
+const SCREENS = ["screen-home","screen-difficulty","screen-quiz","screen-memory","screen-result"];
+function show(id) {
+  SCREENS.forEach(s => $(s).classList.toggle("hidden", s !== id));
+  window.scrollTo(0, 0);
+}
+
+/* ---------- stars storage ---------- */
+const store = {
+  get: k => parseInt(localStorage.getItem("geo-" + k) || "0", 10),
+  set: (k, v) => localStorage.setItem("geo-" + k, v),
+};
+function renderHome() {
+  let total = 0;
+  ["flags","capitals","continents","memory"].forEach(g => {
+    const s = store.get(g);
+    total += s;
+    $("best-" + g).textContent = s ? "⭐".repeat(s) : "עוד לא שיחקתם";
+  });
+  $("total-stars").textContent = total;
+}
+function goHome() { renderHome(); show("screen-home"); }
+
+let pendingGame = null;
+function startGame(g) {
+  if (g === "memory") return startMemory();
+  pendingGame = g;
+  show("screen-difficulty");
+}
+
+/* ================= atlas map ================= */
+function initMap() {
+  renderChipsFallback(); // show something usable immediately, no network wait
+
+  if (typeof d3 === "undefined" || typeof topojson === "undefined") return;
+
+  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 6000));
+  Promise.race([d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"), timeout])
+    .then(world => {
+      const W = 820, H = 430;
+      $("map-card").innerHTML = "";
+      const svg = d3.select("#map-card").append("svg")
+        .attr("viewBox", `0 0 ${W} ${H}`)
+        .attr("dir", "ltr");
+      const projection = d3.geoNaturalEarth1().fitSize([W, H], { type: "Sphere" });
+      const path = d3.geoPath(projection);
+
+      svg.append("path").attr("class", "map-sea").attr("d", path({ type: "Sphere" }));
+      svg.append("g").selectAll("path")
+        .data(topojson.feature(world, world.objects.countries).features)
+        .join("path")
+        .attr("class", "map-land")
+        .attr("d", path);
+
+      svg.append("g").selectAll("circle")
+        .data(COUNTRIES)
+        .join("circle")
+        .attr("class", "map-dot")
+        .attr("r", 8)
+        .attr("cx", c => projection([c.lon, c.lat])[0])
+        .attr("cy", c => projection([c.lon, c.lat])[1])
+        .on("click", (e, c) => selectCountry(c, e.currentTarget))
+        .append("title").text(c => c.name);
+    })
+    .catch(() => { /* keep the chips fallback already shown */ });
+}
+
+function renderChipsFallback() {
+  const card = $("map-card");
+  card.innerHTML = '<div class="country-chips">' + COUNTRIES.map(c =>
+    `<button class="chip" onclick="selectCountryByCode('${c.code}', this)">
+       <img src="${flagUrlSmall(c.code)}" alt=""> ${c.name}
+     </button>`).join("") + "</div>";
+}
+function selectCountryByCode(code, el) {
+  selectCountry(COUNTRIES.find(c => c.code === code), el);
+}
+
+function selectCountry(c, dotEl) {
+  document.querySelectorAll(".map-dot.active").forEach(d => d.classList.remove("active"));
+  if (dotEl && dotEl.classList) dotEl.classList.add("active");
+  const panel = $("country-panel");
+  panel.classList.remove("placeholder");
+  panel.innerHTML = `
+    <div class="cp-head">
+      <img src="${flagUrl(c.code)}" alt="דגל ${c.name}">
+      <div>
+        <h3>${c.name}</h3>
+        <div style="color:var(--ink-soft)">תעודת זהות של מדינה</div>
+      </div>
+    </div>
+    <div class="cp-grid">
+      <div class="cp-item"><span class="ico">🏙️</span><span><span class="lbl">עיר בירה</span><span class="val">${c.capital}</span></span></div>
+      <div class="cp-item"><span class="ico">🌍</span><span><span class="lbl">יבשת</span><span class="val">${c.continent}</span></span></div>
+      <div class="cp-item"><span class="ico">👨‍👩‍👧‍👦</span><span><span class="lbl">כמה אנשים גרים שם?</span><span class="val">${c.pop}</span></span></div>
+      <div class="cp-item"><span class="ico">🗣️</span><span><span class="lbl">איזו שפה מדברים?</span><span class="val">${c.lang}</span></span></div>
+      <div class="cp-item"><span class="ico">📸</span><span><span class="lbl">כדאי לבקר ב...</span><span class="val">${c.landmark}</span></span></div>
+    </div>
+    <div class="cp-fact">💡 ${c.fact}</div>`;
+  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
+
+/* ================= quiz engine ================= */
+let game = null;
+
+const GAME_DEFS = {
+  flags: {
+    question: c => `<h3>לאיזו מדינה שייך הדגל?</h3><img class="flag-img" src="${flagUrl(c.code)}" alt="דגל">`,
+    answer: c => c.name,
+    pool: () => game.pool.map(x => x.name),
+  },
+  capitals: {
+    question: c => `<h3>מה עיר הבירה של...</h3><div class="big-word">${c.name}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">`,
+    answer: c => c.capital,
+    pool: () => game.pool.map(x => x.capital),
+  },
+  continents: {
+    question: c => `<h3>באיזו יבשת נמצאת...</h3><div class="big-word">${c.name}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">`,
+    answer: c => c.continent,
+    pool: () => CONTINENTS,
+  },
+};
+
+function startQuiz(type, difficulty) {
+  const pool = difficulty === "easy" ? COUNTRIES.filter(c => EASY_CODES.includes(c.code)) : COUNTRIES;
+  const total = Math.min(QUESTIONS_PER_ROUND, pool.length);
+  game = {
+    type,
+    difficulty,
+    pool,
+    countries: shuffle(pool).slice(0, total),
+    index: 0,
+    correct: 0,
+    total,
+  };
+  $("q-total").textContent = total;
+  show("screen-quiz");
+  renderQuestion();
+}
+
+function renderQuestion() {
+  const def = GAME_DEFS[game.type];
+  const c = game.countries[game.index];
+  $("q-num").textContent = game.index + 1;
+  $("progress-fill").style.width = (game.index / game.total * 100) + "%";
+  $("question-card").innerHTML = def.question(c);
+  $("fact-area").innerHTML = "";
+
+  const right = def.answer(c);
+  const wrongs = shuffle([...new Set(def.pool(c))].filter(a => a !== right)).slice(0, 3);
+  const opts = shuffle([right, ...wrongs]);
+
+  $("options").innerHTML = "";
+  opts.forEach(text => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = text;
+    b.onclick = () => pick(b, text === right, c);
+    $("options").appendChild(b);
+  });
+
+  const skipBtn = document.createElement("button");
+  skipBtn.className = "opt opt-skip";
+  skipBtn.textContent = "🤷 לא יודע";
+  skipBtn.onclick = () => pick(skipBtn, false, c, true);
+  $("options").appendChild(skipBtn);
+}
+
+function pick(btn, isRight, country, skipped) {
+  const def = GAME_DEFS[game.type];
+  document.querySelectorAll(".opt").forEach(b => {
+    b.disabled = true;
+    if (b.textContent === def.answer(country)) b.classList.add("correct");
+  });
+  if (isRight) {
+    game.correct++;
+    burstConfetti(12);
+  } else if (skipped) {
+    btn.classList.add("skipped");
+  } else {
+    btn.classList.add("wrong");
+  }
+  $("progress-fill").style.width = ((game.index + 1) / game.total * 100) + "%";
+  $("fact-area").innerHTML = `
+    <div class="reveal-chips">
+      <span class="rc">📍 ${country.continent}</span>
+      <span class="rc">🏙️ ${country.capital}</span>
+    </div>
+    <div class="fact-bubble">${isRight ? "🎉 נכון!" : skipped ? "אין דבר, הנה התשובה:" : "כמעט!"} 💡 ${country.fact}</div>
+    <div style="text-align:center"><button class="btn-next" onclick="nextQuestion()">${game.index + 1 < game.total ? "לשאלה הבאה ⬅" : "לתוצאות 🏆"}</button></div>`;
+}
+
+function nextQuestion() {
+  game.index++;
+  if (game.index >= game.total) return finishQuiz();
+  renderQuestion();
+}
+
+function starsFor(correct, total) {
+  const r = correct / total;
+  return r >= 0.9 ? 3 : r >= 0.6 ? 2 : r >= 0.3 ? 1 : 0;
+}
+
+function finishQuiz() {
+  const stars = starsFor(game.correct, game.total);
+  showResult(game.type, stars, `ענית נכון על ${game.correct} מתוך ${game.total} שאלות!`);
+}
+
+/* ================= memory game ================= */
+let mem = null;
+
+function startMemory() {
+  const chosen = shuffle(COUNTRIES).slice(0, 8);
+  const cards = shuffle(chosen.flatMap(c => [
+    { key: c.code, html: `<img src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">` },
+    { key: c.code, html: c.name },
+  ]));
+  mem = { open: [], matched: 0, lock: false, moves: 0 };
+  $("pairs-found").textContent = "0";
+  const grid = $("memory-grid");
+  grid.innerHTML = "";
+  cards.forEach(card => {
+    const b = document.createElement("button");
+    b.className = "mem-card";
+    b.dataset.key = card.key;
+    b.innerHTML = `<div class="mem-inner">
+        <div class="mem-face mem-front">🌍</div>
+        <div class="mem-face mem-back">${card.html}</div>
+      </div>`;
+    b.onclick = () => flipCard(b);
+    grid.appendChild(b);
+  });
+  show("screen-memory");
+}
+
+function flipCard(card) {
+  if (mem.lock || card.classList.contains("flipped")) return;
+  card.classList.add("flipped");
+  mem.open.push(card);
+  if (mem.open.length < 2) return;
+
+  mem.moves++;
+  const [a, b] = mem.open;
+  mem.open = [];
+  if (a.dataset.key === b.dataset.key) {
+    a.classList.add("matched");
+    b.classList.add("matched");
+    mem.matched++;
+    $("pairs-found").textContent = mem.matched;
+    burstConfetti(10);
+    if (mem.matched === 8) {
+      setTimeout(() => {
+        const stars = mem.moves <= 12 ? 3 : mem.moves <= 18 ? 2 : 1;
+        showResult("memory", stars, `מצאתם את כל 8 הזוגות ב-${mem.moves} ניסיונות!`);
+      }, 700);
+    }
+  } else {
+    mem.lock = true;
+    setTimeout(() => {
+      a.classList.remove("flipped");
+      b.classList.remove("flipped");
+      mem.lock = false;
+    }, 900);
+  }
+}
+
+/* ================= results ================= */
+let lastGame = null;
+
+function showResult(type, stars, text) {
+  lastGame = type;
+  if (stars > store.get(type)) store.set(type, stars);
+  $("result-stars").textContent = stars ? "⭐".repeat(stars) : "🌱";
+  $("result-emoji").textContent = stars === 3 ? "🏆" : stars === 2 ? "🎉" : stars === 1 ? "💪" : "🌱";
+  $("result-title").textContent =
+    stars === 3 ? "מדהים! אלופי העולם!" :
+    stars === 2 ? "כל הכבוד!" :
+    stars === 1 ? "יפה מאוד, ממשיכים להתאמן!" : "התחלה טובה — נסו שוב!";
+  $("result-text").textContent = text;
+  show("screen-result");
+  if (stars >= 2) burstConfetti(60);
+}
+
+$("btn-again").onclick = () => startGame(lastGame);
+
+/* ================= confetti ================= */
+const CONFETTI_COLORS = ["#D97757","#6A9BCC","#7DA87B","#E8B44F","#B4688F"];
+function burstConfetti(n) {
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("div");
+    el.className = "confetti";
+    el.style.left = Math.random() * 100 + "vw";
+    el.style.width = el.style.height = (6 + Math.random() * 8) + "px";
+    el.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+    el.style.animationDuration = (1.2 + Math.random() * 1.6) + "s";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3200);
+  }
+}
+
+/* ================= init ================= */
+renderHome();
+initMap();
+</script>
+</body>
+</html>

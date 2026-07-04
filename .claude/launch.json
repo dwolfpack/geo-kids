@@ -1,0 +1,42 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dror-cv",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8734", "--directory", "dror-cv"],
+      "port": 8734
+    },
+    {
+      "name": "portfolio",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3500"],
+      "port": 3500
+    },
+    {
+      "name": "shoko",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3600", "--directory", "claude-first-projects"],
+      "port": 3600
+    },
+    {
+      "name": "bugcraft-academy",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "bugcraft-academy", "run", "dev"],
+      "port": 5173
+    },
+    {
+      "name": "geo-kids",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "3700", "--directory", "geo-kids"],
+      "port": 3700,
+      "autoPort": false
+    },
+    {
+      "name": "word-islands",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "word-islands"],
+      "port": 5173
+    }
+  ]
+}
