@@ -26,10 +26,21 @@ Dror asked to "go over ideas and make them better." Findings and fixes:
 4. **LinkedIn — added per-post Definition of Done + fresh story bank** (the .env catch and the deleted-AI-feature story are both post material).
 5. **Validator hardened + real bug fixed:** new checks (filename↔frontmatter session/slug/module consistency, duplicate session numbers), verified via seeded mutation; that test exposed a real bug — validator broke on CRLF line endings (any Windows checkout). Fixed; all content re-validates ✓.
 
+## Implementation session (same night — "start working on them one by one")
+
+1. **Telegram bot v1 — BUILT, TESTED, COMMITTED** (`a023a8c`). All four design steps in one pass:
+   - `scripts/extract_countries.py` → `data/countries.json` (100 countries from geo-kids; escaped-quote bug in parser found & fixed; drift test guards sync).
+   - `services/`: `store.py` (SQLite WAL, schema_version, idempotent answers, streak logic), `geodata.py` (4 question types, cumulative level pools, same-continent distractors, haversine for "farther from Israel"), `claude.py` (lazy client, daily budget, retry; default model Haiku).
+   - `handlers/`: chat (free chat + /join flow + /status admin), quiz (/quiz, answer buttons, level-up offers, /scores), explain (kid-mode Hebrew, age-tuned, 10-min window), digest (/remind confirm-first, /reminders, morning job).
+   - `bot.py`: allowlist, jobs at 16:00/07:00 Asia/Jerusalem, hourly watchdog.
+   - **38/38 tests pass.** Old anthropic SDK upgraded (httpx incompat). README + .env.example updated. NOT yet run against live Telegram — needs Dror: fill FAMILY_IDS/ADMIN_ID in .env, `python bot.py`, follow README manual checklist.
+2. **QA-for-AI asset #1 — BUILT:** `qa-for-ai/assessment/ai-sdlc-quality-assessment.md` — 15-question diagnostic (3 pillars × 5), level anchors, "show me" scoring discipline, report skeleton, honest v0.1 limitations.
+3. **LinkedIn post 2 — DRAFTED** in docs/linkedin-series.md; needs Dror's real kid-testing observations in the [brackets] (truth rule — I don't invent family stories).
+
 ## Morning checklist for Dror
 
 1. Review + answer open questions in the QA-for-AI design (§7) — biggest decisions: consulting vs full-time, Israel vs global.
-2. Review telegram bot design (§10) — say "go" and implementation starts (step 1: refactor + /join + SQLite).
+2. ~~Say "go" on the bot~~ → bot is BUILT; to launch: fill FAMILY_IDS + ADMIN_ID in telegram-claude-bot/.env, run `python bot.py`, walk the README manual checklist. Hosting question (design §10 Q1) still open — currently it runs only while your PC is on.
 3. Read Post 1 draft in linkedin-series.md — edit to your voice, publish when ready.
 4. Module 1 is live in content/ and validated — read one EN + one HE session to approve tone before we build Module 2 or the website.
 

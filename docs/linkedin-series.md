@@ -67,7 +67,25 @@ The announcement. Recap the journey (posts 1–9 in three sentences), name the o
 >
 > What would you build if code stopped being the obstacle?
 
-*(Drafts for posts 2–10 will be written one week ahead of publishing so they include the freshest real material — several depend on artifacts we're building, e.g. post 7 needs the eval demo.)*
+## Ready-to-post draft: Post 2 (needs Dror's real observations in the [brackets])
+
+> My QA team is 8 years old and works for ice cream.
+>
+> I built a Hebrew geography game with AI. A hundred countries, five difficulty levels, colorful flags. I tested it myself and it was flawless.
+>
+> Then my kids played it.
+>
+> In the first ten minutes they found: [REAL EXAMPLE — what did they break/complain about? e.g., tapping the same button twice, a country name that confused them, a level that was too hard].
+>
+> Here's the thing — I never would have found [that]. Not because I'm careless, but because I tested it the way *I* use it. They used it the way *they* use everything: impatiently, repeatedly, and in ways no spec anticipates.
+>
+> Twenty years in organizations taught me the same lesson in a different language: the gap between "works as designed" and "works for the people using it" is where all the interesting problems live.
+>
+> AI can now build your product in a weekend. It still can't tell you what your users will do to it on Monday.
+>
+> Who plays the role of "my kids" for your product?
+
+*(Posts 3–10 get drafted one week ahead of publishing so they use the freshest real material — post 7 now has its artifact: the family bot shipped with a 38-test suite including an idempotency test and a data-drift test between the game and the bot. Post 6's validator story also grew: mutation-testing the validator's new checks exposed a real CRLF bug in the validator itself — "the test that tested the tester.")*
 
 ---
 
