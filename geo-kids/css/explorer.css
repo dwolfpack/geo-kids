@@ -1,0 +1,91 @@
+/* Explorer game: search card + type-ahead suggestion chips */
+
+.explorer-card {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px 20px;
+  margin-bottom: 20px;
+}
+
+.explorer-card h2 {
+  margin: 0 0 14px;
+}
+
+.explorer-input {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 12px 16px;
+  font-family: inherit;
+  font-size: 1.1rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.explorer-input::placeholder {
+  color: var(--ink-soft);
+}
+
+.explorer-input:focus {
+  border-color: var(--sky);
+}
+
+.explorer-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.explorer-suggestion {
+  min-height: 44px;
+  padding: 8px 18px;
+  font-family: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.explorer-suggestion:hover,
+.explorer-suggestion:focus-visible {
+  border-color: var(--coral);
+  background: var(--coral);
+  color: #fff;
+}
+
+.explorer-empty {
+  padding: 10px 4px;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+@media (max-width: 480px) {
+  .explorer-card {
+    padding: 18px 14px;
+  }
+
+  .explorer-input {
+    font-size: 1rem;
+    padding: 10px 14px;
+  }
+
+  .explorer-suggestions {
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .explorer-suggestion {
+    font-size: 0.9rem;
+    padding: 7px 14px;
+  }
+}
