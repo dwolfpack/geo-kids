@@ -1,6 +1,0 @@
-anthropic
-python-telegram-bot[job-queue]==21.*
-python-dotenv
-
-# dev
-pytest
