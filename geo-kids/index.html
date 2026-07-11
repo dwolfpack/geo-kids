@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>מסע סביב העולם 🌍</title>
+<title id="page-title">מסע סביב העולם 🌍</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/explorer.css">
+<link rel="stylesheet" href="css/records.css">
+<link rel="stylesheet" href="css/profiles.css">
 <style>
   :root {
     --bg: #F0EEE6;
@@ -33,6 +36,19 @@
 
   /* ---------- header ---------- */
   header { text-align: center; margin-bottom: 28px; }
+  .lang-toggle {
+    display: inline-flex; gap: 6px; background: var(--card);
+    border: 2px solid var(--line); border-radius: 999px;
+    padding: 4px; margin-bottom: 8px; box-shadow: var(--shadow);
+  }
+  .lang-btn {
+    font-family: inherit; font-size: .82rem; font-weight: 700;
+    border: none; border-radius: 999px; padding: 6px 14px;
+    background: transparent; color: var(--ink-soft); cursor: pointer;
+    min-height: 32px; transition: background .15s, color .15s;
+  }
+  .lang-btn.active { background: var(--coral); color: #fff; }
+  .lang-btn:not(.active):hover { background: var(--bg); }
   header h1 {
     font-size: clamp(2rem, 6vw, 3.2rem);
     font-weight: 800;
@@ -87,36 +103,6 @@
     .game-card .best { margin-top: 8px; font-size: .9rem; }
   }
 
-  /* ---------- atlas / map ---------- */
-  .atlas { margin-top: 36px; }
-  .atlas > h2 {
-    text-align: center; font-size: 1.7rem; font-weight: 800; margin-bottom: 6px;
-  }
-  .atlas > .hint { text-align: center; color: var(--ink-soft); margin-bottom: 16px; }
-  .map-card {
-    background: var(--card); border: 2px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--shadow);
-    padding: 14px; overflow: hidden;
-  }
-  .map-card svg { display: block; width: 100%; height: auto; border-radius: 12px; }
-  .map-sea { fill: #E4EDF4; }
-  .map-land { fill: #C5D9BC; stroke: #FAF9F5; stroke-width: .6; }
-  .map-dot { fill: var(--coral); stroke: #fff; stroke-width: 2; cursor: pointer; transition: r .15s; }
-  .map-dot:hover { r: 11; fill: var(--coral-dark); }
-  .map-dot.active { fill: var(--sun); r: 11; stroke: var(--ink); }
-
-  /* fallback country chips (if map can't load) */
-  .country-chips { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
-  .chip {
-    display: flex; align-items: center; gap: 8px;
-    background: var(--card); border: 2px solid var(--line); border-radius: 999px;
-    padding: 10px 16px; font-family: inherit; font-size: 1rem; font-weight: 600;
-    cursor: pointer; transition: border-color .15s, transform .12s;
-    min-height: 44px; touch-action: manipulation;
-  }
-  .chip:hover { border-color: var(--coral); transform: translateY(-2px); }
-  .chip img { width: 26px; border-radius: 4px; border: 1px solid var(--line); }
-
   /* ---------- country info panel ---------- */
   .country-panel {
     margin-top: 16px;
@@ -143,6 +129,11 @@
     margin-top: 14px; background: #FBF3E4; border: 2px solid var(--sun);
     border-radius: 14px; padding: 12px 16px; font-size: 1.05rem;
   }
+  .cp-wiki {
+    display: inline-block; margin-top: 14px; color: var(--sky); font-weight: 700;
+    text-decoration: none; border-bottom: 2px solid transparent;
+  }
+  .cp-wiki:hover { border-color: var(--sky); }
 
   /* ---------- difficulty screen ---------- */
   .diff-card {
@@ -211,12 +202,6 @@
   .big-word { font-size: 2.2rem; font-weight: 800; color: var(--coral-dark); }
 
   .options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-  .opt-skip {
-    grid-column: 1 / -1;
-    background: transparent; border: 2px dashed var(--line); color: var(--ink-soft);
-  }
-  .opt-skip:hover:not(:disabled) { border-color: var(--ink-soft); }
-  .opt.skipped { background: #F0EEE6; border-color: var(--ink-soft); }
   .opt {
     background: var(--card); border: 2px solid var(--line);
     border-radius: 16px; padding: 18px 14px;
@@ -331,49 +316,50 @@
   <!-- ============ HOME ============ -->
   <div id="screen-home">
     <header>
-      <h1><span class="globe">🌍</span> מסע סביב העולם</h1>
-      <p>משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!</p>
-      <div class="stars-total">⭐ <span id="total-stars">0</span> כוכבים שאספתם</div>
+      <div id="lang-toggle" class="lang-toggle"></div>
+      <div id="auth-bar" class="auth-bar"></div>
+      <h1><span class="globe">🌍</span> <span id="app-title-text">מסע סביב העולם</span></h1>
+      <p id="app-subtitle">משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!</p>
+      <div class="stars-total">⭐ <span id="total-stars">0</span> <span id="stars-label">כוכבים שאספתם</span></div>
     </header>
 
     <div class="games">
       <button class="game-card" style="--accent: var(--coral)" onclick="startGame('flags')">
         <span class="emoji">🚩</span>
-        <h2>חידון דגלים</h2>
-        <p>איזו מדינה מתחבאת מאחורי הדגל?</p>
+        <h2 id="gc-flags-title">חידון דגלים</h2>
+        <p id="gc-flags-desc">איזו מדינה מתחבאת מאחורי הדגל?</p>
         <div class="best" id="best-flags"></div>
       </button>
       <button class="game-card" style="--accent: var(--sky)" onclick="startGame('capitals')">
         <span class="emoji">🏙️</span>
-        <h2>ערי בירה</h2>
-        <p>מה עיר הבירה של כל מדינה?</p>
+        <h2 id="gc-capitals-title">ערי בירה</h2>
+        <p id="gc-capitals-desc">מה עיר הבירה של כל מדינה?</p>
         <div class="best" id="best-capitals"></div>
       </button>
       <button class="game-card" style="--accent: var(--leaf)" onclick="startGame('continents')">
         <span class="emoji">🗺️</span>
-        <h2>לאיזו יבשת?</h2>
-        <p>מצאו באיזו יבשת נמצאת כל מדינה</p>
+        <h2 id="gc-continents-title">לאיזו יבשת?</h2>
+        <p id="gc-continents-desc">מצאו באיזו יבשת נמצאת כל מדינה</p>
         <div class="best" id="best-continents"></div>
       </button>
       <button class="game-card" style="--accent: var(--berry)" onclick="startGame('memory')">
         <span class="emoji">🧠</span>
-        <h2>משחק זיכרון</h2>
-        <p>התאימו כל דגל למדינה שלו</p>
+        <h2 id="gc-memory-title">משחק זיכרון</h2>
+        <p id="gc-memory-desc">התאימו כל דגל למדינה שלו</p>
         <div class="best" id="best-memory"></div>
+      </button>
+      <button class="game-card" style="--accent: var(--sun)" onclick="startExplorer()">
+        <span class="emoji">🔎</span>
+        <h2 id="gc-explorer-title">גלו מדינה</h2>
+        <p id="gc-explorer-desc">הקלידו שם של מדינה וגלו הכל עליה</p>
       </button>
     </div>
 
-    <!-- ============ ATLAS ============ -->
-    <section class="atlas">
-      <h2>🗺️ מפת העולם שלנו</h2>
-      <p class="hint">לחצו על נקודה כתומה במפה כדי לגלות מדינה!</p>
-      <div class="map-card" id="map-card"></div>
-      <div class="country-panel placeholder" id="country-panel">
-        👆 לחצו על מדינה במפה ותקבלו את תעודת הזהות שלה!
-      </div>
-    </section>
-
-    <footer>נבנה באהבה ❤️ ללומדים צעירים</footer>
+    <footer>
+      <span id="footer-text">נבנה באהבה ❤️ ללומדים צעירים</span>
+      <br>
+      <a href="https://www.linkedin.com/in/dror-wolfshtat/" target="_blank" rel="noopener" style="color:var(--ink-soft); text-decoration:underline;">LinkedIn ↗</a>
+    </footer>
   </div>
 
   <!-- ============ DIFFICULTY ============ -->
@@ -382,7 +368,7 @@
       <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
     </div>
     <div class="diff-card">
-      <h2>באיזו רמה רוצים לשחק?</h2>
+      <h2 id="diff-heading">באיזו רמה רוצים לשחק?</h2>
       <div class="diff-options" id="diff-options"></div>
     </div>
   </div>
@@ -403,9 +389,47 @@
   <div id="screen-memory" class="hidden">
     <div class="topbar">
       <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
-      <div class="progress-pill">זוגות: <span id="pairs-found">0</span> / 8</div>
+      <div class="progress-pill"><span id="pairs-label">זוגות:</span> <span id="pairs-found">0</span> / 8</div>
     </div>
     <div class="memory-grid" id="memory-grid"></div>
+  </div>
+
+  <!-- ============ EXPLORER ============ -->
+  <div id="screen-explorer" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+    </div>
+    <div class="explorer-card">
+      <h2 id="explorer-heading">🔎 גלו מדינה</h2>
+      <input id="explorer-search" class="explorer-input" type="text" placeholder="הקלידו שם של מדינה..." autocomplete="off">
+      <div id="explorer-suggestions" class="explorer-suggestions"></div>
+    </div>
+    <div class="country-panel placeholder" id="explorer-panel">
+      👆 התחילו להקליד כדי לגלות מדינה!
+    </div>
+  </div>
+
+  <!-- ============ RECORDS ============ -->
+  <div id="screen-records" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+    </div>
+    <div id="records-content"></div>
+  </div>
+
+  <!-- ============ PROFILE PICKER ============ -->
+  <div id="screen-profile" class="hidden">
+    <div class="topbar">
+      <button class="btn-back" onclick="goHome()">🏠 חזרה</button>
+    </div>
+    <div class="profile-card">
+      <h2 id="profile-heading">מי משחק עכשיו? 👋</h2>
+      <div id="profile-list" class="profile-list"></div>
+      <div class="profile-add-row">
+        <input id="new-profile-name" class="profile-input" type="text" placeholder="הקלידו שם חדש..." autocomplete="off" onkeydown="if(event.key==='Enter') addProfileFromInput()">
+        <button class="btn-next" id="profile-add-btn" onclick="addProfileFromInput()">➕ הוספה</button>
+      </div>
+    </div>
   </div>
 
   <!-- ============ RESULT ============ -->
@@ -417,132 +441,259 @@
       <p id="result-text"></p>
       <div class="result-actions">
         <button class="btn-next" id="btn-again">🔄 עוד פעם!</button>
-        <button class="btn-ghost" onclick="goHome()">🏠 למסך הראשי</button>
+        <button class="btn-ghost" id="btn-result-home" onclick="goHome()">🏠 למסך הראשי</button>
       </div>
     </div>
   </div>
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
 <script>
 /* ================= data ================= */
 const COUNTRIES = [
-  { code:"il", name:"ישראל",        capital:"ירושלים",      continent:"אסיה",            lat:31.8,  lon:35.2,   pop:"כ-10 מיליון",    lang:"עברית",                    landmark:"הכותל המערבי 🕍",           fact:"ים המלח בישראל הוא המקום הנמוך ביותר בעולם!" },
-  { code:"us", name:"ארצות הברית",  capital:"וושינגטון",    continent:"אמריקה הצפונית", lat:38.9,  lon:-77.0,  pop:"כ-335 מיליון",   lang:"אנגלית",                   landmark:"פסל החירות 🗽",              fact:"בארצות הברית יש 50 מדינות — וכוכב אחד בדגל לכל אחת!" },
-  { code:"fr", name:"צרפת",         capital:"פריז",         continent:"אירופה",          lat:48.9,  lon:2.35,   pop:"כ-68 מיליון",    lang:"צרפתית",                   landmark:"מגדל אייפל 🗼",              fact:"מגדל אייפל בפריז נבנה לפני יותר מ-130 שנה!" },
-  { code:"it", name:"איטליה",       capital:"רומא",         continent:"אירופה",          lat:41.9,  lon:12.5,   pop:"כ-59 מיליון",    lang:"איטלקית",                  landmark:"הקולוסיאום 🏛️",             fact:"איטליה נראית במפה כמו מגף ענק! והפיצה הומצאה שם 🍕" },
-  { code:"es", name:"ספרד",         capital:"מדריד",        continent:"אירופה",          lat:40.4,  lon:-3.7,   pop:"כ-48 מיליון",    lang:"ספרדית",                   landmark:"סגרדה פמיליה ⛪",            fact:"בספרד נהוגה שנת צהריים שנקראת 'סייסטה'!" },
-  { code:"gb", name:"בריטניה",      capital:"לונדון",       continent:"אירופה",          lat:51.5,  lon:-0.13,  pop:"כ-68 מיליון",    lang:"אנגלית",                   landmark:"ביג בן 🕰️",                 fact:"בלונדון יש שעון ענק ומפורסם שנקרא ביג בן!" },
-  { code:"de", name:"גרמניה",       capital:"ברלין",        continent:"אירופה",          lat:52.5,  lon:13.4,   pop:"כ-84 מיליון",    lang:"גרמנית",                   landmark:"שער ברנדנבורג 🏛️",          fact:"בגרמניה יש יותר מ-1,500 סוגים של נקניקיות!" },
-  { code:"gr", name:"יוון",         capital:"אתונה",        continent:"אירופה",          lat:38.0,  lon:23.7,   pop:"כ-10 מיליון",    lang:"יוונית",                   landmark:"האקרופוליס 🏛️",             fact:"המשחקים האולימפיים הומצאו ביוון לפני אלפי שנים!" },
-  { code:"jp", name:"יפן",          capital:"טוקיו",        continent:"אסיה",            lat:35.7,  lon:139.7,  pop:"כ-124 מיליון",   lang:"יפנית",                    landmark:"הר פוג'י 🗻",                fact:"ביפן יש רכבות סופר-מהירות שנוסעות 320 קמ\"ש!" },
-  { code:"cn", name:"סין",          capital:"בייג'ינג",     continent:"אסיה",            lat:39.9,  lon:116.4,  pop:"כ-1.4 מיליארד",  lang:"סינית",                    landmark:"החומה הגדולה 🧱",            fact:"החומה הסינית כל כך ארוכה שאפשר ללכת עליה חודשים!" },
-  { code:"in", name:"הודו",         capital:"ניו דלהי",     continent:"אסיה",            lat:28.6,  lon:77.2,   pop:"כ-1.4 מיליארד",  lang:"הינדי ואנגלית",            landmark:"הטאג' מהאל 🕌",              fact:"בהודו חיים יותר ממיליארד אנשים — והמון פילים! 🐘" },
-  { code:"th", name:"תאילנד",       capital:"בנגקוק",       continent:"אסיה",            lat:13.75, lon:100.5,  pop:"כ-72 מיליון",    lang:"תאית",                     landmark:"הארמון הגדול 👑",            fact:"בתאילנד אומרים שלום עם הידיים צמודות — 'סוואדי!'" },
-  { code:"tr", name:"טורקיה",       capital:"אנקרה",        continent:"אסיה",            lat:39.9,  lon:32.85,  pop:"כ-85 מיליון",    lang:"טורקית",                   landmark:"איה סופיה 🕌",               fact:"בטורקיה יש עיר שנמצאת בשתי יבשות בו-זמנית!" },
-  { code:"eg", name:"מצרים",        capital:"קהיר",         continent:"אפריקה",          lat:30.0,  lon:31.2,   pop:"כ-106 מיליון",   lang:"ערבית",                    landmark:"הפירמידות 🔺",               fact:"הפירמידות במצרים נבנו לפני יותר מ-4,500 שנה!" },
-  { code:"ke", name:"קניה",         capital:"ניירובי",      continent:"אפריקה",          lat:-1.3,  lon:36.8,   pop:"כ-55 מיליון",    lang:"סוואהילית ואנגלית",        landmark:"ספארי מסאי מארה 🦁",         fact:"בקניה אפשר לראות אריות, ג'ירפות ופילים בטבע!" },
-  { code:"za", name:"דרום אפריקה",  capital:"פרטוריה",      continent:"אפריקה",          lat:-25.7, lon:28.2,   pop:"כ-60 מיליון",    lang:"11 שפות רשמיות!",          landmark:"הר השולחן ⛰️",              fact:"בדרום אפריקה חיים פינגווינים על החוף!" },
-  { code:"ma", name:"מרוקו",        capital:"רבאט",         continent:"אפריקה",          lat:34.0,  lon:-6.8,   pop:"כ-37 מיליון",    lang:"ערבית",                    landmark:"העיר הכחולה שפשאוון 💙",     fact:"במרוקו יש שוק ענק וצבעוני שנקרא 'שוק מראקש'!" },
-  { code:"br", name:"ברזיל",        capital:"ברזיליה",      continent:"אמריקה הדרומית", lat:-15.8, lon:-47.9,  pop:"כ-216 מיליון",   lang:"פורטוגזית",                landmark:"פסל ישו הגואל ⛰️",          fact:"בברזיל נמצא יער האמזונס — היער הגדול בעולם!" },
-  { code:"ar", name:"ארגנטינה",     capital:"בואנוס איירס", continent:"אמריקה הדרומית", lat:-34.6, lon:-58.4,  pop:"כ-46 מיליון",    lang:"ספרדית",                   landmark:"מפלי איגואסו 💦",            fact:"בארגנטינה רוקדים ריקוד מפורסם שנקרא טנגו!" },
-  { code:"pe", name:"פרו",          capital:"לימה",         continent:"אמריקה הדרומית", lat:-12.0, lon:-77.0,  pop:"כ-34 מיליון",    lang:"ספרדית",                   landmark:"מאצ'ו פיצ'ו ⛰️",            fact:"בפרו יש עיר עתיקה בהרים שנקראת מאצ'ו פיצ'ו!" },
-  { code:"mx", name:"מקסיקו",       capital:"מקסיקו סיטי",  continent:"אמריקה הצפונית", lat:19.4,  lon:-99.1,  pop:"כ-128 מיליון",   lang:"ספרדית",                   landmark:"פירמידות המאיה 🛕",          fact:"המקסיקנים המציאו את השוקולד לפני אלפי שנים! 🍫" },
-  { code:"ca", name:"קנדה",         capital:"אוטווה",       continent:"אמריקה הצפונית", lat:45.4,  lon:-75.7,  pop:"כ-39 מיליון",    lang:"אנגלית וצרפתית",           landmark:"מפלי הניאגרה 💦",            fact:"בקנדה יש יותר אגמים מבכל שאר העולם ביחד!" },
-  { code:"au", name:"אוסטרליה",     capital:"קנברה",        continent:"אוקיאניה",        lat:-35.3, lon:149.1,  pop:"כ-26 מיליון",    lang:"אנגלית",                   landmark:"בית האופרה של סידני 🎭",     fact:"רק באוסטרליה חיים קנגורו וקואלה בטבע!" },
-  { code:"nz", name:"ניו זילנד",    capital:"וולינגטון",    continent:"אוקיאניה",        lat:-41.3, lon:174.8,  pop:"כ-5 מיליון",     lang:"אנגלית ומאורית",           landmark:"הרי שר הטבעות 🏔️",          fact:"בניו זילנד יש יותר כבשים מאשר בני אדם!" },
-  { code:"nl", name:"הולנד",        capital:"אמסטרדם",      continent:"אירופה",          lat:52.4,  lon:4.9,    pop:"כ-18 מיליון",    lang:"הולנדית",                  landmark:"טחנות הרוח 🌬️",             fact:"בהולנד יש יותר אופניים מאשר אנשים! 🚲" },
-  { code:"ch", name:"שווייץ",       capital:"ברן",          continent:"אירופה",          lat:46.9,  lon:7.4,    pop:"כ-9 מיליון",     lang:"גרמנית, צרפתית ואיטלקית",  landmark:"הרי האלפים 🏔️",             fact:"בשווייץ מכינים את השוקולד המפורסם בעולם!" },
-  { code:"pt", name:"פורטוגל",      capital:"ליסבון",       continent:"אירופה",          lat:38.7,  lon:-9.14,  pop:"כ-10 מיליון",    lang:"פורטוגזית",                landmark:"מגדל בלם 🗼",                fact:"פורטוגל היא אחת המדינות העתיקות ביותר באירופה עם אותם גבולות!" },
-  { code:"se", name:"שוודיה",       capital:"שטוקהולם",     continent:"אירופה",          lat:59.33, lon:18.07,  pop:"כ-10.5 מיליון",  lang:"שוודית",                   landmark:"העיר העתיקה גמלה סטן 🏘️",   fact:"בשוודיה יש חוק שמאפשר לכולם לחנות ולטייל כמעט בכל מקום בטבע!" },
-  { code:"no", name:"נורווגיה",     capital:"אוסלו",        continent:"אירופה",          lat:59.91, lon:10.75,  pop:"כ-5.5 מיליון",   lang:"נורווגית",                 landmark:"הפיורדים 🏔️",               fact:"בנורווגיה יש מקומות שבהם השמש לא שוקעת בכלל בקיץ!" },
-  { code:"fi", name:"פינלנד",       capital:"הלסינקי",      continent:"אירופה",          lat:60.17, lon:24.94,  pop:"כ-5.5 מיליון",   lang:"פינית",                    landmark:"ארץ אלף האגמים 🌊",          fact:"בפינלנד יש יותר סאונות מאשר מכוניות!" },
-  { code:"pl", name:"פולין",        capital:"ורשה",         continent:"אירופה",          lat:52.23, lon:21.01,  pop:"כ-38 מיליון",    lang:"פולנית",                   landmark:"מכרה המלח וייליצ'קה 🧂",     fact:"ליד קרקוב יש מכרה מלח עתיק שהוא כמו עיר שלמה מתחת לאדמה!" },
-  { code:"at", name:"אוסטריה",      capital:"וינה",         continent:"אירופה",          lat:48.2,  lon:16.37,  pop:"כ-9 מיליון",     lang:"גרמנית",                   landmark:"ארמון שנברון 🏰",            fact:"מוצרט נולד באוסטריה והתחיל לנגן בפסנתר כשהיה בן חמש!" },
-  { code:"ie", name:"אירלנד",       capital:"דבלין",        continent:"אירופה",          lat:53.35, lon:-6.26,  pop:"כ-5 מיליון",     lang:"אירית ואנגלית",            landmark:"צוקי מוהר 🌊",               fact:"לפי אגדה אירית, מי שתופס פיה בת מזל יזכה במשאלה!" },
-  { code:"ru", name:"רוסיה",        capital:"מוסקבה",       continent:"אירופה",          lat:55.75, lon:37.62,  pop:"כ-144 מיליון",   lang:"רוסית",                    landmark:"הכיכר האדומה 🏛️",           fact:"רוסיה כל כך גדולה שיש בה 11 אזורי זמן שונים!" },
-  { code:"sa", name:"ערב הסעודית",  capital:"ריאד",         continent:"אסיה",            lat:24.71, lon:46.68,  pop:"כ-36 מיליון",    lang:"ערבית",                    landmark:"מדבר הרוב הריק 🏜️",         fact:"בערב הסעודית יש מדבר חול ענק שהוא הגדול מסוגו בעולם!" },
-  { code:"ae", name:"איחוד האמירויות", capital:"אבו דאבי",  continent:"אסיה",            lat:24.47, lon:54.37,  pop:"כ-9.5 מיליון",   lang:"ערבית",                    landmark:"מגדל בורג' חליפה 🏙️",       fact:"בדובאי נמצא הבניין הגבוה בעולם!" },
-  { code:"kr", name:"דרום קוריאה",  capital:"סיאול",        continent:"אסיה",            lat:37.57, lon:126.98, pop:"כ-52 מיליון",    lang:"קוריאנית",                 landmark:"ארמון גיונגבוקגונג 🏯",     fact:"בדרום קוריאה כמעט לכולם יש אינטרנט מהיר במיוחד!" },
-  { code:"id", name:"אינדונזיה",    capital:"ג'קרטה",       continent:"אסיה",            lat:-6.2,  lon:106.85, pop:"כ-277 מיליון",   lang:"אינדונזית",                landmark:"מקדש בורובודור 🛕",          fact:"אינדונזיה מורכבת מיותר מ-17,000 איים!" },
-  { code:"vn", name:"וייטנאם",      capital:"האנוי",        continent:"אסיה",            lat:21.03, lon:105.85, pop:"כ-98 מיליון",    lang:"וייטנאמית",                landmark:"מפרץ הלונג ביי 🚣",          fact:"בווייטנאם יש שדות אורז ירוקים שנראים כמו מדרגות ענק!" },
-  { code:"ph", name:"פיליפינים",    capital:"מנילה",        continent:"אסיה",            lat:14.6,  lon:120.98, pop:"כ-115 מיליון",   lang:"פיליפינית ואנגלית",        landmark:"מדרגות האורז של באנאווה 🌾", fact:"הפיליפינים מורכבים מיותר מ-7,000 איים!" },
-  { code:"ng", name:"ניגריה",       capital:"אבוג'ה",       continent:"אפריקה",          lat:9.08,  lon:7.4,    pop:"כ-223 מיליון",   lang:"אנגלית",                   landmark:"שוק הבלנים 🛍️",             fact:"ניגריה היא המדינה עם הכי הרבה תושבים באפריקה!" },
-  { code:"et", name:"אתיופיה",      capital:"אדיס אבבה",    continent:"אפריקה",          lat:9.03,  lon:38.74,  pop:"כ-126 מיליון",   lang:"אמהרית",                   landmark:"כנסיות הסלע בלליבלה ⛪",     fact:"באתיופיה יש לוח שנה משלהם עם 13 חודשים בשנה!" },
-  { code:"gh", name:"גאנה",         capital:"אקרה",         continent:"אפריקה",          lat:5.6,   lon:-0.19,  pop:"כ-34 מיליון",    lang:"אנגלית",                   landmark:"טירת קייפ קוסט 🏰",          fact:"גאנה הייתה המדינה הראשונה באפריקה שהשתחררה משלטון קולוניאלי!" },
-  { code:"cl", name:"צ'ילה",        capital:"סנטיאגו",      continent:"אמריקה הדרומית", lat:-33.45, lon:-70.67, pop:"כ-19.5 מיליון",  lang:"ספרדית",                   landmark:"איי הפסחא 🗿",               fact:"צ'ילה היא כל כך ארוכה וצרה שהיא נמתחת על פני 4,300 ק\"מ!" },
-  { code:"co", name:"קולומביה",     capital:"בוגוטה",       continent:"אמריקה הדרומית", lat:4.71,  lon:-74.07, pop:"כ-52 מיליון",    lang:"ספרדית",                   landmark:"העיר הצבעונית קרטחנה 🌈",    fact:"קולומביה מגדלת יותר פרחים מכל מדינה אחרת בעולם, חוץ מהולנד!" },
-  { code:"cu", name:"קובה",         capital:"הוואנה",       continent:"אמריקה הצפונית", lat:23.13, lon:-82.38, pop:"כ-11 מיליון",    lang:"ספרדית",                   landmark:"מכוניות עתיקות צבעוניות 🚗", fact:"בקובה עדיין נוהגים במכוניות צבעוניות מלפני עשרות שנים!" },
-  { code:"is", name:"איסלנד",       capital:"רייקיאוויק",   continent:"אירופה",          lat:64.15, lon:-21.94, pop:"כ-380 אלף",      lang:"איסלנדית",                 landmark:"מעיינות חמים גיאותרמיים ♨️", fact:"באיסלנד יש הרי געש וקרחונים אחד ליד השני!" },
-  { code:"dk", name:"דנמרק",        capital:"קופנהגן",      continent:"אירופה",          lat:55.68, lon:12.57,  pop:"כ-6 מיליון",     lang:"דנית",                     landmark:"פסל בת הים הקטנה 🧜‍♀️",      fact:"לגו הומצא בדנמרק!" },
-  { code:"be", name:"בלגיה",        capital:"בריסל",        continent:"אירופה",          lat:50.85, lon:4.35,   pop:"כ-11.7 מיליון",  lang:"צרפתית והולנדית",          landmark:"האטומיום 🔬",                fact:"בבלגיה יש יותר מ-1,000 סוגים שונים של בירה!" },
-  { code:"ua", name:"אוקראינה",     capital:"קייב",         continent:"אירופה",          lat:50.45, lon:30.52,  pop:"כ-38 מיליון",    lang:"אוקראינית",                landmark:"כיכר העצמאות 🏛️",           fact:"אוקראינה היא אחת מיצרניות החיטה הגדולות בעולם!" },
-  { code:"jo", name:"ירדן",         capital:"עמאן",         continent:"אסיה",            lat:31.95, lon:35.93,  pop:"כ-11 מיליון",    lang:"ערבית",                    landmark:"העיר הוורודה פטרה 🏛️",      fact:"העיר פטרה בירדן פוסלה ישירות מתוך הסלע לפני אלפי שנים!" },
-  { code:"cz", name:"צ'כיה",        capital:"פראג",         continent:"אירופה",          lat:50.08, lon:14.44,  pop:"כ-10.5 מיליון",  lang:"צ'כית",                    landmark:"הגשר קרלוב 🌉",              fact:"בפראג יש שעון אסטרונומי עתיק שעדיין עובד אחרי 600 שנה!" },
-  { code:"hu", name:"הונגריה",      capital:"בודפשט",       continent:"אירופה",          lat:47.5,  lon:19.05,  pop:"כ-9.6 מיליון",   lang:"הונגרית",                  landmark:"בניין הפרלמנט ההונגרי 🏛️",  fact:"בבודפשט יש מעיינות חמים טבעיים שאפשר לשחות בהם בתוך העיר!" },
-  { code:"ro", name:"רומניה",       capital:"בוקרשט",       continent:"אירופה",          lat:44.43, lon:26.10,  pop:"כ-19 מיליון",    lang:"רומנית",                   landmark:"טירת דרקולה בברן 🏰",        fact:"ברומניה נמצאת הטירה שהשראתה את סיפור דרקולה!" },
-  { code:"bg", name:"בולגריה",      capital:"סופיה",        continent:"אירופה",          lat:42.70, lon:23.32,  pop:"כ-6.4 מיליון",   lang:"בולגרית",                  landmark:"הרי הוורדים 🌹",             fact:"בבולגריה מגדלים המון ורדים ומייצרים מהם בושם מיוחד!" },
-  { code:"hr", name:"קרואטיה",      capital:"זאגרב",        continent:"אירופה",          lat:45.82, lon:15.98,  pop:"כ-3.9 מיליון",   lang:"קרואטית",                  landmark:"העיר דוברובניק 🏖️",         fact:"העיר דוברובניק בקרואטיה שימשה כתפאורה בסדרות טלוויזיה מפורסמות!" },
-  { code:"rs", name:"סרביה",        capital:"בלגרד",        continent:"אירופה",          lat:44.79, lon:20.45,  pop:"כ-6.6 מיליון",   lang:"סרבית",                    landmark:"מבצר קלמגדן 🏯",             fact:"בלגרד נבנתה במקום שבו נפגשים שני נהרות גדולים!" },
-  { code:"sk", name:"סלובקיה",      capital:"ברטיסלבה",     continent:"אירופה",          lat:48.15, lon:17.11,  pop:"כ-5.4 מיליון",   lang:"סלובקית",                  landmark:"טירת ברטיסלבה 🏰",           fact:"סלובקיה קרובה כל כך לשלוש מדינות שאפשר לראות את כולן מגבעה אחת!" },
-  { code:"si", name:"סלובניה",      capital:"לובליאנה",     continent:"אירופה",          lat:46.06, lon:14.51,  pop:"כ-2.1 מיליון",   lang:"סלובנית",                  landmark:"מערת הענק פוסטויna 🕳️",     fact:"בסלובניה יש מערות ענקיות עם רכבת שנוסעת בפנים!" },
-  { code:"lt", name:"ליטא",         capital:"וילנה",        continent:"אירופה",          lat:54.69, lon:25.28,  pop:"כ-2.7 מיליון",   lang:"ליטאית",                   landmark:"העיר העתיקה של וילנה 🏘️",   fact:"ליטא הייתה המדינה האחרונה באירופה שהפכה לנוצרית!" },
-  { code:"lv", name:"לטביה",        capital:"ריגה",         continent:"אירופה",          lat:56.95, lon:24.11,  pop:"כ-1.8 מיליון",   lang:"לטבית",                    landmark:"בנייני האר-נובו ברִיגָה 🏛️", fact:"בריגה יש אחד מאוספי בנייני האר-נובו הגדולים בעולם!" },
-  { code:"ee", name:"אסטוניה",      capital:"טאלין",        continent:"אירופה",          lat:59.44, lon:24.75,  pop:"כ-1.3 מיליון",   lang:"אסטונית",                  landmark:"העיר העתיקה של טאלין 🏰",    fact:"אסטוניה הייתה מהמדינות הראשונות בעולם שאפשרו להצביע דרך האינטרנט!" },
-  { code:"my", name:"מלזיה",        capital:"קואלה לומפור", continent:"אסיה",            lat:3.14,  lon:101.69, pop:"כ-34 מיליון",    lang:"מלאית",                    landmark:"מגדלי התאומים פטרונס 🏙️",   fact:"במלזיה יש יערות גשם עתיקים יותר מהיערות באמזונס!" },
-  { code:"sg", name:"סינגפור",      capital:"סינגפור",      continent:"אסיה",            lat:1.35,  lon:103.82, pop:"כ-6 מיליון",     lang:"מלאית, אנגלית וסינית",     landmark:"גני מפרץ 'גארדנס ביי דה ביי' 🌳", fact:"סינגפור היא גם מדינה וגם עיר אחת גדולה!" },
-  { code:"bd", name:"בנגלדש",       capital:"דאקה",         continent:"אסיה",            lat:23.81, lon:90.41,  pop:"כ-173 מיליון",   lang:"בנגלית",                   landmark:"יער המנגרובים הסונדרבנס 🐅", fact:"בבנגלדש נמצא יער המנגרובים הגדול בעולם, ובו חיים נמרים!" },
-  { code:"pk", name:"פקיסטן",       capital:"איסלאמאבאד",   continent:"אסיה",            lat:33.68, lon:73.05,  pop:"כ-241 מיליון",   lang:"אורדו",                    landmark:"הר ק2 🏔️",                  fact:"בפקיסטן נמצא ק2, ההר השני בגובהו בעולם!" },
-  { code:"ir", name:"איראן",        capital:"טהראן",        continent:"אסיה",            lat:35.69, lon:51.39,  pop:"כ-89 מיליון",    lang:"פרסית",                    landmark:"כיכר נקש-א-ג'האן 🕌",        fact:"באיראן יש שטיחים מפורסמים שאורכים חודשים ארוכים לארוג!" },
-  { code:"iq", name:"עיראק",        capital:"בגדד",         continent:"אסיה",            lat:33.31, lon:44.36,  pop:"כ-45 מיליון",    lang:"ערבית",                    landmark:"העיר העתיקה בבל 🏛️",        fact:"בעיראק נמצאת בבל העתיקה, אחת הערים העתיקות בהיסטוריה!" },
-  { code:"lb", name:"לבנון",        capital:"ביירות",       continent:"אסיה",            lat:33.89, lon:35.50,  pop:"כ-5.5 מיליון",   lang:"ערבית",                    landmark:"ארזי לבנון 🌲",              fact:"עצי הארז הענקיים של לבנון מוזכרים בסיפורים בני אלפי שנים!" },
-  { code:"qa", name:"קטאר",         capital:"דוחא",         continent:"אסיה",            lat:25.29, lon:51.53,  pop:"כ-2.7 מיליון",   lang:"ערבית",                    landmark:"מגדלי דוחא 🏙️",             fact:"קטאר אירחה את גביע העולם בכדורגל בשנת 2022!" },
-  { code:"kw", name:"כווית",        capital:"כווית סיטי",   continent:"אסיה",            lat:29.38, lon:47.99,  pop:"כ-4.3 מיליון",   lang:"ערבית",                    landmark:"מגדלי כווית 🗼",             fact:"בכווית יש שלושה מגדלי מים ענקיים שנראים כמו חלל!" },
-  { code:"om", name:"עומאן",        capital:"מוסקט",        continent:"אסיה",            lat:23.59, lon:58.38,  pop:"כ-4.6 מיליון",   lang:"ערבית",                    landmark:"מסגד השולטן קאבוס 🕌",       fact:"בעומאן יש קניונים ענקיים במדבר שנקראים 'ואדיות'!" },
-  { code:"dz", name:"אלג'יריה",     capital:"אלג'יר",       continent:"אפריקה",          lat:36.75, lon:3.06,   pop:"כ-45 מיליון",    lang:"ערבית",                    landmark:"מדבר הסהרה 🏜️",             fact:"אלג'יריה היא המדינה הכי גדולה באפריקה!" },
-  { code:"tn", name:"תוניסיה",      capital:"תוניס",        continent:"אפריקה",          lat:36.81, lon:10.18,  pop:"כ-12 מיליון",    lang:"ערבית",                    landmark:"העיר העתיקה קרתגו 🏛️",      fact:"בתוניסיה צולמו סצנות מפורסמות מסרטי מדע בדיוני!" },
-  { code:"ly", name:"לוב",          capital:"טריפולי",      continent:"אפריקה",          lat:32.89, lon:13.19,  pop:"כ-6.8 מיליון",   lang:"ערבית",                    landmark:"חורבות לפטיס מגנה 🏛️",      fact:"בלוב יש חלק גדול מהמדבר הסהרה עם דיונות חול ענקיות!" },
-  { code:"uy", name:"אורוגוואי",    capital:"מונטווידאו",   continent:"אמריקה הדרומית", lat:-34.90, lon:-56.19, pop:"כ-3.5 מיליון",   lang:"ספרדית",                   landmark:"חוף פונטה דל אסטה 🏖️",      fact:"באורוגוואי יש יותר פרות מאנשים!" },
-  { code:"py", name:"פרגוואי",      capital:"אסונסיון",     continent:"אמריקה הדרומית", lat:-25.30, lon:-57.64, pop:"כ-6.9 מיליון",   lang:"ספרדית וגוארני",           landmark:"סכר איטאיפו הענק 💧",        fact:"בפרגוואי יש אחד הסכרים הגדולים בעולם, שמייצר חשמל לשתי מדינות!" },
-  { code:"bo", name:"בוליביה",      capital:"לה פאס",       continent:"אמריקה הדרומית", lat:-16.5,  lon:-68.15, pop:"כ-12 מיליון",    lang:"ספרדית",                   landmark:"מישור המלח סלאר דה אויוני 🧂", fact:"בבוליביה יש מדבר מלח ענק שנראה כמו מראה אינסופית!" },
-  { code:"ec", name:"אקוודור",      capital:"קיטו",         continent:"אמריקה הדרומית", lat:-0.23,  lon:-78.52, pop:"כ-18 מיליון",    lang:"ספרדית",                   landmark:"איי גלפאגוס 🐢",             fact:"קו המשווה עובר ממש דרך אקוודור — משם בא שם המדינה!" },
-  { code:"ve", name:"ונצואלה",      capital:"קראקס",        continent:"אמריקה הדרומית", lat:10.48,  lon:-66.90, pop:"כ-28 מיליון",    lang:"ספרדית",                   landmark:"מפל אנחל 💦",                fact:"בוונצואלה נמצא המפל הגבוה בעולם — אנחל!" },
-  { code:"pa", name:"פנמה",         capital:"פנמה סיטי",    continent:"אמריקה הצפונית", lat:8.98,   lon:-79.52, pop:"כ-4.4 מיליון",   lang:"ספרדית",                   landmark:"תעלת פנמה 🚢",               fact:"תעלת פנמה מחברת בין שני אוקיינוסים, ואוניות עוברות דרכה כל יום!" },
-  { code:"cr", name:"קוסטה ריקה",   capital:"סן חוזה",      continent:"אמריקה הצפונית", lat:9.93,   lon:-84.09, pop:"כ-5.2 מיליון",   lang:"ספרדית",                   landmark:"יערות הגשם הטרופיים 🐸",     fact:"בקוסטה ריקה אין צבא בכלל — כל הכסף הולך לחינוך ולטבע!" },
-  { code:"gt", name:"גואטמלה",      capital:"גואטמלה סיטי", continent:"אמריקה הצפונית", lat:14.63,  lon:-90.51, pop:"כ-18 מיליון",    lang:"ספרדית",                   landmark:"פירמידות המאיה בטיקאל 🛕",   fact:"בגואטמלה יש עיר מאיה עתיקה עם פירמידות בתוך היער!" },
-  { code:"hn", name:"הונדורס",      capital:"טגוסיגלפה",    continent:"אמריקה הצפונית", lat:14.10,  lon:-87.22, pop:"כ-10.5 מיליון",  lang:"ספרדית",                   landmark:"שוניות האלמוגים ברואטן 🐠",  fact:"בהונדורס יש שונית האלמוגים השנייה בגודלה בעולם!" },
-  { code:"do", name:"הרפובליקה הדומיניקנית", capital:"סנטו דומינגו", continent:"אמריקה הצפונית", lat:18.49, lon:-69.94, pop:"כ-11 מיליון", lang:"ספרדית",             landmark:"העיר העתיקה סנטו דומינגו 🏰", fact:"בסנטו דומינגו נמצא הרחוב הקולוניאלי העתיק ביותר ביבשת אמריקה!" },
-  { code:"jm", name:"ג'מייקה",      capital:"קינגסטון",     continent:"אמריקה הצפונית", lat:18.02,  lon:-76.80, pop:"כ-2.8 מיליון",   lang:"אנגלית",                   landmark:"מפלי דאנס ריבר 💦",          fact:"מוזיקת הרגאיי הומצאה בג'מייקה!" },
-  { code:"tt", name:"טרינידד וטובגו", capital:"פורט אוף ספיין", continent:"אמריקה הצפונית", lat:10.65, lon:-61.52, pop:"כ-1.5 מיליון",  lang:"אנגלית",                   landmark:"אגם הזפת הטבעי 🖤",          fact:"בטרינידד יש אגם זפת טבעי — הגדול מסוגו בעולם!" },
-  { code:"fj", name:"פיג'י",        capital:"סובה",         continent:"אוקיאניה",        lat:-18.14, lon:178.44, pop:"כ-930 אלף",      lang:"פיג'ית ואנגלית",           landmark:"שוניות אלמוגים צבעוניות 🐠", fact:"פיג'י מורכבת מיותר מ-300 איים טרופיים!" },
-  { code:"pg", name:"פפואה גינאה החדשה", capital:"פורט מורסבי", continent:"אוקיאניה",     lat:-9.48,  lon:147.15, pop:"כ-10 מיליון",    lang:"אנגלית וטוק פיסין",        landmark:"יערות הגשם ההרריים 🌋",      fact:"בפפואה גינאה החדשה מדברים יותר מ-800 שפות שונות — יותר מכל מדינה אחרת בעולם!" },
-  { code:"lk", name:"סרי לנקה",     capital:"קולומבו",      continent:"אסיה",            lat:6.93,   lon:79.85,  pop:"כ-22 מיליון",    lang:"סינהלית וטמילית",          landmark:"מבצר הסלע סיגיריה 🗿",       fact:"בסרי לנקה יש מבצר עתיק שנבנה על צוק סלע ענק!" },
-  { code:"np", name:"נפאל",         capital:"קטמנדו",       continent:"אסיה",            lat:27.72,  lon:85.32,  pop:"כ-30 מיליון",    lang:"נפאלית",                   landmark:"הר האוורסט 🏔️",             fact:"בנפאל נמצא האוורסט — ההר הגבוה בעולם!" },
-  { code:"mm", name:"מיאנמר",       capital:"נאיפידאו",     continent:"אסיה",            lat:19.76,  lon:96.08,  pop:"כ-55 מיליון",    lang:"בורמזית",                  landmark:"פגודת שוודגון הזהובה 🛕",    fact:"במיאנמר יש אלפי מקדשים עתיקים בעיר אחת — באגאן!" },
-  { code:"kh", name:"קמבודיה",      capital:"פנום פן",      continent:"אסיה",            lat:11.55,  lon:104.92, pop:"כ-17 מיליון",    lang:"חמרית",                    landmark:"מקדשי אנגקור וואט 🛕",       fact:"אנגקור וואט בקמבודיה הוא המבנה הדתי הגדול בעולם!" },
-  { code:"la", name:"לאוס",         capital:"וייאנטיאן",    continent:"אסיה",            lat:17.97,  lon:102.60, pop:"כ-7.6 מיליון",   lang:"לאית",                     landmark:"מפלי קואנג סי 💦",           fact:"בלאוס יש מפלים בצבע טורקיז מדהים!" },
-  { code:"mn", name:"מונגוליה",     capital:"אולן באתור",   continent:"אסיה",            lat:47.89,  lon:106.91, pop:"כ-3.4 מיליון",   lang:"מונגולית",                 landmark:"מדבר גובי הענק 🐪",          fact:"במונגוליה חיים יותר סוסים מאנשים!" },
-  { code:"kz", name:"קזחסטן",       capital:"אסטנה",        continent:"אסיה",            lat:51.17,  lon:71.43,  pop:"כ-20 מיליון",    lang:"קזחית ורוסית",             landmark:"ערבות הענק 🌾",              fact:"קזחסטן היא המדינה הכי גדולה בעולם שאין לה יציאה לים!" },
-  { code:"uz", name:"אוזבקיסטן",    capital:"טשקנט",        continent:"אסיה",            lat:41.30,  lon:69.24,  pop:"כ-35 מיליון",    lang:"אוזבקית",                  landmark:"העיר העתיקה סמרקנד 🕌",      fact:"העיר סמרקנד באוזבקיסטן הייתה תחנה חשובה בדרך המשי!" },
-  { code:"ge", name:"גאורגיה",      capital:"טביליסי",      continent:"אסיה",            lat:41.72,  lon:44.79,  pop:"כ-3.7 מיליון",   lang:"גאורגית",                  landmark:"הרי הקווקז 🏔️",             fact:"בגאורגיה מייצרים יין כבר יותר מ-8,000 שנה — אחד המקומות הראשונים בעולם!" },
-  { code:"am", name:"ארמניה",       capital:"ירואן",        continent:"אסיה",            lat:40.18,  lon:44.51,  pop:"כ-3 מיליון",     lang:"ארמנית",                   landmark:"הר אררט הנשקף מהעיר 🏔️",    fact:"ארמניה הייתה המדינה הראשונה בעולם שהכריזה על הנצרות כדת רשמית!" },
-  { code:"az", name:"אזרבייג'ן",    capital:"באקו",         continent:"אסיה",            lat:40.41,  lon:49.87,  pop:"כ-10 מיליון",    lang:"אזרית",                    landmark:"מגדלי האש 🔥",               fact:"באזרבייג'ן יש מקומות שבהם אש בוערת ישירות מהאדמה בלי הפסקה!" },
+  { code:"il", name:{he:"ישראל",en:"Israel"}, capital:{he:"ירושלים",en:"Jerusalem"}, continent:{he:"אסיה",en:"Asia"}, lat:31.8, lon:35.2, pop:{he:"כ-10 מיליון",en:"~10 million"}, lang:{he:"עברית",en:"Hebrew"}, landmark:{he:"הכותל המערבי 🕍",en:"Western Wall 🕍"}, fact:{he:"ים המלח בישראל הוא המקום הנמוך ביותר בעולם!",en:"The Dead Sea in Israel is the lowest point on Earth!"} },
+  { code:"us", name:{he:"ארצות הברית",en:"United States"}, capital:{he:"וושינגטון",en:"Washington"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:38.9, lon:-77.0, pop:{he:"כ-335 מיליון",en:"~335 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"פסל החירות 🗽",en:"Statue of Liberty 🗽"}, fact:{he:"בארצות הברית יש 50 מדינות — וכוכב אחד בדגל לכל אחת!",en:"The United States has 50 states — one star on the flag for each!"} },
+  { code:"fr", name:{he:"צרפת",en:"France"}, capital:{he:"פריז",en:"Paris"}, continent:{he:"אירופה",en:"Europe"}, lat:48.9, lon:2.35, pop:{he:"כ-68 מיליון",en:"~68 million"}, lang:{he:"צרפתית",en:"French"}, landmark:{he:"מגדל אייפל 🗼",en:"Eiffel Tower 🗼"}, fact:{he:"מגדל אייפל בפריז נבנה לפני יותר מ-130 שנה!",en:"The Eiffel Tower in Paris was built more than 130 years ago!"} },
+  { code:"it", name:{he:"איטליה",en:"Italy"}, capital:{he:"רומא",en:"Rome"}, continent:{he:"אירופה",en:"Europe"}, lat:41.9, lon:12.5, pop:{he:"כ-59 מיליון",en:"~59 million"}, lang:{he:"איטלקית",en:"Italian"}, landmark:{he:"הקולוסיאום 🏛️",en:"The Colosseum 🏛️"}, fact:{he:"איטליה נראית במפה כמו מגף ענק! והפיצה הומצאה שם 🍕",en:"Italy looks like a giant boot on the map! And that's where pizza was invented 🍕"} },
+  { code:"es", name:{he:"ספרד",en:"Spain"}, capital:{he:"מדריד",en:"Madrid"}, continent:{he:"אירופה",en:"Europe"}, lat:40.4, lon:-3.7, pop:{he:"כ-48 מיליון",en:"~48 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"סגרדה פמיליה ⛪",en:"Sagrada Familia ⛪"}, fact:{he:"בספרד נהוגה שנת צהריים שנקראת 'סייסטה'!",en:"In Spain people take an afternoon nap called a 'siesta'!"} },
+  { code:"gb", name:{he:"בריטניה",en:"United Kingdom"}, capital:{he:"לונדון",en:"London"}, continent:{he:"אירופה",en:"Europe"}, lat:51.5, lon:-0.13, pop:{he:"כ-68 מיליון",en:"~68 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"ביג בן 🕰️",en:"Big Ben 🕰️"}, fact:{he:"בלונדון יש שעון ענק ומפורסם שנקרא ביג בן!",en:"London has a huge, famous clock called Big Ben!"} },
+  { code:"de", name:{he:"גרמניה",en:"Germany"}, capital:{he:"ברלין",en:"Berlin"}, continent:{he:"אירופה",en:"Europe"}, lat:52.5, lon:13.4, pop:{he:"כ-84 מיליון",en:"~84 million"}, lang:{he:"גרמנית",en:"German"}, landmark:{he:"שער ברנדנבורג 🏛️",en:"Brandenburg Gate 🏛️"}, fact:{he:"בגרמניה יש יותר מ-1,500 סוגים של נקניקיות!",en:"Germany has more than 1,500 kinds of sausages!"} },
+  { code:"gr", name:{he:"יוון",en:"Greece"}, capital:{he:"אתונה",en:"Athens"}, continent:{he:"אירופה",en:"Europe"}, lat:38.0, lon:23.7, pop:{he:"כ-10 מיליון",en:"~10 million"}, lang:{he:"יוונית",en:"Greek"}, landmark:{he:"האקרופוליס 🏛️",en:"The Acropolis 🏛️"}, fact:{he:"המשחקים האולימפיים הומצאו ביוון לפני אלפי שנים!",en:"The Olympic Games were invented in Greece thousands of years ago!"} },
+  { code:"jp", name:{he:"יפן",en:"Japan"}, capital:{he:"טוקיו",en:"Tokyo"}, continent:{he:"אסיה",en:"Asia"}, lat:35.7, lon:139.7, pop:{he:"כ-124 מיליון",en:"~124 million"}, lang:{he:"יפנית",en:"Japanese"}, landmark:{he:"הר פוג'י 🗻",en:"Mount Fuji 🗻"}, fact:{he:"ביפן יש רכבות סופר-מהירות שנוסעות 320 קמ\\\"ש!",en:"Japan has super-fast trains that zoom along at 320 km/h!"} },
+  { code:"cn", name:{he:"סין",en:"China"}, capital:{he:"בייג'ינג",en:"Beijing"}, continent:{he:"אסיה",en:"Asia"}, lat:39.9, lon:116.4, pop:{he:"כ-1.4 מיליארד",en:"~1.4 billion"}, lang:{he:"סינית",en:"Chinese"}, landmark:{he:"החומה הגדולה 🧱",en:"The Great Wall 🧱"}, fact:{he:"החומה הסינית כל כך ארוכה שאפשר ללכת עליה חודשים!",en:"The Great Wall of China is so long you could walk it for months!"} },
+  { code:"in", name:{he:"הודו",en:"India"}, capital:{he:"ניו דלהי",en:"New Delhi"}, continent:{he:"אסיה",en:"Asia"}, lat:28.6, lon:77.2, pop:{he:"כ-1.4 מיליארד",en:"~1.4 billion"}, lang:{he:"הינדי ואנגלית",en:"Hindi and English"}, landmark:{he:"הטאג' מהאל 🕌",en:"Taj Mahal 🕌"}, fact:{he:"בהודו חיים יותר ממיליארד אנשים — והמון פילים! 🐘",en:"More than a billion people live in India — and tons of elephants! 🐘"} },
+  { code:"th", name:{he:"תאילנד",en:"Thailand"}, capital:{he:"בנגקוק",en:"Bangkok"}, continent:{he:"אסיה",en:"Asia"}, lat:13.75, lon:100.5, pop:{he:"כ-72 מיליון",en:"~72 million"}, lang:{he:"תאית",en:"Thai"}, landmark:{he:"הארמון הגדול 👑",en:"The Grand Palace 👑"}, fact:{he:"בתאילנד אומרים שלום עם הידיים צמודות — 'סוואדי!'",en:"In Thailand people greet each other with hands pressed together, saying 'sawadee!'"} },
+  { code:"tr", name:{he:"טורקיה",en:"Turkey"}, capital:{he:"אנקרה",en:"Ankara"}, continent:{he:"אסיה",en:"Asia"}, lat:39.9, lon:32.85, pop:{he:"כ-85 מיליון",en:"~85 million"}, lang:{he:"טורקית",en:"Turkish"}, landmark:{he:"איה סופיה 🕌",en:"Hagia Sophia 🕌"}, fact:{he:"בטורקיה יש עיר שנמצאת בשתי יבשות בו-זמנית!",en:"Turkey has a city that sits on two continents at the same time!"} },
+  { code:"eg", name:{he:"מצרים",en:"Egypt"}, capital:{he:"קהיר",en:"Cairo"}, continent:{he:"אפריקה",en:"Africa"}, lat:30.0, lon:31.2, pop:{he:"כ-106 מיליון",en:"~106 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"הפירמידות 🔺",en:"The Pyramids 🔺"}, fact:{he:"הפירמידות במצרים נבנו לפני יותר מ-4,500 שנה!",en:"The pyramids of Egypt were built more than 4,500 years ago!"} },
+  { code:"ke", name:{he:"קניה",en:"Kenya"}, capital:{he:"ניירובי",en:"Nairobi"}, continent:{he:"אפריקה",en:"Africa"}, lat:-1.3, lon:36.8, pop:{he:"כ-55 מיליון",en:"~55 million"}, lang:{he:"סוואהילית ואנגלית",en:"Swahili and English"}, landmark:{he:"ספארי מסאי מארה 🦁",en:"Maasai Mara safari 🦁"}, fact:{he:"בקניה אפשר לראות אריות, ג'ירפות ופילים בטבע!",en:"In Kenya you can spot lions, giraffes, and elephants roaming wild!"} },
+  { code:"za", name:{he:"דרום אפריקה",en:"South Africa"}, capital:{he:"פרטוריה",en:"Pretoria"}, continent:{he:"אפריקה",en:"Africa"}, lat:-25.7, lon:28.2, pop:{he:"כ-60 מיליון",en:"~60 million"}, lang:{he:"11 שפות רשמיות!",en:"11 official languages!"}, landmark:{he:"הר השולחן ⛰️",en:"Table Mountain ⛰️"}, fact:{he:"בדרום אפריקה חיים פינגווינים על החוף!",en:"Penguins live right on the beach in South Africa!"} },
+  { code:"ma", name:{he:"מרוקו",en:"Morocco"}, capital:{he:"רבאט",en:"Rabat"}, continent:{he:"אפריקה",en:"Africa"}, lat:34.0, lon:-6.8, pop:{he:"כ-37 מיליון",en:"~37 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"העיר הכחולה שפשאוון 💙",en:"The blue city of Chefchaouen 💙"}, fact:{he:"במרוקו יש שוק ענק וצבעוני שנקרא 'שוק מראקש'!",en:"Morocco has a huge, colorful market called the souk of Marrakesh!"} },
+  { code:"br", name:{he:"ברזיל",en:"Brazil"}, capital:{he:"ברזיליה",en:"Brasília"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-15.8, lon:-47.9, pop:{he:"כ-216 מיליון",en:"~216 million"}, lang:{he:"פורטוגזית",en:"Portuguese"}, landmark:{he:"פסל ישו הגואל ⛰️",en:"Christ the Redeemer statue ⛰️"}, fact:{he:"בברזיל נמצא יער האמזונס — היער הגדול בעולם!",en:"Brazil is home to the Amazon rainforest — the biggest forest in the world!"} },
+  { code:"ar", name:{he:"ארגנטינה",en:"Argentina"}, capital:{he:"בואנוס איירס",en:"Buenos Aires"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-34.6, lon:-58.4, pop:{he:"כ-46 מיליון",en:"~46 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"מפלי איגואסו 💦",en:"Iguazu Falls 💦"}, fact:{he:"בארגנטינה רוקדים ריקוד מפורסם שנקרא טנגו!",en:"Argentina is famous for a dance called the tango!"} },
+  { code:"pe", name:{he:"פרו",en:"Peru"}, capital:{he:"לימה",en:"Lima"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-12.0, lon:-77.0, pop:{he:"כ-34 מיליון",en:"~34 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"מאצ'ו פיצ'ו ⛰️",en:"Machu Picchu ⛰️"}, fact:{he:"בפרו יש עיר עתיקה בהרים שנקראת מאצ'ו פיצ'ו!",en:"Peru has an ancient mountain city called Machu Picchu!"} },
+  { code:"mx", name:{he:"מקסיקו",en:"Mexico"}, capital:{he:"מקסיקו סיטי",en:"Mexico City"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:19.4, lon:-99.1, pop:{he:"כ-128 מיליון",en:"~128 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"פירמידות המאיה 🛕",en:"Mayan pyramids 🛕"}, fact:{he:"המקסיקנים המציאו את השוקולד לפני אלפי שנים! 🍫",en:"The Mexicans invented chocolate thousands of years ago! 🍫"} },
+  { code:"ca", name:{he:"קנדה",en:"Canada"}, capital:{he:"אוטווה",en:"Ottawa"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:45.4, lon:-75.7, pop:{he:"כ-39 מיליון",en:"~39 million"}, lang:{he:"אנגלית וצרפתית",en:"English and French"}, landmark:{he:"מפלי הניאגרה 💦",en:"Niagara Falls 💦"}, fact:{he:"בקנדה יש יותר אגמים מבכל שאר העולם ביחד!",en:"Canada has more lakes than the rest of the world put together!"} },
+  { code:"au", name:{he:"אוסטרליה",en:"Australia"}, capital:{he:"קנברה",en:"Canberra"}, continent:{he:"אוקיאניה",en:"Oceania"}, lat:-35.3, lon:149.1, pop:{he:"כ-26 מיליון",en:"~26 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"בית האופרה של סידני 🎭",en:"Sydney Opera House 🎭"}, fact:{he:"רק באוסטרליה חיים קנגורו וקואלה בטבע!",en:"Kangaroos and koalas live in the wild only in Australia!"} },
+  { code:"nz", name:{he:"ניו זילנד",en:"New Zealand"}, capital:{he:"וולינגטון",en:"Wellington"}, continent:{he:"אוקיאניה",en:"Oceania"}, lat:-41.3, lon:174.8, pop:{he:"כ-5 מיליון",en:"~5 million"}, lang:{he:"אנגלית ומאורית",en:"English and Māori"}, landmark:{he:"הרי שר הטבעות 🏔️",en:"The Lord of the Rings mountains 🏔️"}, fact:{he:"בניו זילנד יש יותר כבשים מאשר בני אדם!",en:"New Zealand has more sheep than people!"} },
+  { code:"nl", name:{he:"הולנד",en:"Netherlands"}, capital:{he:"אמסטרדם",en:"Amsterdam"}, continent:{he:"אירופה",en:"Europe"}, lat:52.4, lon:4.9, pop:{he:"כ-18 מיליון",en:"~18 million"}, lang:{he:"הולנדית",en:"Dutch"}, landmark:{he:"טחנות הרוח 🌬️",en:"Windmills 🌬️"}, fact:{he:"בהולנד יש יותר אופניים מאשר אנשים! 🚲",en:"The Netherlands has more bikes than people! 🚲"} },
+  { code:"ch", name:{he:"שווייץ",en:"Switzerland"}, capital:{he:"ברן",en:"Bern"}, continent:{he:"אירופה",en:"Europe"}, lat:46.9, lon:7.4, pop:{he:"כ-9 מיליון",en:"~9 million"}, lang:{he:"גרמנית, צרפתית ואיטלקית",en:"German, French, and Italian"}, landmark:{he:"הרי האלפים 🏔️",en:"The Alps 🏔️"}, fact:{he:"בשווייץ מכינים את השוקולד המפורסם בעולם!",en:"Switzerland makes some of the world's most famous chocolate!"} },
+  { code:"pt", name:{he:"פורטוגל",en:"Portugal"}, capital:{he:"ליסבון",en:"Lisbon"}, continent:{he:"אירופה",en:"Europe"}, lat:38.7, lon:-9.14, pop:{he:"כ-10 מיליון",en:"~10 million"}, lang:{he:"פורטוגזית",en:"Portuguese"}, landmark:{he:"מגדל בלם 🗼",en:"Belém Tower 🗼"}, fact:{he:"פורטוגל היא אחת המדינות העתיקות ביותר באירופה עם אותם גבולות!",en:"Portugal is one of the oldest countries in Europe — with the same borders for centuries!"} },
+  { code:"se", name:{he:"שוודיה",en:"Sweden"}, capital:{he:"שטוקהולם",en:"Stockholm"}, continent:{he:"אירופה",en:"Europe"}, lat:59.33, lon:18.07, pop:{he:"כ-10.5 מיליון",en:"~10.5 million"}, lang:{he:"שוודית",en:"Swedish"}, landmark:{he:"העיר העתיקה גמלה סטן 🏘️",en:"The old town Gamla Stan 🏘️"}, fact:{he:"בשוודיה יש חוק שמאפשר לכולם לחנות ולטייל כמעט בכל מקום בטבע!",en:"Sweden has a law that lets anyone camp and hike almost anywhere in nature!"} },
+  { code:"no", name:{he:"נורווגיה",en:"Norway"}, capital:{he:"אוסלו",en:"Oslo"}, continent:{he:"אירופה",en:"Europe"}, lat:59.91, lon:10.75, pop:{he:"כ-5.5 מיליון",en:"~5.5 million"}, lang:{he:"נורווגית",en:"Norwegian"}, landmark:{he:"הפיורדים 🏔️",en:"The fjords 🏔️"}, fact:{he:"בנורווגיה יש מקומות שבהם השמש לא שוקעת בכלל בקיץ!",en:"In parts of Norway, the sun doesn't set at all in summer!"} },
+  { code:"fi", name:{he:"פינלנד",en:"Finland"}, capital:{he:"הלסינקי",en:"Helsinki"}, continent:{he:"אירופה",en:"Europe"}, lat:60.17, lon:24.94, pop:{he:"כ-5.5 מיליון",en:"~5.5 million"}, lang:{he:"פינית",en:"Finnish"}, landmark:{he:"ארץ אלף האגמים 🌊",en:"The land of a thousand lakes 🌊"}, fact:{he:"בפינלנד יש יותר סאונות מאשר מכוניות!",en:"Finland has more saunas than cars!"} },
+  { code:"pl", name:{he:"פולין",en:"Poland"}, capital:{he:"ורשה",en:"Warsaw"}, continent:{he:"אירופה",en:"Europe"}, lat:52.23, lon:21.01, pop:{he:"כ-38 מיליון",en:"~38 million"}, lang:{he:"פולנית",en:"Polish"}, landmark:{he:"מכרה המלח וייליצ'קה 🧂",en:"Wieliczka Salt Mine 🧂"}, fact:{he:"ליד קרקוב יש מכרה מלח עתיק שהוא כמו עיר שלמה מתחת לאדמה!",en:"Near Kraków there's an ancient salt mine that's like a whole city underground!"} },
+  { code:"at", name:{he:"אוסטריה",en:"Austria"}, capital:{he:"וינה",en:"Vienna"}, continent:{he:"אירופה",en:"Europe"}, lat:48.2, lon:16.37, pop:{he:"כ-9 מיליון",en:"~9 million"}, lang:{he:"גרמנית",en:"German"}, landmark:{he:"ארמון שנברון 🏰",en:"Schönbrunn Palace 🏰"}, fact:{he:"מוצרט נולד באוסטריה והתחיל לנגן בפסנתר כשהיה בן חמש!",en:"Mozart was born in Austria and started playing piano when he was just five!"} },
+  { code:"ie", name:{he:"אירלנד",en:"Ireland"}, capital:{he:"דבלין",en:"Dublin"}, continent:{he:"אירופה",en:"Europe"}, lat:53.35, lon:-6.26, pop:{he:"כ-5 מיליון",en:"~5 million"}, lang:{he:"אירית ואנגלית",en:"Irish and English"}, landmark:{he:"צוקי מוהר 🌊",en:"Cliffs of Moher 🌊"}, fact:{he:"לפי אגדה אירית, מי שתופס פיה בת מזל יזכה במשאלה!",en:"According to Irish legend, whoever catches a lucky fairy gets to make a wish!"} },
+  { code:"ru", name:{he:"רוסיה",en:"Russia"}, capital:{he:"מוסקבה",en:"Moscow"}, continent:{he:"אירופה",en:"Europe"}, lat:55.75, lon:37.62, pop:{he:"כ-144 מיליון",en:"~144 million"}, lang:{he:"רוסית",en:"Russian"}, landmark:{he:"הכיכר האדומה 🏛️",en:"Red Square 🏛️"}, fact:{he:"רוסיה כל כך גדולה שיש בה 11 אזורי זמן שונים!",en:"Russia is so big it spans 11 different time zones!"} },
+  { code:"sa", name:{he:"ערב הסעודית",en:"Saudi Arabia"}, capital:{he:"ריאד",en:"Riyadh"}, continent:{he:"אסיה",en:"Asia"}, lat:24.71, lon:46.68, pop:{he:"כ-36 מיליון",en:"~36 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מדבר הרוב הריק 🏜️",en:"The Empty Quarter desert 🏜️"}, fact:{he:"בערב הסעודית יש מדבר חול ענק שהוא הגדול מסוגו בעולם!",en:"Saudi Arabia has a huge sand desert — the largest of its kind in the world!"} },
+  { code:"ae", name:{he:"איחוד האמירויות",en:"United Arab Emirates"}, capital:{he:"אבו דאבי",en:"Abu Dhabi"}, continent:{he:"אסיה",en:"Asia"}, lat:24.47, lon:54.37, pop:{he:"כ-9.5 מיליון",en:"~9.5 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מגדל בורג' חליפה 🏙️",en:"Burj Khalifa tower 🏙️"}, fact:{he:"בדובאי נמצא הבניין הגבוה בעולם!",en:"The world's tallest building is in Dubai!"} },
+  { code:"kr", name:{he:"דרום קוריאה",en:"South Korea"}, capital:{he:"סיאול",en:"Seoul"}, continent:{he:"אסיה",en:"Asia"}, lat:37.57, lon:126.98, pop:{he:"כ-52 מיליון",en:"~52 million"}, lang:{he:"קוריאנית",en:"Korean"}, landmark:{he:"ארמון גיונגבוקגונג 🏯",en:"Gyeongbokgung Palace 🏯"}, fact:{he:"בדרום קוריאה כמעט לכולם יש אינטרנט מהיר במיוחד!",en:"Almost everyone in South Korea has super-fast internet!"} },
+  { code:"id", name:{he:"אינדונזיה",en:"Indonesia"}, capital:{he:"ג'קרטה",en:"Jakarta"}, continent:{he:"אסיה",en:"Asia"}, lat:-6.2, lon:106.85, pop:{he:"כ-277 מיליון",en:"~277 million"}, lang:{he:"אינדונזית",en:"Indonesian"}, landmark:{he:"מקדש בורובודור 🛕",en:"Borobudur Temple 🛕"}, fact:{he:"אינדונזיה מורכבת מיותר מ-17,000 איים!",en:"Indonesia is made up of more than 17,000 islands!"} },
+  { code:"vn", name:{he:"וייטנאם",en:"Vietnam"}, capital:{he:"האנוי",en:"Hanoi"}, continent:{he:"אסיה",en:"Asia"}, lat:21.03, lon:105.85, pop:{he:"כ-98 מיליון",en:"~98 million"}, lang:{he:"וייטנאמית",en:"Vietnamese"}, landmark:{he:"מפרץ הלונג ביי 🚣",en:"Ha Long Bay 🚣"}, fact:{he:"בווייטנאם יש שדות אורז ירוקים שנראים כמו מדרגות ענק!",en:"Vietnam has green rice fields that look like giant staircases!"} },
+  { code:"ph", name:{he:"פיליפינים",en:"Philippines"}, capital:{he:"מנילה",en:"Manila"}, continent:{he:"אסיה",en:"Asia"}, lat:14.6, lon:120.98, pop:{he:"כ-115 מיליון",en:"~115 million"}, lang:{he:"פיליפינית ואנגלית",en:"Filipino and English"}, landmark:{he:"מדרגות האורז של באנאווה 🌾",en:"Banaue Rice Terraces 🌾"}, fact:{he:"הפיליפינים מורכבים מיותר מ-7,000 איים!",en:"The Philippines is made up of more than 7,000 islands!"} },
+  { code:"ng", name:{he:"ניגריה",en:"Nigeria"}, capital:{he:"אבוג'ה",en:"Abuja"}, continent:{he:"אפריקה",en:"Africa"}, lat:9.08, lon:7.4, pop:{he:"כ-223 מיליון",en:"~223 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"שוק הבלנים 🛍️",en:"Balogun Market 🛍️"}, fact:{he:"ניגריה היא המדינה עם הכי הרבה תושבים באפריקה!",en:"Nigeria has more people than any other country in Africa!"} },
+  { code:"et", name:{he:"אתיופיה",en:"Ethiopia"}, capital:{he:"אדיס אבבה",en:"Addis Ababa"}, continent:{he:"אפריקה",en:"Africa"}, lat:9.03, lon:38.74, pop:{he:"כ-126 מיליון",en:"~126 million"}, lang:{he:"אמהרית",en:"Amharic"}, landmark:{he:"כנסיות הסלע בלליבלה ⛪",en:"Rock-hewn churches of Lalibela ⛪"}, fact:{he:"באתיופיה יש לוח שנה משלהם עם 13 חודשים בשנה!",en:"Ethiopia has its own calendar with 13 months in a year!"} },
+  { code:"gh", name:{he:"גאנה",en:"Ghana"}, capital:{he:"אקרה",en:"Accra"}, continent:{he:"אפריקה",en:"Africa"}, lat:5.6, lon:-0.19, pop:{he:"כ-34 מיליון",en:"~34 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"טירת קייפ קוסט 🏰",en:"Cape Coast Castle 🏰"}, fact:{he:"גאנה הייתה המדינה הראשונה באפריקה שהשתחררה משלטון קולוניאלי!",en:"Ghana was the first African country to gain independence from colonial rule!"} },
+  { code:"cl", name:{he:"צ'ילה",en:"Chile"}, capital:{he:"סנטיאגו",en:"Santiago"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-33.45, lon:-70.67, pop:{he:"כ-19.5 מיליון",en:"~19.5 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"איי הפסחא 🗿",en:"Easter Island 🗿"}, fact:{he:"צ'ילה היא כל כך ארוכה וצרה שהיא נמתחת על פני 4,300 ק\\\"מ!",en:"Chile is so long and skinny it stretches over 4,300 km!"} },
+  { code:"co", name:{he:"קולומביה",en:"Colombia"}, capital:{he:"בוגוטה",en:"Bogotá"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:4.71, lon:-74.07, pop:{he:"כ-52 מיליון",en:"~52 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"העיר הצבעונית קרטחנה 🌈",en:"The colorful city of Cartagena 🌈"}, fact:{he:"קולומביה מגדלת יותר פרחים מכל מדינה אחרת בעולם, חוץ מהולנד!",en:"Colombia grows more flowers than any country except the Netherlands!"} },
+  { code:"cu", name:{he:"קובה",en:"Cuba"}, capital:{he:"הוואנה",en:"Havana"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:23.13, lon:-82.38, pop:{he:"כ-11 מיליון",en:"~11 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"מכוניות עתיקות צבעוניות 🚗",en:"Colorful vintage cars 🚗"}, fact:{he:"בקובה עדיין נוהגים במכוניות צבעוניות מלפני עשרות שנים!",en:"In Cuba people still drive colorful cars from decades ago!"} },
+  { code:"is", name:{he:"איסלנד",en:"Iceland"}, capital:{he:"רייקיאוויק",en:"Reykjavik"}, continent:{he:"אירופה",en:"Europe"}, lat:64.15, lon:-21.94, pop:{he:"כ-380 אלף",en:"~380 thousand"}, lang:{he:"איסלנדית",en:"Icelandic"}, landmark:{he:"מעיינות חמים גיאותרמיים ♨️",en:"Geothermal hot springs ♨️"}, fact:{he:"באיסלנד יש הרי געש וקרחונים אחד ליד השני!",en:"Iceland has volcanoes and glaciers sitting right next to each other!"} },
+  { code:"dk", name:{he:"דנמרק",en:"Denmark"}, capital:{he:"קופנהגן",en:"Copenhagen"}, continent:{he:"אירופה",en:"Europe"}, lat:55.68, lon:12.57, pop:{he:"כ-6 מיליון",en:"~6 million"}, lang:{he:"דנית",en:"Danish"}, landmark:{he:"פסל בת הים הקטנה 🧜‍♀️",en:"The Little Mermaid statue 🧜‍♀️"}, fact:{he:"לגו הומצא בדנמרק!",en:"LEGO was invented in Denmark!"} },
+  { code:"be", name:{he:"בלגיה",en:"Belgium"}, capital:{he:"בריסל",en:"Brussels"}, continent:{he:"אירופה",en:"Europe"}, lat:50.85, lon:4.35, pop:{he:"כ-11.7 מיליון",en:"~11.7 million"}, lang:{he:"צרפתית והולנדית",en:"French and Dutch"}, landmark:{he:"האטומיום 🔬",en:"The Atomium 🔬"}, fact:{he:"בבלגיה יש יותר מ-1,000 סוגים שונים של בירה!",en:"Belgium has more than 1,000 different kinds of beer!"} },
+  { code:"ua", name:{he:"אוקראינה",en:"Ukraine"}, capital:{he:"קייב",en:"Kyiv"}, continent:{he:"אירופה",en:"Europe"}, lat:50.45, lon:30.52, pop:{he:"כ-38 מיליון",en:"~38 million"}, lang:{he:"אוקראינית",en:"Ukrainian"}, landmark:{he:"כיכר העצמאות 🏛️",en:"Independence Square 🏛️"}, fact:{he:"אוקראינה היא אחת מיצרניות החיטה הגדולות בעולם!",en:"Ukraine is one of the biggest wheat producers in the world!"} },
+  { code:"jo", name:{he:"ירדן",en:"Jordan"}, capital:{he:"עמאן",en:"Amman"}, continent:{he:"אסיה",en:"Asia"}, lat:31.95, lon:35.93, pop:{he:"כ-11 מיליון",en:"~11 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"העיר הוורודה פטרה 🏛️",en:"The rose-red city of Petra 🏛️"}, fact:{he:"העיר פטרה בירדן פוסלה ישירות מתוך הסלע לפני אלפי שנים!",en:"The city of Petra in Jordan was carved straight out of rock thousands of years ago!"} },
+  { code:"cz", name:{he:"צ'כיה",en:"Czechia"}, capital:{he:"פראג",en:"Prague"}, continent:{he:"אירופה",en:"Europe"}, lat:50.08, lon:14.44, pop:{he:"כ-10.5 מיליון",en:"~10.5 million"}, lang:{he:"צ'כית",en:"Czech"}, landmark:{he:"הגשר קרלוב 🌉",en:"Charles Bridge 🌉"}, fact:{he:"בפראג יש שעון אסטרונומי עתיק שעדיין עובד אחרי 600 שנה!",en:"Prague has an ancient astronomical clock that still works after 600 years!"} },
+  { code:"hu", name:{he:"הונגריה",en:"Hungary"}, capital:{he:"בודפשט",en:"Budapest"}, continent:{he:"אירופה",en:"Europe"}, lat:47.5, lon:19.05, pop:{he:"כ-9.6 מיליון",en:"~9.6 million"}, lang:{he:"הונגרית",en:"Hungarian"}, landmark:{he:"בניין הפרלמנט ההונגרי 🏛️",en:"The Hungarian Parliament Building 🏛️"}, fact:{he:"בבודפשט יש מעיינות חמים טבעיים שאפשר לשחות בהם בתוך העיר!",en:"Budapest has natural hot springs you can swim in right inside the city!"} },
+  { code:"ro", name:{he:"רומניה",en:"Romania"}, capital:{he:"בוקרשט",en:"Bucharest"}, continent:{he:"אירופה",en:"Europe"}, lat:44.43, lon:26.10, pop:{he:"כ-19 מיליון",en:"~19 million"}, lang:{he:"רומנית",en:"Romanian"}, landmark:{he:"טירת דרקולה בברן 🏰",en:"Dracula's castle in Bran 🏰"}, fact:{he:"ברומניה נמצאת הטירה שהשראתה את סיפור דרקולה!",en:"The castle that inspired the story of Dracula is in Romania!"} },
+  { code:"bg", name:{he:"בולגריה",en:"Bulgaria"}, capital:{he:"סופיה",en:"Sofia"}, continent:{he:"אירופה",en:"Europe"}, lat:42.70, lon:23.32, pop:{he:"כ-6.4 מיליון",en:"~6.4 million"}, lang:{he:"בולגרית",en:"Bulgarian"}, landmark:{he:"הרי הוורדים 🌹",en:"The Rose Valley 🌹"}, fact:{he:"בבולגריה מגדלים המון ורדים ומייצרים מהם בושם מיוחד!",en:"Bulgaria grows tons of roses and turns them into special perfume!"} },
+  { code:"hr", name:{he:"קרואטיה",en:"Croatia"}, capital:{he:"זאגרב",en:"Zagreb"}, continent:{he:"אירופה",en:"Europe"}, lat:45.82, lon:15.98, pop:{he:"כ-3.9 מיליון",en:"~3.9 million"}, lang:{he:"קרואטית",en:"Croatian"}, landmark:{he:"העיר דוברובניק 🏖️",en:"The city of Dubrovnik 🏖️"}, fact:{he:"העיר דוברובניק בקרואטיה שימשה כתפאורה בסדרות טלוויזיה מפורסמות!",en:"Dubrovnik in Croatia has been used as a backdrop in famous TV shows!"} },
+  { code:"rs", name:{he:"סרביה",en:"Serbia"}, capital:{he:"בלגרד",en:"Belgrade"}, continent:{he:"אירופה",en:"Europe"}, lat:44.79, lon:20.45, pop:{he:"כ-6.6 מיליון",en:"~6.6 million"}, lang:{he:"סרבית",en:"Serbian"}, landmark:{he:"מבצר קלמגדן 🏯",en:"Kalemegdan Fortress 🏯"}, fact:{he:"בלגרד נבנתה במקום שבו נפגשים שני נהרות גדולים!",en:"Belgrade was built right where two great rivers meet!"} },
+  { code:"sk", name:{he:"סלובקיה",en:"Slovakia"}, capital:{he:"ברטיסלבה",en:"Bratislava"}, continent:{he:"אירופה",en:"Europe"}, lat:48.15, lon:17.11, pop:{he:"כ-5.4 מיליון",en:"~5.4 million"}, lang:{he:"סלובקית",en:"Slovak"}, landmark:{he:"טירת ברטיסלבה 🏰",en:"Bratislava Castle 🏰"}, fact:{he:"סלובקיה קרובה כל כך לשלוש מדינות שאפשר לראות את כולן מגבעה אחת!",en:"Slovakia is so close to three countries that you can see them all from one hill!"} },
+  { code:"si", name:{he:"סלובניה",en:"Slovenia"}, capital:{he:"לובליאנה",en:"Ljubljana"}, continent:{he:"אירופה",en:"Europe"}, lat:46.06, lon:14.51, pop:{he:"כ-2.1 מיליון",en:"~2.1 million"}, lang:{he:"סלובנית",en:"Slovenian"}, landmark:{he:"מערת הענק פוסטויna 🕳️",en:"Postojna Cave 🕳️"}, fact:{he:"בסלובניה יש מערות ענקיות עם רכבת שנוסעת בפנים!",en:"Slovenia has giant caves with a train that rides right through them!"} },
+  { code:"lt", name:{he:"ליטא",en:"Lithuania"}, capital:{he:"וילנה",en:"Vilnius"}, continent:{he:"אירופה",en:"Europe"}, lat:54.69, lon:25.28, pop:{he:"כ-2.7 מיליון",en:"~2.7 million"}, lang:{he:"ליטאית",en:"Lithuanian"}, landmark:{he:"העיר העתיקה של וילנה 🏘️",en:"The old town of Vilnius 🏘️"}, fact:{he:"ליטא הייתה המדינה האחרונה באירופה שהפכה לנוצרית!",en:"Lithuania was the last country in Europe to become Christian!"} },
+  { code:"lv", name:{he:"לטביה",en:"Latvia"}, capital:{he:"ריגה",en:"Riga"}, continent:{he:"אירופה",en:"Europe"}, lat:56.95, lon:24.11, pop:{he:"כ-1.8 מיליון",en:"~1.8 million"}, lang:{he:"לטבית",en:"Latvian"}, landmark:{he:"בנייני האר-נובו ברִיגָה 🏛️",en:"Art Nouveau buildings in Riga 🏛️"}, fact:{he:"בריגה יש אחד מאוספי בנייני האר-נובו הגדולים בעולם!",en:"Riga has one of the biggest collections of Art Nouveau buildings in the world!"} },
+  { code:"ee", name:{he:"אסטוניה",en:"Estonia"}, capital:{he:"טאלין",en:"Tallinn"}, continent:{he:"אירופה",en:"Europe"}, lat:59.44, lon:24.75, pop:{he:"כ-1.3 מיליון",en:"~1.3 million"}, lang:{he:"אסטונית",en:"Estonian"}, landmark:{he:"העיר העתיקה של טאלין 🏰",en:"The old town of Tallinn 🏰"}, fact:{he:"אסטוניה הייתה מהמדינות הראשונות בעולם שאפשרו להצביע דרך האינטרנט!",en:"Estonia was one of the first countries in the world to let people vote online!"} },
+  { code:"my", name:{he:"מלזיה",en:"Malaysia"}, capital:{he:"קואלה לומפור",en:"Kuala Lumpur"}, continent:{he:"אסיה",en:"Asia"}, lat:3.14, lon:101.69, pop:{he:"כ-34 מיליון",en:"~34 million"}, lang:{he:"מלאית",en:"Malay"}, landmark:{he:"מגדלי התאומים פטרונס 🏙️",en:"Petronas Twin Towers 🏙️"}, fact:{he:"במלזיה יש יערות גשם עתיקים יותר מהיערות באמזונס!",en:"Malaysia has rainforests even older than the Amazon!"} },
+  { code:"sg", name:{he:"סינגפור",en:"Singapore"}, capital:{he:"סינגפור",en:"Singapore"}, continent:{he:"אסיה",en:"Asia"}, lat:1.35, lon:103.82, pop:{he:"כ-6 מיליון",en:"~6 million"}, lang:{he:"מלאית, אנגלית וסינית",en:"Malay, English, and Chinese"}, landmark:{he:"גני מפרץ 'גארדנס ביי דה ביי' 🌳",en:"Gardens by the Bay 🌳"}, fact:{he:"סינגפור היא גם מדינה וגם עיר אחת גדולה!",en:"Singapore is both a country and one big city all at once!"} },
+  { code:"bd", name:{he:"בנגלדש",en:"Bangladesh"}, capital:{he:"דאקה",en:"Dhaka"}, continent:{he:"אסיה",en:"Asia"}, lat:23.81, lon:90.41, pop:{he:"כ-173 מיליון",en:"~173 million"}, lang:{he:"בנגלית",en:"Bengali"}, landmark:{he:"יער המנגרובים הסונדרבנס 🐅",en:"The Sundarbans mangrove forest 🐅"}, fact:{he:"בבנגלדש נמצא יער המנגרובים הגדול בעולם, ובו חיים נמרים!",en:"Bangladesh has the largest mangrove forest in the world, home to tigers!"} },
+  { code:"pk", name:{he:"פקיסטן",en:"Pakistan"}, capital:{he:"איסלאמאבאד",en:"Islamabad"}, continent:{he:"אסיה",en:"Asia"}, lat:33.68, lon:73.05, pop:{he:"כ-241 מיליון",en:"~241 million"}, lang:{he:"אורדו",en:"Urdu"}, landmark:{he:"הר ק2 🏔️",en:"Mount K2 🏔️"}, fact:{he:"בפקיסטן נמצא ק2, ההר השני בגובהו בעולם!",en:"Pakistan is home to K2, the second-tallest mountain on Earth!"} },
+  { code:"ir", name:{he:"איראן",en:"Iran"}, capital:{he:"טהראן",en:"Tehran"}, continent:{he:"אסיה",en:"Asia"}, lat:35.69, lon:51.39, pop:{he:"כ-89 מיליון",en:"~89 million"}, lang:{he:"פרסית",en:"Persian"}, landmark:{he:"כיכר נקש-א-ג'האן 🕌",en:"Naqsh-e Jahan Square 🕌"}, fact:{he:"באיראן יש שטיחים מפורסמים שאורכים חודשים ארוכים לארוג!",en:"Iran makes famous carpets that can take months and months to weave!"} },
+  { code:"iq", name:{he:"עיראק",en:"Iraq"}, capital:{he:"בגדד",en:"Baghdad"}, continent:{he:"אסיה",en:"Asia"}, lat:33.31, lon:44.36, pop:{he:"כ-45 מיליון",en:"~45 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"העיר העתיקה בבל 🏛️",en:"The ancient city of Babylon 🏛️"}, fact:{he:"בעיראק נמצאת בבל העתיקה, אחת הערים העתיקות בהיסטוריה!",en:"Iraq is home to ancient Babylon, one of the oldest cities in history!"} },
+  { code:"lb", name:{he:"לבנון",en:"Lebanon"}, capital:{he:"ביירות",en:"Beirut"}, continent:{he:"אסיה",en:"Asia"}, lat:33.89, lon:35.50, pop:{he:"כ-5.5 מיליון",en:"~5.5 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"ארזי לבנון 🌲",en:"The Cedars of Lebanon 🌲"}, fact:{he:"עצי הארז הענקיים של לבנון מוזכרים בסיפורים בני אלפי שנים!",en:"Lebanon's giant cedar trees are mentioned in stories thousands of years old!"} },
+  { code:"qa", name:{he:"קטאר",en:"Qatar"}, capital:{he:"דוחא",en:"Doha"}, continent:{he:"אסיה",en:"Asia"}, lat:25.29, lon:51.53, pop:{he:"כ-2.7 מיליון",en:"~2.7 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מגדלי דוחא 🏙️",en:"The Doha skyline towers 🏙️"}, fact:{he:"קטאר אירחה את גביע העולם בכדורגל בשנת 2022!",en:"Qatar hosted the soccer World Cup in 2022!"} },
+  { code:"kw", name:{he:"כווית",en:"Kuwait"}, capital:{he:"כווית סיטי",en:"Kuwait City"}, continent:{he:"אסיה",en:"Asia"}, lat:29.38, lon:47.99, pop:{he:"כ-4.3 מיליון",en:"~4.3 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מגדלי כווית 🗼",en:"Kuwait Towers 🗼"}, fact:{he:"בכווית יש שלושה מגדלי מים ענקיים שנראים כמו חלל!",en:"Kuwait has three giant water towers that look like something from outer space!"} },
+  { code:"om", name:{he:"עומאן",en:"Oman"}, capital:{he:"מוסקט",en:"Muscat"}, continent:{he:"אסיה",en:"Asia"}, lat:23.59, lon:58.38, pop:{he:"כ-4.6 מיליון",en:"~4.6 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מסגד השולטן קאבוס 🕌",en:"Sultan Qaboos Grand Mosque 🕌"}, fact:{he:"בעומאן יש קניונים ענקיים במדבר שנקראים 'ואדיות'!",en:"Oman has huge desert canyons called 'wadis'!"} },
+  { code:"dz", name:{he:"אלג'יריה",en:"Algeria"}, capital:{he:"אלג'יר",en:"Algiers"}, continent:{he:"אפריקה",en:"Africa"}, lat:36.75, lon:3.06, pop:{he:"כ-45 מיליון",en:"~45 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"מדבר הסהרה 🏜️",en:"The Sahara Desert 🏜️"}, fact:{he:"אלג'יריה היא המדינה הכי גדולה באפריקה!",en:"Algeria is the biggest country in Africa!"} },
+  { code:"tn", name:{he:"תוניסיה",en:"Tunisia"}, capital:{he:"תוניס",en:"Tunis"}, continent:{he:"אפריקה",en:"Africa"}, lat:36.81, lon:10.18, pop:{he:"כ-12 מיליון",en:"~12 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"העיר העתיקה קרתגו 🏛️",en:"The ancient city of Carthage 🏛️"}, fact:{he:"בתוניסיה צולמו סצנות מפורסמות מסרטי מדע בדיוני!",en:"Famous scenes from science-fiction movies were filmed in Tunisia!"} },
+  { code:"ly", name:{he:"לוב",en:"Libya"}, capital:{he:"טריפולי",en:"Tripoli"}, continent:{he:"אפריקה",en:"Africa"}, lat:32.89, lon:13.19, pop:{he:"כ-6.8 מיליון",en:"~6.8 million"}, lang:{he:"ערבית",en:"Arabic"}, landmark:{he:"חורבות לפטיס מגנה 🏛️",en:"The ruins of Leptis Magna 🏛️"}, fact:{he:"בלוב יש חלק גדול מהמדבר הסהרה עם דיונות חול ענקיות!",en:"Libya has a huge stretch of the Sahara Desert with giant sand dunes!"} },
+  { code:"uy", name:{he:"אורוגוואי",en:"Uruguay"}, capital:{he:"מונטווידאו",en:"Montevideo"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-34.90, lon:-56.19, pop:{he:"כ-3.5 מיליון",en:"~3.5 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"חוף פונטה דל אסטה 🏖️",en:"Punta del Este beach 🏖️"}, fact:{he:"באורוגוואי יש יותר פרות מאנשים!",en:"Uruguay has more cows than people!"} },
+  { code:"py", name:{he:"פרגוואי",en:"Paraguay"}, capital:{he:"אסונסיון",en:"Asunción"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-25.30, lon:-57.64, pop:{he:"כ-6.9 מיליון",en:"~6.9 million"}, lang:{he:"ספרדית וגוארני",en:"Spanish and Guaraní"}, landmark:{he:"סכר איטאיפו הענק 💧",en:"The giant Itaipu Dam 💧"}, fact:{he:"בפרגוואי יש אחד הסכרים הגדולים בעולם, שמייצר חשמל לשתי מדינות!",en:"Paraguay has one of the biggest dams in the world, powering two whole countries!"} },
+  { code:"bo", name:{he:"בוליביה",en:"Bolivia"}, capital:{he:"לה פאס",en:"La Paz"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-16.5, lon:-68.15, pop:{he:"כ-12 מיליון",en:"~12 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"מישור המלח סלאר דה אויוני 🧂",en:"Salar de Uyuni salt flat 🧂"}, fact:{he:"בבוליביה יש מדבר מלח ענק שנראה כמו מראה אינסופית!",en:"Bolivia has a giant salt desert that looks like an endless mirror!"} },
+  { code:"ec", name:{he:"אקוודור",en:"Ecuador"}, capital:{he:"קיטו",en:"Quito"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:-0.23, lon:-78.52, pop:{he:"כ-18 מיליון",en:"~18 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"איי גלפאגוס 🐢",en:"The Galápagos Islands 🐢"}, fact:{he:"קו המשווה עובר ממש דרך אקוודור — משם בא שם המדינה!",en:"The equator runs right through Ecuador — that's where the country got its name!"} },
+  { code:"ve", name:{he:"ונצואלה",en:"Venezuela"}, capital:{he:"קראקס",en:"Caracas"}, continent:{he:"אמריקה הדרומית",en:"South America"}, lat:10.48, lon:-66.90, pop:{he:"כ-28 מיליון",en:"~28 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"מפל אנחל 💦",en:"Angel Falls 💦"}, fact:{he:"בוונצואלה נמצא המפל הגבוה בעולם — אנחל!",en:"Venezuela is home to Angel Falls, the tallest waterfall in the world!"} },
+  { code:"pa", name:{he:"פנמה",en:"Panama"}, capital:{he:"פנמה סיטי",en:"Panama City"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:8.98, lon:-79.52, pop:{he:"כ-4.4 מיליון",en:"~4.4 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"תעלת פנמה 🚢",en:"The Panama Canal 🚢"}, fact:{he:"תעלת פנמה מחברת בין שני אוקיינוסים, ואוניות עוברות דרכה כל יום!",en:"The Panama Canal connects two oceans, and ships sail through it every single day!"} },
+  { code:"cr", name:{he:"קוסטה ריקה",en:"Costa Rica"}, capital:{he:"סן חוזה",en:"San José"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:9.93, lon:-84.09, pop:{he:"כ-5.2 מיליון",en:"~5.2 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"יערות הגשם הטרופיים 🐸",en:"Tropical rainforests 🐸"}, fact:{he:"בקוסטה ריקה אין צבא בכלל — כל הכסף הולך לחינוך ולטבע!",en:"Costa Rica has no army at all — all the money goes to education and nature instead!"} },
+  { code:"gt", name:{he:"גואטמלה",en:"Guatemala"}, capital:{he:"גואטמלה סיטי",en:"Guatemala City"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:14.63, lon:-90.51, pop:{he:"כ-18 מיליון",en:"~18 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"פירמידות המאיה בטיקאל 🛕",en:"Mayan pyramids at Tikal 🛕"}, fact:{he:"בגואטמלה יש עיר מאיה עתיקה עם פירמידות בתוך היער!",en:"Guatemala has an ancient Mayan city with pyramids hidden inside the jungle!"} },
+  { code:"hn", name:{he:"הונדורס",en:"Honduras"}, capital:{he:"טגוסיגלפה",en:"Tegucigalpa"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:14.10, lon:-87.22, pop:{he:"כ-10.5 מיליון",en:"~10.5 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"שוניות האלמוגים ברואטן 🐠",en:"Roatán coral reefs 🐠"}, fact:{he:"בהונדורס יש שונית האלמוגים השנייה בגודלה בעולם!",en:"Honduras has the second-largest coral reef in the world!"} },
+  { code:"do", name:{he:"הרפובליקה הדומיניקנית",en:"Dominican Republic"}, capital:{he:"סנטו דומינגו",en:"Santo Domingo"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:18.49, lon:-69.94, pop:{he:"כ-11 מיליון",en:"~11 million"}, lang:{he:"ספרדית",en:"Spanish"}, landmark:{he:"העיר העתיקה סנטו דומינגו 🏰",en:"The old city of Santo Domingo 🏰"}, fact:{he:"בסנטו דומינגו נמצא הרחוב הקולוניאלי העתיק ביותר ביבשת אמריקה!",en:"Santo Domingo has the oldest colonial street in all of the Americas!"} },
+  { code:"jm", name:{he:"ג'מייקה",en:"Jamaica"}, capital:{he:"קינגסטון",en:"Kingston"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:18.02, lon:-76.80, pop:{he:"כ-2.8 מיליון",en:"~2.8 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"מפלי דאנס ריבר 💦",en:"Dunn's River Falls 💦"}, fact:{he:"מוזיקת הרגאיי הומצאה בג'מייקה!",en:"Reggae music was invented in Jamaica!"} },
+  { code:"tt", name:{he:"טרינידד וטובגו",en:"Trinidad and Tobago"}, capital:{he:"פורט אוף ספיין",en:"Port of Spain"}, continent:{he:"אמריקה הצפונית",en:"North America"}, lat:10.65, lon:-61.52, pop:{he:"כ-1.5 מיליון",en:"~1.5 million"}, lang:{he:"אנגלית",en:"English"}, landmark:{he:"אגם הזפת הטבעי 🖤",en:"The natural Pitch Lake 🖤"}, fact:{he:"בטרינידד יש אגם זפת טבעי — הגדול מסוגו בעולם!",en:"Trinidad has a natural lake of tar — the biggest one of its kind in the world!"} },
+  { code:"fj", name:{he:"פיג'י",en:"Fiji"}, capital:{he:"סובה",en:"Suva"}, continent:{he:"אוקיאניה",en:"Oceania"}, lat:-18.14, lon:178.44, pop:{he:"כ-930 אלף",en:"~930 thousand"}, lang:{he:"פיג'ית ואנגלית",en:"Fijian and English"}, landmark:{he:"שוניות אלמוגים צבעוניות 🐠",en:"Colorful coral reefs 🐠"}, fact:{he:"פיג'י מורכבת מיותר מ-300 איים טרופיים!",en:"Fiji is made up of more than 300 tropical islands!"} },
+  { code:"pg", name:{he:"פפואה גינאה החדשה",en:"Papua New Guinea"}, capital:{he:"פורט מורסבי",en:"Port Moresby"}, continent:{he:"אוקיאניה",en:"Oceania"}, lat:-9.48, lon:147.15, pop:{he:"כ-10 מיליון",en:"~10 million"}, lang:{he:"אנגלית וטוק פיסין",en:"English and Tok Pisin"}, landmark:{he:"יערות הגשם ההרריים 🌋",en:"Mountain rainforests 🌋"}, fact:{he:"בפפואה גינאה החדשה מדברים יותר מ-800 שפות שונות — יותר מכל מדינה אחרת בעולם!",en:"People in Papua New Guinea speak more than 800 different languages — more than any other country in the world!"} },
+  { code:"lk", name:{he:"סרי לנקה",en:"Sri Lanka"}, capital:{he:"קולומבו",en:"Colombo"}, continent:{he:"אסיה",en:"Asia"}, lat:6.93, lon:79.85, pop:{he:"כ-22 מיליון",en:"~22 million"}, lang:{he:"סינהלית וטמילית",en:"Sinhala and Tamil"}, landmark:{he:"מבצר הסלע סיגיריה 🗿",en:"Sigiriya rock fortress 🗿"}, fact:{he:"בסרי לנקה יש מבצר עתיק שנבנה על צוק סלע ענק!",en:"Sri Lanka has an ancient fortress built right on top of a giant rock cliff!"} },
+  { code:"np", name:{he:"נפאל",en:"Nepal"}, capital:{he:"קטמנדו",en:"Kathmandu"}, continent:{he:"אסיה",en:"Asia"}, lat:27.72, lon:85.32, pop:{he:"כ-30 מיליון",en:"~30 million"}, lang:{he:"נפאלית",en:"Nepali"}, landmark:{he:"הר האוורסט 🏔️",en:"Mount Everest 🏔️"}, fact:{he:"בנפאל נמצא האוורסט — ההר הגבוה בעולם!",en:"Nepal is home to Mount Everest — the tallest mountain in the world!"} },
+  { code:"mm", name:{he:"מיאנמר",en:"Myanmar"}, capital:{he:"נאיפידאו",en:"Naypyidaw"}, continent:{he:"אסיה",en:"Asia"}, lat:19.76, lon:96.08, pop:{he:"כ-55 מיליון",en:"~55 million"}, lang:{he:"בורמזית",en:"Burmese"}, landmark:{he:"פגודת שוודגון הזהובה 🛕",en:"Golden Shwedagon Pagoda 🛕"}, fact:{he:"במיאנמר יש אלפי מקדשים עתיקים בעיר אחת — באגאן!",en:"Myanmar has thousands of ancient temples all in one city — Bagan!"} },
+  { code:"kh", name:{he:"קמבודיה",en:"Cambodia"}, capital:{he:"פנום פן",en:"Phnom Penh"}, continent:{he:"אסיה",en:"Asia"}, lat:11.55, lon:104.92, pop:{he:"כ-17 מיליון",en:"~17 million"}, lang:{he:"חמרית",en:"Khmer"}, landmark:{he:"מקדשי אנגקור וואט 🛕",en:"Angkor Wat temples 🛕"}, fact:{he:"אנגקור וואט בקמבודיה הוא המבנה הדתי הגדול בעולם!",en:"Angkor Wat in Cambodia is the largest religious monument in the world!"} },
+  { code:"la", name:{he:"לאוס",en:"Laos"}, capital:{he:"וייאנטיאן",en:"Vientiane"}, continent:{he:"אסיה",en:"Asia"}, lat:17.97, lon:102.60, pop:{he:"כ-7.6 מיליון",en:"~7.6 million"}, lang:{he:"לאית",en:"Lao"}, landmark:{he:"מפלי קואנג סי 💦",en:"Kuang Si Falls 💦"}, fact:{he:"בלאוס יש מפלים בצבע טורקיז מדהים!",en:"Laos has waterfalls in an amazing turquoise color!"} },
+  { code:"mn", name:{he:"מונגוליה",en:"Mongolia"}, capital:{he:"אולן באתור",en:"Ulaanbaatar"}, continent:{he:"אסיה",en:"Asia"}, lat:47.89, lon:106.91, pop:{he:"כ-3.4 מיליון",en:"~3.4 million"}, lang:{he:"מונגולית",en:"Mongolian"}, landmark:{he:"מדבר גובי הענק 🐪",en:"The vast Gobi Desert 🐪"}, fact:{he:"במונגוליה חיים יותר סוסים מאנשים!",en:"Mongolia has more horses than people!"} },
+  { code:"kz", name:{he:"קזחסטן",en:"Kazakhstan"}, capital:{he:"אסטנה",en:"Astana"}, continent:{he:"אסיה",en:"Asia"}, lat:51.17, lon:71.43, pop:{he:"כ-20 מיליון",en:"~20 million"}, lang:{he:"קזחית ורוסית",en:"Kazakh and Russian"}, landmark:{he:"ערבות הענק 🌾",en:"Vast steppe grasslands 🌾"}, fact:{he:"קזחסטן היא המדינה הכי גדולה בעולם שאין לה יציאה לים!",en:"Kazakhstan is the biggest landlocked country in the world!"} },
+  { code:"uz", name:{he:"אוזבקיסטן",en:"Uzbekistan"}, capital:{he:"טשקנט",en:"Tashkent"}, continent:{he:"אסיה",en:"Asia"}, lat:41.30, lon:69.24, pop:{he:"כ-35 מיליון",en:"~35 million"}, lang:{he:"אוזבקית",en:"Uzbek"}, landmark:{he:"העיר העתיקה סמרקנד 🕌",en:"The ancient city of Samarkand 🕌"}, fact:{he:"העיר סמרקנד באוזבקיסטן הייתה תחנה חשובה בדרך המשי!",en:"The city of Samarkand in Uzbekistan was once a key stop on the Silk Road!"} },
+  { code:"ge", name:{he:"גאורגיה",en:"Georgia"}, capital:{he:"טביליסי",en:"Tbilisi"}, continent:{he:"אסיה",en:"Asia"}, lat:41.72, lon:44.79, pop:{he:"כ-3.7 מיליון",en:"~3.7 million"}, lang:{he:"גאורגית",en:"Georgian"}, landmark:{he:"הרי הקווקז 🏔️",en:"The Caucasus Mountains 🏔️"}, fact:{he:"בגאורגיה מייצרים יין כבר יותר מ-8,000 שנה — אחד המקומות הראשונים בעולם!",en:"Georgia has been making wine for more than 8,000 years — one of the first places in the world to do it!"} },
+  { code:"am", name:{he:"ארמניה",en:"Armenia"}, capital:{he:"ירואן",en:"Yerevan"}, continent:{he:"אסיה",en:"Asia"}, lat:40.18, lon:44.51, pop:{he:"כ-3 מיליון",en:"~3 million"}, lang:{he:"ארמנית",en:"Armenian"}, landmark:{he:"הר אררט הנשקף מהעיר 🏔️",en:"Mount Ararat, visible from the city 🏔️"}, fact:{he:"ארמניה הייתה המדינה הראשונה בעולם שהכריזה על הנצרות כדת רשמית!",en:"Armenia was the first country in the world to declare Christianity its official religion!"} },
+  { code:"az", name:{he:"אזרבייג'ן",en:"Azerbaijan"}, capital:{he:"באקו",en:"Baku"}, continent:{he:"אסיה",en:"Asia"}, lat:40.41, lon:49.87, pop:{he:"כ-10 מיליון",en:"~10 million"}, lang:{he:"אזרית",en:"Azerbaijani"}, landmark:{he:"מגדלי האש 🔥",en:"The Flame Towers 🔥"}, fact:{he:"באזרבייג'ן יש מקומות שבהם אש בוערת ישירות מהאדמה בלי הפסקה!",en:"In Azerbaijan there are places where fire burns straight out of the ground, nonstop!"} },
 ];
-const CONTINENTS = ["אסיה","אירופה","אפריקה","אמריקה הצפונית","אמריקה הדרומית","אוקיאניה"];
+const CONTINENTS = [
+  {he:"אסיה",en:"Asia"}, {he:"אירופה",en:"Europe"}, {he:"אפריקה",en:"Africa"},
+  {he:"אמריקה הצפונית",en:"North America"}, {he:"אמריקה הדרומית",en:"South America"}, {he:"אוקיאניה",en:"Oceania"},
+];
 const QUESTIONS_PER_ROUND = 8;
 
+/* Levels are sorted purely by population, 30/30/30 then the remaining 10
+   countries split across the last two levels (5/5). No pinning — Israel
+   lands wherever its population rank puts it. */
 const LEVELS = [
-  { key:1, label:"קל מאוד",   emoji:"🟢", cls:"lvl-1", codes:["il","us","gb","fr","it","es","de","jp","cn","eg","ca","au","br","in","ru"] },
-  { key:2, label:"קל",        emoji:"🟡", cls:"lvl-2", codes:["mx","ar","gr","nl","ch","tr","th","kr","se","no","pt","ie","pl","at","sa"] },
-  { key:3, label:"בינוני",    emoji:"🟠", cls:"lvl-3", codes:["ke","za","ma","pe","nz","dk","be","fi","id","vn","ph","ae","cl","co","cu","is","jo","ua","ng","et","gh"] },
-  { key:4, label:"קשה",       emoji:"🔴", cls:"lvl-4", codes:["cz","hu","ro","bg","hr","rs","sk","si","lt","lv","ee","my","sg","bd","pk","ir","iq","lb","qa","kw","om","dz","tn","ly"] },
-  { key:5, label:"מומחה",     emoji:"🟣", cls:"lvl-5", codes:["uy","py","bo","ec","ve","pa","cr","gt","hn","do","jm","tt","fj","pg","lk","np","mm","kh","la","mn","kz","uz","ge","am","az"] },
+  { key:1, labelKey:"levelEasy",     emoji:"🟢", cls:"lvl-1", codes:["cn","in","us","id","pk","ng","br","bd","ru","mx","et","jp","ph","eg","vn","ir","tr","de","th","fr","gb","za","it","ke","mm","kr","co","es","ar","iq"] },
+  { key:2, labelKey:"levelMedium",   emoji:"🟡", cls:"lvl-2", codes:["dz","ca","pl","ua","ma","sa","uz","pe","gh","my","np","ve","au","lk","kz","cl","ro","nl","ec","gt","kh","tn","bo","be","cu","jo","do","se","cz","hn"] },
+  { key:3, labelKey:"levelHard",     emoji:"🟠", cls:"lvl-3", codes:["il","gr","pt","pg","az","hu","ae","ch","at","la","py","ly","rs","bg","dk","sg","no","fi","lb","sk","cr","nz","ie","om","pa","kw","hr","ge","uy","mn"] },
+  { key:4, labelKey:"levelVeryHard", emoji:"🔴", cls:"lvl-4", codes:["am","jm","lt","qa","si"] },
+  { key:5, labelKey:"levelExpert",   emoji:"🟣", cls:"lvl-5", codes:["lv","tt","ee","fj","is"] },
 ];
 function poolForLevel(levelKey) {
   const codes = LEVELS.slice(0, levelKey).flatMap(l => l.codes);
   return COUNTRIES.filter(c => codes.includes(c.code));
+}
+
+/* ================= language ================= */
+let LANG = localStorage.getItem("geo-lang") === "en" ? "en" : "he";
+
+const UI = {
+  he: {
+    pageTitle: "מסע סביב העולם 🌍", appTitle: "מסע סביב העולם",
+    subtitle: "משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!",
+    starsCollected: "כוכבים שאספתם",
+    gameFlagsTitle: "חידון דגלים", gameFlagsDesc: "איזו מדינה מתחבאת מאחורי הדגל?",
+    gameCapitalsTitle: "ערי בירה", gameCapitalsDesc: "מה עיר הבירה של כל מדינה?",
+    gameContinentsTitle: "לאיזו יבשת?", gameContinentsDesc: "מצאו באיזו יבשת נמצאת כל מדינה",
+    gameMemoryTitle: "משחק זיכרון", gameMemoryDesc: "התאימו כל דגל למדינה שלו",
+    gameExplorerTitle: "גלו מדינה", gameExplorerDesc: "הקלידו שם של מדינה וגלו הכל עליה",
+    notPlayedYet: "עוד לא שיחקתם",
+    footerText: "נבנה באהבה ❤️ ללומדים צעירים",
+    backHome: "🏠 חזרה",
+    diffHeading: "באיזו רמה רוצים לשחק?", countriesSuffix: "מדינות",
+    levelEasy: "קל", levelMedium: "בינוני", levelHard: "קשה", levelVeryHard: "קשה מאוד", levelExpert: "מומחה",
+    pairsLabel: "זוגות:",
+    explorerHeading: "🔎 גלו מדינה", explorerPlaceholder: "הקלידו שם של מדינה...",
+    explorerInitial: "👆 התחילו להקליד כדי לגלות מדינה!",
+    explorerNoMatch: "לא מצאנו מדינה כזו, נסו שם אחר 🤔",
+    cpIdCard: "תעודת זהות של מדינה", cpCapital: "עיר בירה", cpContinent: "יבשת",
+    cpPop: "כמה אנשים גרים שם?", cpLang: "איזו שפה מדברים?", cpLandmark: "כדאי לבקר ב...",
+    cpWiki: "📖 קראו עוד בוויקיפדיה",
+    questionFlag: "לאיזו מדינה שייך הדגל?", questionCapital: "מה עיר הבירה של...", questionContinent: "באיזו יבשת נמצאת...",
+    feedbackCorrect: "🎉 נכון!", feedbackWrong: "כמעט!",
+    nextQuestion: "לשאלה הבאה ⬅", toResults: "לתוצאות 🏆", // Hebrew is RTL, so "forward" points left
+    profileHeading: "מי משחק עכשיו? 👋", profileEmptyState: "עדיין אין שחקנים — הוסיפו שם למטה 👇",
+    profilePlaceholder: "הקלידו שם חדש...", profileAdd: "➕ הוספה",
+    profileChoose: "👋 בחרו שחקן", profileRecords: "🏆 שיאים", profileSwitch: "🔄 החלפה",
+    recordsBanner: "💾 הניקוד נשמר על המכשיר הזה, בנפרד לכל שחקן/ית.", recordsTotal: "כוכבים בסך הכל",
+    resultAgain: "🔄 עוד פעם!", resultHome: "🏠 למסך הראשי",
+    resultTitle3: "מדהים! אלופי העולם!", resultTitle2: "כל הכבוד!",
+    resultTitle1: "יפה מאוד, ממשיכים להתאמן!", resultTitle0: "התחלה טובה — נסו שוב!",
+    quizResultText: (c, tot) => `ענית נכון על ${c} מתוך ${tot} שאלות!`,
+    memoryResultText: (m) => `מצאתם את כל 8 הזוגות ב-${m} ניסיונות!`,
+  },
+  en: {
+    pageTitle: "Around the World Adventure 🌍", appTitle: "Around the World Adventure",
+    subtitle: "Geography games and adventures — let's learn countries, flags, and capitals!",
+    starsCollected: "stars collected",
+    gameFlagsTitle: "Flag Quiz", gameFlagsDesc: "Which country is hiding behind the flag?",
+    gameCapitalsTitle: "Capital Cities", gameCapitalsDesc: "What's the capital city of each country?",
+    gameContinentsTitle: "Which Continent?", gameContinentsDesc: "Find which continent each country is on",
+    gameMemoryTitle: "Memory Game", gameMemoryDesc: "Match each flag to its country",
+    gameExplorerTitle: "Discover a Country", gameExplorerDesc: "Type a country's name and discover everything about it",
+    notPlayedYet: "Not played yet",
+    footerText: "Built with love ❤️ for young learners",
+    backHome: "🏠 Home",
+    diffHeading: "Which level do you want to play?", countriesSuffix: "countries",
+    levelEasy: "Easy", levelMedium: "Medium", levelHard: "Hard", levelVeryHard: "Very Hard", levelExpert: "Expert",
+    pairsLabel: "Pairs:",
+    explorerHeading: "🔎 Discover a Country", explorerPlaceholder: "Type a country's name...",
+    explorerInitial: "👆 Start typing to discover a country!",
+    explorerNoMatch: "We couldn't find that country, try another name 🤔",
+    cpIdCard: "Country ID card", cpCapital: "Capital city", cpContinent: "Continent",
+    cpPop: "How many people live there?", cpLang: "What language do they speak?", cpLandmark: "Worth visiting...",
+    cpWiki: "📖 Read more on Wikipedia",
+    questionFlag: "Which country does this flag belong to?", questionCapital: "What's the capital city of...", questionContinent: "Which continent is...",
+    feedbackCorrect: "🎉 Correct!", feedbackWrong: "Almost!",
+    nextQuestion: "Next question ➡", toResults: "See results 🏆", // English is LTR, so "forward" points right
+    profileHeading: "Who's playing now? 👋", profileEmptyState: "No players yet — add a name below 👇",
+    profilePlaceholder: "Type a new name...", profileAdd: "➕ Add",
+    profileChoose: "👋 Choose player", profileRecords: "🏆 Records", profileSwitch: "🔄 Switch",
+    recordsBanner: "💾 Scores are saved on this device, separately for each player.", recordsTotal: "total stars",
+    resultAgain: "🔄 Play again!", resultHome: "🏠 Home screen",
+    resultTitle3: "Amazing! World champions!", resultTitle2: "Great job!",
+    resultTitle1: "Nice work, keep practicing!", resultTitle0: "Good start — try again!",
+    quizResultText: (c, tot) => `You got ${c} out of ${tot} questions right!`,
+    memoryResultText: (m) => `You found all 8 pairs in ${m} tries!`,
+  },
+};
+const t = (key) => UI[LANG][key];
+
+function applyStaticTranslations() {
+  const map = {
+    "page-title": "pageTitle", "app-title-text": "appTitle", "app-subtitle": "subtitle",
+    "stars-label": "starsCollected",
+    "gc-flags-title": "gameFlagsTitle", "gc-flags-desc": "gameFlagsDesc",
+    "gc-capitals-title": "gameCapitalsTitle", "gc-capitals-desc": "gameCapitalsDesc",
+    "gc-continents-title": "gameContinentsTitle", "gc-continents-desc": "gameContinentsDesc",
+    "gc-memory-title": "gameMemoryTitle", "gc-memory-desc": "gameMemoryDesc",
+    "gc-explorer-title": "gameExplorerTitle", "gc-explorer-desc": "gameExplorerDesc",
+    "footer-text": "footerText",
+    "diff-heading": "diffHeading",
+    "pairs-label": "pairsLabel",
+    "explorer-heading": "explorerHeading",
+    "profile-heading": "profileHeading", "profile-add-btn": "profileAdd",
+    "btn-again": "resultAgain", "btn-result-home": "resultHome",
+  };
+  Object.entries(map).forEach(([id, key]) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = t(key);
+  });
+  document.querySelectorAll(".btn-back").forEach((el) => { el.textContent = t("backHome"); });
+  document.title = t("pageTitle");
+  document.documentElement.lang = LANG === "he" ? "he" : "en";
+  document.documentElement.dir = LANG === "he" ? "rtl" : "ltr";
+  const searchInput = $("explorer-search");
+  if (searchInput) searchInput.placeholder = t("explorerPlaceholder");
+  const profileInput = $("new-profile-name");
+  if (profileInput) profileInput.placeholder = t("profilePlaceholder");
+  renderLangToggle();
+}
+
+function renderLangToggle() {
+  const box = $("lang-toggle");
+  if (!box) return;
+  box.innerHTML = `
+    <button class="lang-btn ${LANG === "he" ? "active" : ""}" onclick="setLang('he')">עברית</button>
+    <button class="lang-btn ${LANG === "en" ? "active" : ""}" onclick="setLang('en')">English</button>
+  `;
+}
+
+function setLang(lang) {
+  if (lang !== "he" && lang !== "en") return;
+  LANG = lang;
+  localStorage.setItem("geo-lang", lang);
+  applyStaticTranslations();
+  goHome();
 }
 
 const flagUrl = c => `https://flagcdn.com/w320/${c}.png`;
@@ -552,27 +703,36 @@ const flagUrlSmall = c => `https://flagcdn.com/w160/${c}.png`;
 const $ = id => document.getElementById(id);
 const shuffle = arr => [...arr].sort(() => Math.random() - 0.5);
 
-const SCREENS = ["screen-home","screen-difficulty","screen-quiz","screen-memory","screen-result"];
+const SCREENS = ["screen-home","screen-difficulty","screen-quiz","screen-memory","screen-explorer","screen-records","screen-profile","screen-result"];
 function show(id) {
   SCREENS.forEach(s => $(s).classList.toggle("hidden", s !== id));
   window.scrollTo(0, 0);
 }
 
-/* ---------- stars storage ---------- */
+/* ---------- stars storage (scoped per local player profile) ---------- */
+const ACTIVE_PROFILE_KEY = "geo-active-profile";
+function activeProfileSlug() {
+  const name = localStorage.getItem(ACTIVE_PROFILE_KEY) || "אורח";
+  return encodeURIComponent(name);
+}
 const store = {
-  get: k => parseInt(localStorage.getItem("geo-" + k) || "0", 10),
-  set: (k, v) => localStorage.setItem("geo-" + k, v),
+  get: k => parseInt(localStorage.getItem(`geo-${activeProfileSlug()}-${k}`) || "0", 10),
+  set: (k, v) => localStorage.setItem(`geo-${activeProfileSlug()}-${k}`, v),
 };
 function renderHome() {
   let total = 0;
   ["flags","capitals","continents","memory"].forEach(g => {
     const s = store.get(g);
     total += s;
-    $("best-" + g).textContent = s ? "⭐".repeat(s) : "עוד לא שיחקתם";
+    $("best-" + g).textContent = s ? "⭐".repeat(s) : t("notPlayedYet");
   });
   $("total-stars").textContent = total;
 }
-function goHome() { renderHome(); show("screen-home"); }
+function goHome() {
+  renderHome();
+  if (typeof renderProfileBar === "function") renderProfileBar();
+  show("screen-home");
+}
 
 let pendingGame = null;
 function startGame(g) {
@@ -588,87 +748,34 @@ function renderDifficultyOptions() {
     cumulative += l.codes.length;
     return `<button class="diff-btn ${l.cls}" onclick="startQuiz(pendingGame, ${l.key})">
       <span class="diff-emoji">${l.emoji}</span>
-      <span class="diff-label">${l.label}</span>
-      <span class="diff-desc">${cumulative} מדינות</span>
+      <span class="diff-label">${t(l.labelKey)}</span>
+      <span class="diff-desc">${cumulative} ${t("countriesSuffix")}</span>
     </button>`;
   }).join("");
 }
 
-/* ================= atlas map ================= */
-function initMap() {
-  renderChipsFallback(); // show something usable immediately, no network wait
-
-  // On small screens 100 pins packed into a short map are too fiddly to tap
-  // accurately, so the flag chips (already large, easy tap targets) stay as
-  // the primary way to browse countries instead of upgrading to the pin map.
-  if (window.matchMedia("(max-width: 600px)").matches) return;
-
-  if (typeof d3 === "undefined" || typeof topojson === "undefined") return;
-
-  const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 6000));
-  Promise.race([d3.json("https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json"), timeout])
-    .then(world => {
-      const W = 820, H = 430;
-      $("map-card").innerHTML = "";
-      const svg = d3.select("#map-card").append("svg")
-        .attr("viewBox", `0 0 ${W} ${H}`)
-        .attr("dir", "ltr");
-      const projection = d3.geoNaturalEarth1().fitSize([W, H], { type: "Sphere" });
-      const path = d3.geoPath(projection);
-
-      svg.append("path").attr("class", "map-sea").attr("d", path({ type: "Sphere" }));
-      svg.append("g").selectAll("path")
-        .data(topojson.feature(world, world.objects.countries).features)
-        .join("path")
-        .attr("class", "map-land")
-        .attr("d", path);
-
-      svg.append("g").selectAll("circle")
-        .data(COUNTRIES)
-        .join("circle")
-        .attr("class", "map-dot")
-        .attr("r", 8)
-        .attr("cx", c => projection([c.lon, c.lat])[0])
-        .attr("cy", c => projection([c.lon, c.lat])[1])
-        .on("click", (e, c) => selectCountry(c, e.currentTarget))
-        .append("title").text(c => c.name);
-    })
-    .catch(() => { /* keep the chips fallback already shown */ });
-}
-
-function renderChipsFallback() {
-  const card = $("map-card");
-  card.innerHTML = '<div class="country-chips">' + COUNTRIES.map(c =>
-    `<button class="chip" onclick="selectCountryByCode('${c.code}', this)">
-       <img src="${flagUrlSmall(c.code)}" alt=""> ${c.name}
-     </button>`).join("") + "</div>";
-}
-function selectCountryByCode(code, el) {
-  selectCountry(COUNTRIES.find(c => c.code === code), el);
-}
-
-function selectCountry(c, dotEl) {
-  document.querySelectorAll(".map-dot.active").forEach(d => d.classList.remove("active"));
-  if (dotEl && dotEl.classList) dotEl.classList.add("active");
-  const panel = $("country-panel");
-  panel.classList.remove("placeholder");
-  panel.innerHTML = `
+/* ================= country panel (shared by explorer.js) ================= */
+function renderCountryPanel(c, panelEl) {
+  panelEl.classList.remove("placeholder");
+  const wikiHost = LANG === "he" ? "he" : "en";
+  panelEl.innerHTML = `
     <div class="cp-head">
-      <img src="${flagUrl(c.code)}" alt="דגל ${c.name}">
+      <img src="${flagUrl(c.code)}" alt="${c.name[LANG]}">
       <div>
-        <h3>${c.name}</h3>
-        <div style="color:var(--ink-soft)">תעודת זהות של מדינה</div>
+        <h3>${c.name[LANG]}</h3>
+        <div style="color:var(--ink-soft)">${t("cpIdCard")}</div>
       </div>
     </div>
     <div class="cp-grid">
-      <div class="cp-item"><span class="ico">🏙️</span><span><span class="lbl">עיר בירה</span><span class="val">${c.capital}</span></span></div>
-      <div class="cp-item"><span class="ico">🌍</span><span><span class="lbl">יבשת</span><span class="val">${c.continent}</span></span></div>
-      <div class="cp-item"><span class="ico">👨‍👩‍👧‍👦</span><span><span class="lbl">כמה אנשים גרים שם?</span><span class="val">${c.pop}</span></span></div>
-      <div class="cp-item"><span class="ico">🗣️</span><span><span class="lbl">איזו שפה מדברים?</span><span class="val">${c.lang}</span></span></div>
-      <div class="cp-item"><span class="ico">📸</span><span><span class="lbl">כדאי לבקר ב...</span><span class="val">${c.landmark}</span></span></div>
+      <div class="cp-item"><span class="ico">🏙️</span><span><span class="lbl">${t("cpCapital")}</span><span class="val">${c.capital[LANG]}</span></span></div>
+      <div class="cp-item"><span class="ico">🌍</span><span><span class="lbl">${t("cpContinent")}</span><span class="val">${c.continent[LANG]}</span></span></div>
+      <div class="cp-item"><span class="ico">👨‍👩‍👧‍👦</span><span><span class="lbl">${t("cpPop")}</span><span class="val">${c.pop[LANG]}</span></span></div>
+      <div class="cp-item"><span class="ico">🗣️</span><span><span class="lbl">${t("cpLang")}</span><span class="val">${c.lang[LANG]}</span></span></div>
+      <div class="cp-item"><span class="ico">📸</span><span><span class="lbl">${t("cpLandmark")}</span><span class="val">${c.landmark[LANG]}</span></span></div>
     </div>
-    <div class="cp-fact">💡 ${c.fact}</div>`;
-  panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    <div class="cp-fact">💡 ${c.fact[LANG]}</div>
+    <a class="cp-wiki" href="https://${wikiHost}.wikipedia.org/wiki/${encodeURIComponent(c.name[LANG])}" target="_blank" rel="noopener">${t("cpWiki")}</a>`;
+  panelEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 /* ================= quiz engine ================= */
@@ -676,19 +783,19 @@ let game = null;
 
 const GAME_DEFS = {
   flags: {
-    question: c => `<h3>לאיזו מדינה שייך הדגל?</h3><img class="flag-img" src="${flagUrl(c.code)}" alt="דגל">`,
-    answer: c => c.name,
-    pool: () => game.pool.map(x => x.name),
+    question: c => `<h3>${t("questionFlag")}</h3><img class="flag-img" src="${flagUrl(c.code)}" alt="flag">`,
+    answer: c => c.name[LANG],
+    pool: () => game.pool.map(x => x.name[LANG]),
   },
   capitals: {
-    question: c => `<h3>מה עיר הבירה של...</h3><div class="big-word">${c.name}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">`,
-    answer: c => c.capital,
-    pool: () => game.pool.map(x => x.capital),
+    question: c => `<h3>${t("questionCapital")}</h3><div class="big-word">${c.name[LANG]}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="${c.name[LANG]}">`,
+    answer: c => c.capital[LANG],
+    pool: () => game.pool.map(x => x.capital[LANG]),
   },
   continents: {
-    question: c => `<h3>באיזו יבשת נמצאת...</h3><div class="big-word">${c.name}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">`,
-    answer: c => c.continent,
-    pool: () => CONTINENTS,
+    question: c => `<h3>${t("questionContinent")}</h3><div class="big-word">${c.name[LANG]}</div><br><img class="flag-img" style="width:140px" src="${flagUrlSmall(c.code)}" alt="${c.name[LANG]}">`,
+    answer: c => c.continent[LANG],
+    pool: () => CONTINENTS.map(x => x[LANG]),
   },
 };
 
@@ -730,14 +837,9 @@ function renderQuestion() {
     $("options").appendChild(b);
   });
 
-  const skipBtn = document.createElement("button");
-  skipBtn.className = "opt opt-skip";
-  skipBtn.textContent = "🤷 לא יודע";
-  skipBtn.onclick = () => pick(skipBtn, false, c, true);
-  $("options").appendChild(skipBtn);
 }
 
-function pick(btn, isRight, country, skipped) {
+function pick(btn, isRight, country) {
   const def = GAME_DEFS[game.type];
   document.querySelectorAll(".opt").forEach(b => {
     b.disabled = true;
@@ -746,19 +848,17 @@ function pick(btn, isRight, country, skipped) {
   if (isRight) {
     game.correct++;
     burstConfetti(12);
-  } else if (skipped) {
-    btn.classList.add("skipped");
   } else {
     btn.classList.add("wrong");
   }
   $("progress-fill").style.width = ((game.index + 1) / game.total * 100) + "%";
   $("fact-area").innerHTML = `
     <div class="reveal-chips">
-      <span class="rc">📍 ${country.continent}</span>
-      <span class="rc">🏙️ ${country.capital}</span>
+      <span class="rc">📍 ${country.continent[LANG]}</span>
+      <span class="rc">🏙️ ${country.capital[LANG]}</span>
     </div>
-    <div class="fact-bubble">${isRight ? "🎉 נכון!" : skipped ? "אין דבר, הנה התשובה:" : "כמעט!"} 💡 ${country.fact}</div>
-    <div style="text-align:center"><button class="btn-next" onclick="nextQuestion()">${game.index + 1 < game.total ? "לשאלה הבאה ⬅" : "לתוצאות 🏆"}</button></div>`;
+    <div class="fact-bubble">${isRight ? t("feedbackCorrect") : t("feedbackWrong")} 💡 ${country.fact[LANG]}</div>
+    <div style="text-align:center"><button class="btn-next" onclick="nextQuestion()">${game.index + 1 < game.total ? t("nextQuestion") : t("toResults")}</button></div>`;
 }
 
 function nextQuestion() {
@@ -774,7 +874,7 @@ function starsFor(correct, total) {
 
 function finishQuiz() {
   const stars = starsFor(game.correct, game.total);
-  showResult(game.type, stars, `ענית נכון על ${game.correct} מתוך ${game.total} שאלות!`);
+  showResult(game.type, stars, t("quizResultText")(game.correct, game.total));
 }
 
 /* ================= memory game ================= */
@@ -783,8 +883,8 @@ let mem = null;
 function startMemory() {
   const chosen = shuffle(COUNTRIES).slice(0, 8);
   const cards = shuffle(chosen.flatMap(c => [
-    { key: c.code, html: `<img src="${flagUrlSmall(c.code)}" alt="דגל ${c.name}">` },
-    { key: c.code, html: c.name },
+    { key: c.code, html: `<img src="${flagUrlSmall(c.code)}" alt="${c.name[LANG]}">` },
+    { key: c.code, html: c.name[LANG] },
   ]));
   mem = { open: [], matched: 0, lock: false, moves: 0 };
   $("pairs-found").textContent = "0";
@@ -822,7 +922,7 @@ function flipCard(card) {
     if (mem.matched === 8) {
       setTimeout(() => {
         const stars = mem.moves <= 12 ? 3 : mem.moves <= 18 ? 2 : 1;
-        showResult("memory", stars, `מצאתם את כל 8 הזוגות ב-${mem.moves} ניסיונות!`);
+        showResult("memory", stars, t("memoryResultText")(mem.moves));
       }, 700);
     }
   } else {
@@ -844,9 +944,9 @@ function showResult(type, stars, text) {
   $("result-stars").textContent = stars ? "⭐".repeat(stars) : "🌱";
   $("result-emoji").textContent = stars === 3 ? "🏆" : stars === 2 ? "🎉" : stars === 1 ? "💪" : "🌱";
   $("result-title").textContent =
-    stars === 3 ? "מדהים! אלופי העולם!" :
-    stars === 2 ? "כל הכבוד!" :
-    stars === 1 ? "יפה מאוד, ממשיכים להתאמן!" : "התחלה טובה — נסו שוב!";
+    stars === 3 ? t("resultTitle3") :
+    stars === 2 ? t("resultTitle2") :
+    stars === 1 ? t("resultTitle1") : t("resultTitle0");
   $("result-text").textContent = text;
   show("screen-result");
   if (stars >= 2) burstConfetti(60);
@@ -870,8 +970,11 @@ function burstConfetti(n) {
 }
 
 /* ================= init ================= */
+applyStaticTranslations();
 renderHome();
-initMap();
 </script>
+<script src="js/explorer.js"></script>
+<script src="js/profiles.js"></script>
+<script src="js/records.js"></script>
 </body>
 </html>

@@ -1,0 +1,81 @@
+/* ============================================================================
+ * geo-kids — local player profile picker
+ * Matches the existing design system (custom properties defined in index.html)
+ * ==========================================================================*/
+
+.profile-card {
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 36px 24px;
+  text-align: center;
+}
+.profile-card h2 {
+  font-size: 1.5rem;
+  font-weight: 800;
+  margin-bottom: 22px;
+}
+
+.profile-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 24px;
+}
+
+.profile-empty {
+  color: var(--ink-soft);
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s, transform .12s;
+  min-height: 44px;
+  touch-action: manipulation;
+}
+.profile-chip:hover { border-color: var(--coral); transform: translateY(-2px); }
+.profile-chip-emoji { font-size: 1.3rem; }
+
+.profile-add-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.profile-input {
+  font-family: inherit;
+  font-size: 1.05rem;
+  border: 2px solid var(--line);
+  border-radius: 999px;
+  padding: 10px 18px;
+  min-height: 44px;
+  min-width: 220px;
+  background: var(--bg);
+  color: var(--ink);
+}
+.profile-input:focus {
+  outline: none;
+  border-color: var(--sky);
+}
+
+@media (max-width: 480px) {
+  .profile-card { padding: 22px 14px; }
+  .profile-card h2 { font-size: 1.2rem; margin-bottom: 16px; }
+  .profile-chip { padding: 8px 14px; font-size: .95rem; }
+  .profile-input { min-width: 0; flex: 1; font-size: .95rem; }
+}
