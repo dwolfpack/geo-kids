@@ -378,7 +378,10 @@
   <!-- ============ HOME ============ -->
   <div id="screen-home">
     <header>
-      <div id="lang-toggle" class="lang-toggle"></div>
+      <div style="display:flex; justify-content:center; gap:8px; flex-wrap:wrap;">
+        <div id="lang-toggle" class="lang-toggle"></div>
+        <button id="sound-toggle" class="lang-toggle" style="padding:4px 14px; cursor:pointer; border:2px solid var(--line); background:var(--bg);" onclick="onSoundToggleClick()"></button>
+      </div>
       <div id="auth-bar" class="auth-bar"></div>
       <h1><span class="globe">🌍</span> <span id="app-title-text">מסע סביב העולם</span></h1>
       <p id="app-subtitle">משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!</p>
@@ -514,6 +517,7 @@
 
 </div>
 
+<script src="js/sound.js"></script>
 <script>
 /* ================= data ================= */
 const COUNTRIES = [
@@ -646,7 +650,7 @@ const UI = {
   he: {
     pageTitle: "מסע סביב העולם 🌍", appTitle: "מסע סביב העולם",
     subtitle: "משחקים והרפתקאות בגאוגרפיה — בואו להכיר מדינות, דגלים וערי בירה!",
-    starsCollected: "כוכבים שאספתם",
+    starsCollected: "כוכבים שאספתם", soundOn: "השתקה", soundOff: "הפעלת קול",
     gameFlagsTitle: "חידון דגלים", gameFlagsDesc: "איזו מדינה מתחבאת מאחורי הדגל?",
     gameCapitalsTitle: "ערי בירה", gameCapitalsDesc: "מה עיר הבירה של כל מדינה?",
     gameContinentsTitle: "לאיזו יבשת?", gameContinentsDesc: "מצאו באיזו יבשת נמצאת כל מדינה",
@@ -680,7 +684,7 @@ const UI = {
   en: {
     pageTitle: "Around the World Adventure 🌍", appTitle: "Around the World Adventure",
     subtitle: "Geography games and adventures — let's learn countries, flags, and capitals!",
-    starsCollected: "stars collected",
+    starsCollected: "stars collected", soundOn: "Mute sound", soundOff: "Unmute sound",
     gameFlagsTitle: "Flag Quiz", gameFlagsDesc: "Which country is hiding behind the flag?",
     gameCapitalsTitle: "Capital Cities", gameCapitalsDesc: "What's the capital city of each country?",
     gameContinentsTitle: "Which Continent?", gameContinentsDesc: "Find which continent each country is on",
@@ -743,6 +747,7 @@ function applyStaticTranslations() {
   const profileInput = $("new-profile-name");
   if (profileInput) profileInput.placeholder = t("profilePlaceholder");
   renderLangToggle();
+  renderSoundToggle();
 }
 
 function renderLangToggle() {
@@ -752,6 +757,17 @@ function renderLangToggle() {
     <button class="lang-btn ${LANG === "he" ? "active" : ""}" onclick="setLang('he')">עברית</button>
     <button class="lang-btn ${LANG === "en" ? "active" : ""}" onclick="setLang('en')">English</button>
   `;
+}
+function renderSoundToggle() {
+  const btn = $("sound-toggle");
+  if (!btn) return;
+  const on = typeof isSoundOn === "function" ? isSoundOn() : true;
+  btn.textContent = on ? "🔊" : "🔇";
+  btn.setAttribute("aria-label", on ? t("soundOn") : t("soundOff"));
+}
+function onSoundToggleClick() {
+  if (typeof toggleSound === "function") toggleSound();
+  renderSoundToggle();
 }
 
 function setLang(lang) {
@@ -923,6 +939,7 @@ function pick(btn, isRight, country) {
   if (isRight) {
     game.correct++;
     burstConfetti(12);
+    if (typeof playChime === "function") playChime();
   } else {
     btn.classList.add("wrong");
   }
@@ -994,6 +1011,7 @@ function flipCard(card) {
     mem.matched++;
     $("pairs-found").textContent = mem.matched;
     burstConfetti(10);
+    if (typeof playChime === "function") playChime();
     if (mem.matched === 8) {
       setTimeout(() => {
         const stars = mem.moves <= 12 ? 3 : mem.moves <= 18 ? 2 : 1;
