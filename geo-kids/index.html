@@ -5,39 +5,59 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title id="page-title">מסע סביב העולם 🌍</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;800&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet"></noscript>
 <link rel="stylesheet" href="css/explorer.css">
 <link rel="stylesheet" href="css/records.css">
 <link rel="stylesheet" href="css/profiles.css">
 <style>
   :root {
-    --bg: #F0EEE6;
-    --card: #FAF9F5;
-    --ink: #191919;
-    --ink-soft: #5E5D59;
-    --coral: #D97757;
-    --coral-dark: #C4633F;
-    --sky: #6A9BCC;
-    --leaf: #7DA87B;
-    --sun: #E8B44F;
-    --berry: #B4688F;
-    --line: #E3E0D5;
+    --bg: #E4EFEE;
+    --card: #FFFCF3;
+    --ink: #1E2C2A;
+    --ink-soft: #5B6D69;
+    --coral: #D6553B;
+    --coral-dark: #B8442E;
+    --sky: #2E7D96;
+    --leaf: #4C9166;
+    --sun: #E0A83E;
+    --berry: #A6567D;
+    --line: #D7E3DE;
     --radius: 20px;
-    --shadow: 0 4px 14px rgba(25,25,25,.08);
+    --shadow: 0 4px 14px rgba(20,35,33,.09);
+    --font-display: 'Fredoka', 'Heebo', sans-serif;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Heebo', sans-serif;
-    background: var(--bg);
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(30,44,42,.07) 1px, transparent 0);
+    background-size: 22px 22px;
     color: var(--ink);
     min-height: 100vh;
   }
   .wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
 
   /* ---------- header ---------- */
-  header { text-align: center; margin-bottom: 28px; }
+  header {
+    text-align: center; margin-bottom: 32px;
+    background: var(--card);
+    border: 2px solid var(--line);
+    border-radius: calc(var(--radius) + 6px);
+    box-shadow: var(--shadow);
+    padding: 22px 20px 26px;
+    position: relative;
+    transform: rotate(-.4deg);
+  }
+  header::before {
+    content: ""; position: absolute; inset: 8px;
+    border: 2px dashed var(--line); border-radius: calc(var(--radius) + 1px);
+    pointer-events: none;
+  }
   .lang-toggle {
-    display: inline-flex; gap: 6px; background: var(--card);
+    display: inline-flex; gap: 6px; background: var(--bg);
     border: 2px solid var(--line); border-radius: 999px;
     padding: 4px; margin-bottom: 8px; box-shadow: var(--shadow);
   }
@@ -48,10 +68,11 @@
     min-height: 32px; transition: background .15s, color .15s;
   }
   .lang-btn.active { background: var(--coral); color: #fff; }
-  .lang-btn:not(.active):hover { background: var(--bg); }
+  .lang-btn:not(.active):hover { background: var(--card); }
   header h1 {
+    font-family: var(--font-display);
     font-size: clamp(2rem, 6vw, 3.2rem);
-    font-weight: 800;
+    font-weight: 700;
     letter-spacing: -1px;
   }
   header h1 .globe { display: inline-block; animation: spin 14s linear infinite; }
@@ -59,7 +80,8 @@
   header p { color: var(--ink-soft); font-size: 1.1rem; margin-top: 6px; }
   .stars-total {
     display: inline-flex; align-items: center; gap: 6px;
-    background: var(--card); border: 2px solid var(--line);
+    font-family: var(--font-display);
+    background: var(--sun); color: #3A2A0E; border: 2px solid var(--line);
     border-radius: 999px; padding: 6px 18px; margin-top: 14px;
     font-weight: 600; box-shadow: var(--shadow);
   }
@@ -73,31 +95,41 @@
     background: var(--card);
     border: 2px solid var(--line);
     border-radius: var(--radius);
-    padding: 26px 20px;
+    padding: 26px 20px 22px;
     text-align: center;
     cursor: pointer;
     box-shadow: var(--shadow);
     transition: transform .15s, box-shadow .15s, border-color .15s;
     position: relative;
-    overflow: hidden;
     font-family: inherit;
     color: inherit;
     width: 100%;
   }
+  .game-card:nth-child(odd) { transform: rotate(-.6deg); }
+  .game-card:nth-child(even) { transform: rotate(.6deg); }
   .game-card::before {
-    content: ""; position: absolute; inset: 0 0 auto 0; height: 8px;
-    background: var(--accent, var(--coral));
+    content: ""; position: absolute; top: 0; inset-inline-end: 0;
+    width: 0; height: 0; border-style: solid;
+    border-width: 0 26px 26px 0;
+    border-color: transparent var(--bg) transparent transparent;
+    filter: drop-shadow(-1px 1px 1px rgba(20,35,33,.12));
   }
-  .game-card:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 10px 24px rgba(25,25,25,.14); border-color: var(--accent, var(--coral)); }
-  .game-card .emoji { font-size: 3.2rem; display: block; margin-bottom: 10px; }
-  .game-card h2 { font-size: 1.35rem; font-weight: 800; }
+  .game-card .emoji {
+    font-size: 2.6rem; display: inline-flex; align-items: center; justify-content: center;
+    width: 74px; height: 74px; margin-bottom: 12px;
+    border: 3px dashed var(--accent, var(--coral));
+    border-radius: 50%;
+    color: var(--accent, var(--coral));
+  }
+  .game-card:hover { transform: translateY(-4px) scale(1.02) rotate(0deg); box-shadow: 0 10px 24px rgba(20,35,33,.16); border-color: var(--accent, var(--coral)); }
+  .game-card h2 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; }
   .game-card p { color: var(--ink-soft); font-size: .95rem; margin-top: 6px; }
   .game-card .best { margin-top: 12px; font-size: 1.05rem; letter-spacing: 2px; }
 
   @media (max-width: 480px) {
     .games { grid-template-columns: 1fr 1fr; gap: 12px; }
     .game-card { padding: 16px 10px; }
-    .game-card .emoji { font-size: 2.2rem; margin-bottom: 6px; }
+    .game-card .emoji { width: 52px; height: 52px; font-size: 1.8rem; margin-bottom: 6px; }
     .game-card h2 { font-size: 1.05rem; }
     .game-card p { font-size: .8rem; margin-top: 4px; }
     .game-card .best { margin-top: 8px; font-size: .9rem; }
@@ -141,11 +173,11 @@
     border-radius: var(--radius); box-shadow: var(--shadow);
     padding: 36px 24px; text-align: center;
   }
-  .diff-card h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 24px; }
+  .diff-card h2 { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; margin-bottom: 24px; }
   .diff-options { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .diff-btn {
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
-    background: var(--bg); border: 3px solid var(--line); border-radius: 18px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    background: var(--bg); border: 3px dashed var(--line); border-radius: 18px;
     padding: 20px 12px; cursor: pointer; font-family: inherit;
     transition: transform .15s, border-color .15s;
     min-height: 44px; touch-action: manipulation;
@@ -154,18 +186,21 @@
     .diff-card { padding: 22px 14px; }
     .diff-options { grid-template-columns: 1fr 1fr; gap: 10px; }
     .diff-btn { padding: 14px 8px; }
-    .diff-emoji { font-size: 1.8rem; }
+    .diff-emoji { width: 42px; height: 42px; font-size: 1.4rem; }
     .diff-label { font-size: 1rem; }
     .diff-desc { font-size: .78rem; }
   }
-  .diff-btn:hover { transform: translateY(-3px); }
-  .diff-btn.lvl-1:hover { border-color: #7DA87B; }
-  .diff-btn.lvl-2:hover { border-color: #E8B44F; }
+  .diff-btn:hover { transform: translateY(-3px) rotate(-1deg); }
+  .diff-btn.lvl-1:hover { border-color: var(--leaf); }
+  .diff-btn.lvl-2:hover { border-color: var(--sun); }
   .diff-btn.lvl-3:hover { border-color: #E8933F; }
   .diff-btn.lvl-4:hover { border-color: var(--coral); }
   .diff-btn.lvl-5:hover { border-color: var(--berry); }
-  .diff-emoji { font-size: 2.2rem; }
-  .diff-label { font-size: 1.15rem; font-weight: 800; }
+  .diff-emoji {
+    width: 54px; height: 54px; display: flex; align-items: center; justify-content: center;
+    font-size: 1.7rem; border-radius: 50%; border: 3px solid var(--line); background: var(--card);
+  }
+  .diff-label { font-family: var(--font-display); font-size: 1.1rem; font-weight: 600; }
   .diff-desc { color: var(--ink-soft); font-size: .88rem; }
 
   /* ---------- game screen ---------- */
@@ -185,6 +220,7 @@
   .progress-pill {
     background: var(--card); border: 2px solid var(--line);
     border-radius: 999px; padding: 8px 20px; font-weight: 600;
+    font-family: var(--font-display);
   }
   .progress-track { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; margin-bottom: 24px; }
   .progress-fill { height: 100%; width: 0; background: var(--coral); border-radius: 999px; transition: width .4s ease; }
@@ -194,12 +230,13 @@
     border-radius: var(--radius); box-shadow: var(--shadow);
     padding: 30px 22px; text-align: center; margin-bottom: 20px;
   }
-  .question-card h3 { font-size: 1.4rem; font-weight: 800; margin-bottom: 18px; }
+  .question-card h3 { font-family: var(--font-display); font-size: 1.4rem; font-weight: 600; margin-bottom: 18px; }
   .flag-img {
-    width: min(260px, 70vw); border-radius: 12px;
-    border: 2px solid var(--line); box-shadow: var(--shadow);
+    width: min(260px, 70vw); border-radius: 6px;
+    border: 8px solid #fff; box-shadow: 0 6px 16px rgba(20,35,33,.18);
+    transform: rotate(-1.5deg);
   }
-  .big-word { font-size: 2.2rem; font-weight: 800; color: var(--coral-dark); }
+  .big-word { font-family: var(--font-display); font-size: 2.2rem; font-weight: 600; color: var(--coral-dark); }
 
   .options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   .opt {
@@ -247,7 +284,7 @@
   .btn-next {
     margin-top: 16px; background: var(--coral); color: #fff;
     border: none; border-radius: 999px; padding: 12px 36px;
-    font-family: inherit; font-size: 1.15rem; font-weight: 800;
+    font-family: var(--font-display); font-size: 1.1rem; font-weight: 600;
     cursor: pointer; box-shadow: var(--shadow); transition: background .15s, transform .12s;
   }
   .btn-next:hover { background: var(--coral-dark); transform: translateY(-2px); }
@@ -285,15 +322,20 @@
     border-radius: var(--radius); box-shadow: var(--shadow);
     padding: 44px 24px; text-align: center; animation: rise .4s ease;
   }
-  .result-card .big-emoji { font-size: 4rem; }
-  .result-card h2 { font-size: 2rem; font-weight: 800; margin: 12px 0 6px; }
+  .result-card .big-emoji {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 108px; height: 108px; font-size: 3.6rem;
+    border: 4px dashed var(--coral); border-radius: 50%;
+    transform: rotate(-6deg);
+  }
+  .result-card h2 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 600; margin: 16px 0 6px; }
   .result-card .stars { font-size: 2.4rem; letter-spacing: 6px; margin: 10px 0; }
   .result-card p { color: var(--ink-soft); font-size: 1.15rem; }
   .result-actions { display: flex; gap: 12px; justify-content: center; margin-top: 24px; flex-wrap: wrap; }
   .btn-ghost {
     background: var(--card); color: var(--ink); border: 2px solid var(--line);
     border-radius: 999px; padding: 12px 32px;
-    font-family: inherit; font-size: 1.1rem; font-weight: 700; cursor: pointer;
+    font-family: var(--font-display); font-size: 1.05rem; font-weight: 600; cursor: pointer;
   }
   .btn-ghost:hover { border-color: var(--coral); }
 
@@ -955,7 +997,7 @@ function showResult(type, stars, text) {
 $("btn-again").onclick = () => startGame(lastGame);
 
 /* ================= confetti ================= */
-const CONFETTI_COLORS = ["#D97757","#6A9BCC","#7DA87B","#E8B44F","#B4688F"];
+const CONFETTI_COLORS = ["#D6553B","#2E7D96","#4C9166","#E0A83E","#A6567D"];
 function burstConfetti(n) {
   for (let i = 0; i < n; i++) {
     const el = document.createElement("div");
