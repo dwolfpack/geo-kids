@@ -842,7 +842,9 @@ function renderCountryPanel(c, panelEl) {
       <div class="cp-item"><span class="ico">📸</span><span><span class="lbl">${t("cpLandmark")}</span><span class="val">${c.landmark[LANG]}</span></span></div>
     </div>
     <div class="cp-fact">💡 ${c.fact[LANG]}</div>
-    <a class="cp-wiki" href="https://${wikiHost}.wikipedia.org/wiki/${encodeURIComponent(c.name[LANG])}" target="_blank" rel="noopener">${t("cpWiki")}</a>`;
+    <a class="cp-wiki" href="https://${wikiHost}.wikipedia.org/wiki/${encodeURIComponent(c.name[LANG])}" target="_blank" rel="noopener">${t("cpWiki")}</a>
+    <div class="mini-map-wrap" id="cp-mini-map"></div>`;
+  if (typeof renderMiniMap === "function") renderMiniMap(c, $("cp-mini-map"), c.name[LANG]);
   panelEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
@@ -1041,6 +1043,7 @@ function burstConfetti(n) {
 applyStaticTranslations();
 renderHome();
 </script>
+<script src="js/worldmap.js"></script>
 <script src="js/explorer.js"></script>
 <script src="js/profiles.js"></script>
 <script src="js/records.js"></script>
