@@ -135,6 +135,21 @@
     .game-card .best { margin-top: 8px; font-size: .9rem; }
   }
 
+  .sticker-rail {
+    display: flex; justify-content: center; gap: -8px;
+    margin-top: 12px;
+  }
+  .sticker-rail img {
+    width: 26px; height: 18px; object-fit: cover;
+    border-radius: 3px; border: 1px solid var(--line);
+    box-shadow: 0 1px 3px rgba(20,35,33,.2);
+    margin-inline-start: -8px;
+  }
+  .sticker-rail img:first-child { margin-inline-start: 0; }
+  @media (max-width: 480px) {
+    .sticker-rail img { width: 20px; height: 14px; }
+  }
+
   /* ---------- country info panel ---------- */
   .country-panel {
     margin-top: 16px;
@@ -371,24 +386,28 @@
         <h2 id="gc-flags-title">חידון דגלים</h2>
         <p id="gc-flags-desc">איזו מדינה מתחבאת מאחורי הדגל?</p>
         <div class="best" id="best-flags"></div>
+        <div class="sticker-rail" id="rail-flags"></div>
       </button>
       <button class="game-card" style="--accent: var(--sky)" onclick="startGame('capitals')">
         <span class="emoji">🏙️</span>
         <h2 id="gc-capitals-title">ערי בירה</h2>
         <p id="gc-capitals-desc">מה עיר הבירה של כל מדינה?</p>
         <div class="best" id="best-capitals"></div>
+        <div class="sticker-rail" id="rail-capitals"></div>
       </button>
       <button class="game-card" style="--accent: var(--leaf)" onclick="startGame('continents')">
         <span class="emoji">🗺️</span>
         <h2 id="gc-continents-title">לאיזו יבשת?</h2>
         <p id="gc-continents-desc">מצאו באיזו יבשת נמצאת כל מדינה</p>
         <div class="best" id="best-continents"></div>
+        <div class="sticker-rail" id="rail-continents"></div>
       </button>
       <button class="game-card" style="--accent: var(--berry)" onclick="startGame('memory')">
         <span class="emoji">🧠</span>
         <h2 id="gc-memory-title">משחק זיכרון</h2>
         <p id="gc-memory-desc">התאימו כל דגל למדינה שלו</p>
         <div class="best" id="best-memory"></div>
+        <div class="sticker-rail" id="rail-memory"></div>
       </button>
       <button class="game-card" style="--accent: var(--sun)" onclick="startExplorer()">
         <span class="emoji">🔎</span>
@@ -761,12 +780,19 @@ const store = {
   get: k => parseInt(localStorage.getItem(`geo-${activeProfileSlug()}-${k}`) || "0", 10),
   set: (k, v) => localStorage.setItem(`geo-${activeProfileSlug()}-${k}`, v),
 };
+function renderStickerRail(railId) {
+  const el = $(railId);
+  if (!el) return;
+  const picks = shuffle(COUNTRIES).slice(0, 6);
+  el.innerHTML = picks.map(c => `<img src="${flagUrlSmall(c.code)}" alt="${c.name[LANG]}">`).join("");
+}
 function renderHome() {
   let total = 0;
   ["flags","capitals","continents","memory"].forEach(g => {
     const s = store.get(g);
     total += s;
     $("best-" + g).textContent = s ? "⭐".repeat(s) : t("notPlayedYet");
+    renderStickerRail("rail-" + g);
   });
   $("total-stars").textContent = total;
 }
