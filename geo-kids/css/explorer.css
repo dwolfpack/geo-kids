@@ -89,3 +89,23 @@
     padding: 7px 14px;
   }
 }
+
+.mini-map-wrap {
+  margin-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+.mini-map-bg {
+  fill: var(--bg);
+  stroke: var(--line);
+  stroke-width: 2;
+}
+.mini-map-pin-ring {
+  fill: none;
+  stroke: var(--coral);
+  stroke-width: 2;
+  opacity: .5;
+}
+.mini-map-pin {
+  fill: var(--coral);
+}
