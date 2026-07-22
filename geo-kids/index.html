@@ -522,15 +522,15 @@
 /* ================= data ================= */
 const QUESTIONS_PER_ROUND = 8;
 
-/* Levels are sorted purely by population, 30/30/30 then the remaining 10
-   countries split across the last two levels (5/5). No pinning — Israel
-   lands wherever its population rank puts it. */
+/* Levels are ranked by kid-recognizability (global fame + flag
+   distinctiveness + geographic familiarity for a Hebrew-speaking child),
+   not population. Split evenly across the ~194-country roster: 39/39/39/39/38. */
 const LEVELS = [
-  { key:1, labelKey:"levelEasy",     emoji:"🟢", cls:"lvl-1", codes:["cn","in","us","id","pk","ng","br","bd","ru","mx","et","jp","ph","eg","vn","ir","tr","de","th","fr","gb","za","it","ke","mm","kr","co","es","ar","iq"] },
-  { key:2, labelKey:"levelMedium",   emoji:"🟡", cls:"lvl-2", codes:["dz","ca","pl","ua","ma","sa","uz","pe","gh","my","np","ve","au","lk","kz","cl","ro","nl","ec","gt","kh","tn","bo","be","cu","jo","do","se","cz","hn"] },
-  { key:3, labelKey:"levelHard",     emoji:"🟠", cls:"lvl-3", codes:["il","gr","pt","pg","az","hu","ae","ch","at","la","py","ly","rs","bg","dk","sg","no","fi","lb","sk","cr","nz","ie","om","pa","kw","hr","ge","uy","mn"] },
-  { key:4, labelKey:"levelVeryHard", emoji:"🔴", cls:"lvl-4", codes:["am","jm","lt","qa","si"] },
-  { key:5, labelKey:"levelExpert",   emoji:"🟣", cls:"lvl-5", codes:["lv","tt","ee","fj","is"] },
+  { key:1, labelKey:"levelEasy",     emoji:"🟢", cls:"lvl-1", codes:["us","cn","gb","fr","de","it","es","jp","ru","br","in","eg","il","ca","au","mx","kr","gr","nl","ch","se","tr","sa","ae","th","za","ar","pt","nz","dk","no","fi","be","ua","pl","at","ie","id","cu"] },
+  { key:2, labelKey:"levelMedium",   emoji:"🟡", cls:"lvl-2", codes:["kp","sy","ps","lb","ir","jo","pk","sg","vn","ph","ng","ma","is","hr","bg","cy","co","cl","pe","jm","af","qa","ke","et","cz","hu","ro","my","bd","mg","kz","az","ge","iq","ye","so","by","ve","pa"] },
+  { key:3, labelKey:"levelHard",     emoji:"🟠", cls:"lvl-3", codes:["cr","kw","dz","tn","ly","mt","lu","rs","sk","si","lt","lv","ee","uy","ci","cm","gh","zw","na","tz","rw","ug","cd","ao","sd","ba","me","md","mk","bh","om","lk","np","kh","mm","mn","uz","am","do"] },
+  { key:4, labelKey:"levelVeryHard", emoji:"🔴", cls:"lvl-4", codes:["bs","ht","gt","hn","ni","sv","bz","py","bo","ec","tt","bb","fj","pg","la","sn","ml","gn","sl","lr","ga","cv","cg","zm","mw","mz","bw","mu","dj","er","bi","sb","vu","ws","to","gy","sr","kg","tj"] },
+  { key:5, labelKey:"levelExpert",   emoji:"🟣", cls:"lvl-5", codes:["tv","nr","pw","mh","fm","ki","gd","lc","vc","ag","kn","dm","va","sm","li","ad","mc","st","gq","gw","km","sc","sz","ls","gm","bj","tg","bf","cf","mr","ne","td","ss","bt","bn","mv","tl","tm"] },
 ];
 function poolForLevel(levelKey) {
   const codes = LEVELS.slice(0, levelKey).flatMap(l => l.codes);
