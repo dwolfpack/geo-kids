@@ -12,6 +12,10 @@
       if (!AudioCtx) return null;
       ctx = new AudioCtx();
     }
+    // Mobile browsers (notably iOS Safari) create AudioContext in a
+    // "suspended" state and require an explicit resume() from within a
+    // user-gesture handler before any sound will actually play.
+    if (ctx.state === "suspended") ctx.resume();
     return ctx;
   }
 
