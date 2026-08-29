@@ -1,0 +1,27 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#F5E6D3"/>
+  <rect x="60" y="60" width="960" height="960" rx="24" fill="#FBF3E7" stroke="#3E6E63" stroke-width="4"/>
+
+  <text x="540" y="230" font-family="Verdana, Geneva, sans-serif" font-size="48" font-weight="bold" fill="#2C4E46" text-anchor="middle">"where's Kiribati?"</text>
+  <text x="540" y="290" font-family="Verdana, Geneva, sans-serif" font-size="30" fill="#D9714E" text-anchor="middle">— the question that started it all</text>
+
+  <!-- stat blocks -->
+  <g font-family="Verdana, Geneva, sans-serif" text-anchor="middle">
+    <circle cx="290" cy="500" r="120" fill="#3E6E63"/>
+    <text x="290" y="490" font-size="56" font-weight="bold" fill="#FBF3E7">195</text>
+    <text x="290" y="535" font-size="24" fill="#FBF3E7">countries</text>
+
+    <circle cx="540" cy="500" r="120" fill="#D9714E"/>
+    <text x="540" y="490" font-size="46" font-weight="bold" fill="#FBF3E7">HE / EN</text>
+    <text x="540" y="535" font-size="24" fill="#FBF3E7">every entry</text>
+
+    <circle cx="790" cy="500" r="120" fill="#E9A23B"/>
+    <text x="790" y="490" font-size="46" font-weight="bold" fill="#2C4E46">0</text>
+    <text x="790" y="535" font-size="24" fill="#2C4E46">frameworks</text>
+  </g>
+
+  <text x="540" y="760" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#2C4E46" text-anchor="middle">vanilla JS · HTML · CSS</text>
+  <text x="540" y="800" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#2C4E46" text-anchor="middle">no build step, Hebrew-first UI</text>
+
+  <text x="540" y="920" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#3E6E63" text-anchor="middle">QA department: age 6</text>
+</svg>

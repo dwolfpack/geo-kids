@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f4f1eb"/>
+  <text x="600" y="65" text-anchor="middle" font-size="28" fill="#26323a" font-weight="bold">One continent at a time</text>
+
+  <!-- flow of batches -->
+  <g font-size="16" fill="#26323a">
+    <rect x="70" y="120" width="150" height="80" rx="10" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="145" y="165" text-anchor="middle">Europe</text>
+
+    <rect x="260" y="120" width="150" height="80" rx="10" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="335" y="165" text-anchor="middle">Africa</text>
+
+    <rect x="450" y="120" width="150" height="80" rx="10" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="525" y="165" text-anchor="middle">Asia</text>
+
+    <rect x="640" y="120" width="150" height="80" rx="10" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="715" y="165" text-anchor="middle">Americas</text>
+
+    <rect x="830" y="120" width="150" height="80" rx="10" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="905" y="165" text-anchor="middle">Oceania</text>
+
+    <path d="M220 160 L260 160" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M410 160 L450 160" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M600 160 L640 160" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M790 160 L830 160" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+  </g>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#26323a"/>
+    </marker>
+  </defs>
+
+  <!-- each batch: plan, script, human -->
+  <g transform="translate(0,240)">
+    <rect x="150" y="0" width="900" height="270" rx="14" fill="#ffffff" stroke="#26323a" stroke-width="2"/>
+    <text x="600" y="40" text-anchor="middle" font-size="20" fill="#26323a" font-weight="bold">Each batch, every time</text>
+
+    <circle cx="260" cy="100" r="30" fill="#f1e4c8" stroke="#a9762f" stroke-width="2"/>
+    <text x="260" y="106" text-anchor="middle" font-size="14" fill="#26323a">plan</text>
+
+    <circle cx="600" cy="100" r="30" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+    <text x="600" y="106" text-anchor="middle" font-size="13" fill="#26323a">script</text>
+
+    <circle cx="940" cy="100" r="30" fill="#f0dede" stroke="#c0463f" stroke-width="2"/>
+    <text x="940" y="106" text-anchor="middle" font-size="12" fill="#26323a">read it</text>
+    <text x="940" y="122" text-anchor="middle" font-size="12" fill="#26323a">aloud</text>
+
+    <path d="M290 100 L570 100" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+    <path d="M630 100 L910 100" stroke="#26323a" stroke-width="2" marker-end="url(#arrow)"/>
+
+    <text x="600" y="180" text-anchor="middle" font-size="16" fill="#5c6b73">script catches shape · a person catches truth</text>
+    <text x="600" y="220" text-anchor="middle" font-size="18" fill="#26323a" font-weight="bold">then, and only then, the next continent</text>
+  </g>
+</svg>

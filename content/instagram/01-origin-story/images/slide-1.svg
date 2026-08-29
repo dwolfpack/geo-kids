@@ -1,0 +1,49 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#FBF3E7"/>
+      <stop offset="100%" stop-color="#F5E6D3"/>
+    </linearGradient>
+  </defs>
+  <rect width="1080" height="1080" fill="url(#bg1)"/>
+
+  <!-- table -->
+  <rect x="0" y="820" width="1080" height="260" fill="#E3B87C"/>
+  <rect x="0" y="810" width="1080" height="16" fill="#C99A5F"/>
+
+  <!-- laptop -->
+  <g>
+    <rect x="380" y="640" width="320" height="200" rx="10" fill="#3E6E63"/>
+    <rect x="400" y="660" width="280" height="150" rx="4" fill="#F5E6D3"/>
+    <rect x="360" y="840" width="360" height="18" rx="6" fill="#2C4E46"/>
+    <!-- world map dots on screen -->
+    <circle cx="450" cy="700" r="6" fill="#D9714E"/>
+    <circle cx="500" cy="730" r="5" fill="#D9714E"/>
+    <circle cx="560" cy="695" r="7" fill="#D9714E"/>
+    <circle cx="620" cy="740" r="5" fill="#D9714E"/>
+    <circle cx="480" cy="760" r="4" fill="#3E6E63"/>
+    <path d="M420 710 Q 480 680 540 710 T 660 720" stroke="#C99A5F" stroke-width="4" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- parent figure -->
+  <g>
+    <circle cx="300" cy="560" r="55" fill="#D9714E"/>
+    <path d="M220 820 Q 220 660 300 640 Q 380 660 380 820 Z" fill="#3E6E63"/>
+  </g>
+
+  <!-- kid figure -->
+  <g>
+    <circle cx="470" cy="600" r="42" fill="#E9A23B"/>
+    <path d="M410 820 Q 410 690 470 672 Q 530 690 530 820 Z" fill="#D9714E"/>
+  </g>
+
+  <!-- title text -->
+  <text x="540" y="150" font-family="Verdana, Geneva, sans-serif" font-size="64" font-weight="bold" fill="#2C4E46" text-anchor="middle">geo-kids</text>
+  <text x="540" y="210" font-family="Verdana, Geneva, sans-serif" font-size="30" fill="#3E6E63" text-anchor="middle">built with (and for) my kid</text>
+
+  <!-- small flags decor -->
+  <rect x="150" y="260" width="60" height="40" fill="#D9714E"/>
+  <rect x="150" y="260" width="60" height="13" fill="#E9A23B"/>
+  <rect x="870" y="300" width="60" height="40" fill="#3E6E63"/>
+  <rect x="870" y="300" width="20" height="40" fill="#F5E6D3"/>
+</svg>

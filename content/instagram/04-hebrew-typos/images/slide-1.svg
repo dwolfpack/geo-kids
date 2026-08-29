@@ -1,0 +1,23 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#F3E9DA"/>
+  <rect x="70" y="70" width="940" height="940" rx="28" fill="#FBF3E7" stroke="#3E6E63" stroke-width="4"/>
+
+  <text x="540" y="200" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#2C4E46" text-anchor="middle">"a script can tell you</text>
+  <text x="540" y="260" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#2C4E46" text-anchor="middle">a field is empty.</text>
+  <text x="540" y="330" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#D9714E" text-anchor="middle">it can't tell you</text>
+  <text x="540" y="390" font-family="Georgia, serif" font-size="46" font-weight="bold" fill="#D9714E" text-anchor="middle">a name is wrong."</text>
+
+  <line x1="220" y1="440" x2="860" y2="440" stroke="#C99A5F" stroke-width="3"/>
+
+  <g font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46">
+    <text x="540" y="510" text-anchor="middle" font-weight="bold">real bugs the validator missed:</text>
+    <text x="540" y="570" text-anchor="middle">• Albania — missing entirely</text>
+    <text x="540" y="620" text-anchor="middle">• Kiribati — wrong Hebrew capital</text>
+    <text x="540" y="670" text-anchor="middle">• Seychelles — wrong Hebrew name</text>
+    <text x="540" y="720" text-anchor="middle">• Bamako / C.A.R. — wrong Hebrew name</text>
+  </g>
+
+  <text x="540" y="850" font-family="Verdana, Geneva, sans-serif" font-size="24" fill="#3E6E63" text-anchor="middle">caught by reading, not by code</text>
+  <text x="540" y="900" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#3E6E63" text-anchor="middle">validate-countries-data.js checked structure —</text>
+  <text x="540" y="935" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#3E6E63" text-anchor="middle">a native speaker checked the truth</text>
+</svg>

@@ -1,0 +1,48 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="800" height="500" fill="#f7f4ee"/>
+  <text x="400" y="45" text-anchor="middle" font-size="22" font-weight="700" fill="#1f2a37">Country Object — Every Field Can Lie Quietly</text>
+
+  <rect x="150" y="80" width="500" height="360" rx="12" fill="#ffffff" stroke="#2f6f5e" stroke-width="2"/>
+  <text x="400" y="108" text-anchor="middle" font-size="14" font-weight="700" fill="#2f6f5e">{ ...country }</text>
+
+  <!-- rows -->
+  <g font-size="13">
+    <text x="175" y="140" fill="#1f2a37">code: "AL"</text>
+    <text x="500" y="140" fill="#2f6f5e">✓ present now (was missing)</text>
+
+    <text x="175" y="170" fill="#1f2a37">name: {he, en}</text>
+    <text x="500" y="170" fill="#b5533c">✗ Seychelles he: wrong</text>
+
+    <text x="175" y="200" fill="#1f2a37">capital: {he, en}</text>
+    <text x="500" y="200" fill="#b5533c">✗ Kiribati he: wrong</text>
+
+    <text x="175" y="230" fill="#1f2a37">continent: {he, en}</text>
+    <text x="500" y="230" fill="#5b6b73">checked by script</text>
+
+    <text x="175" y="260" fill="#1f2a37">lat, lon</text>
+    <text x="500" y="260" fill="#5b6b73">checked by script</text>
+
+    <text x="175" y="290" fill="#1f2a37">pop: {he, en}</text>
+    <text x="500" y="290" fill="#5b6b73">checked by script</text>
+
+    <text x="175" y="320" fill="#1f2a37">lang: {he, en}</text>
+    <text x="500" y="320" fill="#5b6b73">checked by script</text>
+
+    <text x="175" y="350" fill="#1f2a37">landmark: {he, en}</text>
+    <text x="500" y="350" fill="#5b6b73">checked by script</text>
+
+    <text x="175" y="380" fill="#1f2a37">fact: {he, en}</text>
+    <text x="500" y="380" fill="#b5533c">✗ he: hyphenation bug</text>
+  </g>
+
+  <line x1="175" y1="150" x2="655" y2="150" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="180" x2="655" y2="180" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="210" x2="655" y2="210" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="240" x2="655" y2="240" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="270" x2="655" y2="270" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="300" x2="655" y2="300" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="330" x2="655" y2="330" stroke="#eee6d8" stroke-width="1"/>
+  <line x1="175" y1="360" x2="655" y2="360" stroke="#eee6d8" stroke-width="1"/>
+
+  <text x="400" y="475" text-anchor="middle" font-size="13" fill="#5b6b73">Structure checked by script. Meaning caught by a human who reads Hebrew.</text>
+</svg>

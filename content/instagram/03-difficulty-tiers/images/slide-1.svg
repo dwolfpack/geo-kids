@@ -1,0 +1,60 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#FBF3E7"/>
+  <text x="540" y="100" font-family="Verdana, Geneva, sans-serif" font-size="42" font-weight="bold" fill="#2C4E46" text-anchor="middle">before: tiered by population</text>
+
+  <!-- bars before -->
+  <g font-family="Verdana, Geneva, sans-serif" text-anchor="middle" fill="#2C4E46">
+    <!-- baseline -->
+    <line x1="120" y1="480" x2="960" y2="480" stroke="#2C4E46" stroke-width="3"/>
+    <!-- bars: 30,30,30,5,5 scaled -->
+    <rect x="150" y="180" width="110" height="300" fill="#3E6E63"/>
+    <text x="205" y="510" font-size="24">L1</text>
+    <text x="205" y="165" font-size="26">30</text>
+
+    <rect x="300" y="180" width="110" height="300" fill="#3E6E63"/>
+    <text x="355" y="510" font-size="24">L2</text>
+    <text x="355" y="165" font-size="26">30</text>
+
+    <rect x="450" y="180" width="110" height="300" fill="#3E6E63"/>
+    <text x="505" y="510" font-size="24">L3</text>
+    <text x="505" y="165" font-size="26">30</text>
+
+    <rect x="600" y="430" width="110" height="50" fill="#D9714E"/>
+    <text x="655" y="510" font-size="24">L4</text>
+    <text x="655" y="415" font-size="26">5</text>
+
+    <rect x="750" y="430" width="110" height="50" fill="#D9714E"/>
+    <text x="805" y="510" font-size="24">L5</text>
+    <text x="805" y="415" font-size="26">5</text>
+  </g>
+
+  <text x="540" y="600" font-family="Verdana, Geneva, sans-serif" font-size="30" fill="#D9714E" text-anchor="middle">problem: population ≠ what a kid recognizes</text>
+
+  <line x1="150" y1="660" x2="930" y2="660" stroke="#C99A5F" stroke-width="3" stroke-dasharray="10,10"/>
+
+  <text x="540" y="730" font-family="Verdana, Geneva, sans-serif" font-size="42" font-weight="bold" fill="#2C4E46" text-anchor="middle">after: tiered by recognizability</text>
+
+  <!-- bars after: 39,39,39,39,38 evenly -->
+  <g font-family="Verdana, Geneva, sans-serif" text-anchor="middle" fill="#2C4E46">
+    <line x1="120" y1="1000" x2="960" y2="1000" stroke="#2C4E46" stroke-width="3"/>
+    <rect x="150" y="850" width="110" height="150" fill="#3E6E63"/>
+    <text x="205" y="1030" font-size="22">L1</text>
+    <text x="205" y="835" font-size="24">39</text>
+
+    <rect x="300" y="850" width="110" height="150" fill="#3E6E63"/>
+    <text x="355" y="1030" font-size="22">L2</text>
+    <text x="355" y="835" font-size="24">39</text>
+
+    <rect x="450" y="850" width="110" height="150" fill="#3E6E63"/>
+    <text x="505" y="1030" font-size="22">L3</text>
+    <text x="505" y="835" font-size="24">39</text>
+
+    <rect x="600" y="850" width="110" height="150" fill="#3E6E63"/>
+    <text x="655" y="1030" font-size="22">L4</text>
+    <text x="655" y="835" font-size="24">39</text>
+
+    <rect x="750" y="852" width="110" height="148" fill="#3E6E63"/>
+    <text x="805" y="1030" font-size="22">L5</text>
+    <text x="805" y="837" font-size="24">38</text>
+  </g>
+</svg>

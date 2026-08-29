@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f4f1eb"/>
+  <text x="600" y="70" text-anchor="middle" font-size="30" fill="#26323a" font-weight="bold">Where the bug actually lives</text>
+
+  <!-- monolith side -->
+  <g>
+    <text x="270" y="120" text-anchor="middle" font-size="22" fill="#2f5d62" font-weight="bold">Monolith</text>
+    <rect x="120" y="150" width="300" height="220" rx="14" fill="#dfe9e6" stroke="#2f5d62" stroke-width="3"/>
+    <text x="270" y="200" text-anchor="middle" font-size="18" fill="#26323a">one codebase</text>
+    <text x="270" y="235" text-anchor="middle" font-size="18" fill="#26323a">one deploy</text>
+    <text x="270" y="270" text-anchor="middle" font-size="18" fill="#26323a">one log stream</text>
+    <circle cx="270" cy="320" r="18" fill="#c0463f"/>
+    <text x="270" y="326" text-anchor="middle" font-size="14" fill="#ffffff">bug</text>
+    <text x="270" y="400" text-anchor="middle" font-size="16" fill="#5c6b73">fails loud, in one place</text>
+  </g>
+
+  <!-- microservices side -->
+  <g>
+    <text x="900" y="120" text-anchor="middle" font-size="22" fill="#a9762f" font-weight="bold">Microservices</text>
+
+    <rect x="700" y="150" width="120" height="90" rx="10" fill="#f1e4c8" stroke="#a9762f" stroke-width="2"/>
+    <text x="760" y="200" text-anchor="middle" font-size="16" fill="#26323a">service A</text>
+
+    <rect x="860" y="150" width="120" height="90" rx="10" fill="#f1e4c8" stroke="#a9762f" stroke-width="2"/>
+    <text x="920" y="200" text-anchor="middle" font-size="16" fill="#26323a">service B</text>
+
+    <rect x="1020" y="150" width="120" height="90" rx="10" fill="#f1e4c8" stroke="#a9762f" stroke-width="2"/>
+    <text x="1080" y="200" text-anchor="middle" font-size="16" fill="#26323a">service C</text>
+
+    <!-- gap between A and B, where bug lives -->
+    <line x1="820" y1="195" x2="860" y2="195" stroke="#c0463f" stroke-width="3" stroke-dasharray="6 5"/>
+    <circle cx="840" cy="195" r="16" fill="#c0463f"/>
+    <text x="840" y="200" text-anchor="middle" font-size="12" fill="#ffffff">bug</text>
+
+    <text x="760" y="280" text-anchor="middle" font-size="14" fill="#2f5d62">green ✓</text>
+    <text x="920" y="280" text-anchor="middle" font-size="14" fill="#2f5d62">green ✓</text>
+    <text x="1080" y="280" text-anchor="middle" font-size="14" fill="#2f5d62">green ✓</text>
+
+    <text x="900" y="400" text-anchor="middle" font-size="16" fill="#5c6b73">fails quiet, in the gap between two green dashboards</text>
+  </g>
+
+  <text x="600" y="500" text-anchor="middle" font-size="24" fill="#26323a" font-weight="bold">"It works on my service"</text>
+  <text x="600" y="540" text-anchor="middle" font-size="18" fill="#5c6b73">nobody owns the seam where the dashboards meet</text>
+</svg>

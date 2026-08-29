@@ -1,0 +1,42 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="800" height="500" fill="#f7f4ee"/>
+  <text x="400" y="45" text-anchor="middle" font-size="24" font-weight="700" fill="#1f2a37">The Sprint That Got a Phone Call</text>
+
+  <!-- planned sprint bar -->
+  <text x="70" y="110" font-size="14" fill="#5b6b73">planned</text>
+  <rect x="150" y="90" width="560" height="40" rx="6" fill="#e8f3ee" stroke="#2f6f5e" stroke-width="2"/>
+  <text x="220" y="115" text-anchor="middle" font-size="12" fill="#1f2a37">dev A</text>
+  <line x1="290" y1="90" x2="290" y2="130" stroke="#2f6f5e" stroke-width="1"/>
+  <text x="360" y="115" text-anchor="middle" font-size="12" fill="#1f2a37">dev B</text>
+  <line x1="430" y1="90" x2="430" y2="130" stroke="#2f6f5e" stroke-width="1"/>
+  <text x="500" y="115" text-anchor="middle" font-size="12" fill="#1f2a37">dev C</text>
+  <line x1="570" y1="90" x2="570" y2="130" stroke="#2f6f5e" stroke-width="1"/>
+  <text x="640" y="115" text-anchor="middle" font-size="12" fill="#1f2a37">dev D</text>
+
+  <!-- actual sprint bar with a gap -->
+  <text x="70" y="200" font-size="14" fill="#5b6b73">actual</text>
+  <rect x="150" y="180" width="140" height="40" rx="6" fill="#e8f3ee" stroke="#2f6f5e" stroke-width="2"/>
+  <text x="220" y="205" text-anchor="middle" font-size="12" fill="#1f2a37">dev A</text>
+
+  <rect x="290" y="180" width="140" height="40" fill="#fbeee9" stroke="#b5533c" stroke-width="2" stroke-dasharray="6 4"/>
+  <text x="360" y="200" text-anchor="middle" font-size="11" fill="#b5533c" font-weight="700">miluim</text>
+  <text x="360" y="214" text-anchor="middle" font-size="10" fill="#b5533c">3 weeks, no notice</text>
+
+  <rect x="430" y="180" width="140" height="40" rx="6" fill="#e8f3ee" stroke="#2f6f5e" stroke-width="2"/>
+  <text x="500" y="205" text-anchor="middle" font-size="12" fill="#1f2a37">dev C</text>
+
+  <rect x="570" y="180" width="140" height="40" rx="6" fill="#e8f3ee" stroke="#2f6f5e" stroke-width="2"/>
+  <text x="640" y="205" text-anchor="middle" font-size="12" fill="#1f2a37">dev D</text>
+
+  <!-- re-plan arrow -->
+  <path d="M360 235 C 360 290, 500 290, 500 235" fill="none" stroke="#c9a227" stroke-width="2.5" marker-end="url(#arrowY)"/>
+  <text x="430" y="310" text-anchor="middle" font-size="13" fill="#7a6423">work redistributed, calmly</text>
+
+  <defs>
+    <marker id="arrowY" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto">
+      <path d="M0,0 L8,4 L0,8 z" fill="#c9a227"/>
+    </marker>
+  </defs>
+
+  <text x="400" y="420" text-anchor="middle" font-size="13" fill="#5b6b73">No story point covers a phone call. Re-planning fast, without drama, is the skill.</text>
+</svg>

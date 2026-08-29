@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f4f1eb"/>
+  <text x="600" y="70" text-anchor="middle" font-size="30" fill="#26323a" font-weight="bold">Two testers I manage</text>
+
+  <!-- left card: junior engineer -->
+  <g>
+    <rect x="90" y="120" width="450" height="480" rx="16" fill="#dfe9e6" stroke="#2f5d62" stroke-width="3"/>
+    <text x="315" y="170" text-anchor="middle" font-size="22" fill="#2f5d62" font-weight="bold">Junior engineer</text>
+    <text x="315" y="230" text-anchor="middle" font-size="17" fill="#26323a">explains the bug again, faster</text>
+    <text x="315" y="270" text-anchor="middle" font-size="17" fill="#26323a">hopes the 2nd try lands</text>
+    <text x="315" y="330" text-anchor="middle" font-size="17" fill="#26323a" font-weight="bold">what works instead:</text>
+    <text x="315" y="370" text-anchor="middle" font-size="17" fill="#26323a">fewer words</text>
+    <text x="315" y="405" text-anchor="middle" font-size="17" fill="#26323a">more watching</text>
+    <text x="315" y="440" text-anchor="middle" font-size="17" fill="#26323a">a small nudge right at the wall</text>
+  </g>
+
+  <!-- right card: 6yo tester -->
+  <g>
+    <rect x="660" y="120" width="450" height="480" rx="16" fill="#f1e4c8" stroke="#a9762f" stroke-width="3"/>
+    <text x="885" y="170" text-anchor="middle" font-size="22" fill="#a9762f" font-weight="bold">Six year old QA</text>
+    <text x="885" y="230" text-anchor="middle" font-size="17" fill="#26323a">clicks wrong answer 4x</text>
+    <text x="885" y="270" text-anchor="middle" font-size="17" fill="#26323a">just to hear the buzzer</text>
+    <text x="885" y="330" text-anchor="middle" font-size="17" fill="#26323a" font-weight="bold">what she catches:</text>
+    <text x="885" y="370" text-anchor="middle" font-size="17" fill="#26323a">UI with no patience</text>
+    <text x="885" y="405" text-anchor="middle" font-size="17" fill="#26323a">for a kid off the happy path</text>
+    <text x="885" y="440" text-anchor="middle" font-size="17" fill="#26323a">"does this feel true" bugs</text>
+  </g>
+
+  <text x="600" y="640" text-anchor="middle" font-size="20" fill="#5c6b73">same patience, different keyboard</text>
+</svg>

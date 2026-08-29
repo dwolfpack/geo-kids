@@ -1,0 +1,42 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#F3E9DA"/>
+
+  <text x="540" y="90" font-family="Verdana, Geneva, sans-serif" font-size="36" font-weight="bold" fill="#2C4E46" text-anchor="middle">one team, one app</text>
+
+  <!-- monolith box -->
+  <rect x="290" y="140" width="500" height="260" rx="16" fill="#3E6E63"/>
+  <text x="540" y="280" font-family="Verdana, Geneva, sans-serif" font-size="30" fill="#FBF3E7" text-anchor="middle">the monolith</text>
+  <text x="540" y="320" font-family="Verdana, Geneva, sans-serif" font-size="20" fill="#E9A23B" text-anchor="middle">everyone owns everything, together</text>
+
+  <!-- arrow down -->
+  <path d="M540 420 L 540 480" stroke="#2C4E46" stroke-width="6"/>
+  <path d="M510 460 L 540 500 L 570 460" fill="none" stroke="#2C4E46" stroke-width="6"/>
+
+  <text x="540" y="560" font-family="Verdana, Geneva, sans-serif" font-size="36" font-weight="bold" fill="#2C4E46" text-anchor="middle">five teams, five services</text>
+
+  <!-- microservices boxes -->
+  <g font-family="Verdana, Geneva, sans-serif" font-size="18" text-anchor="middle" fill="#FBF3E7">
+    <rect x="80" y="620" width="170" height="140" rx="12" fill="#D9714E"/>
+    <text x="165" y="700">service A</text>
+
+    <rect x="280" y="620" width="170" height="140" rx="12" fill="#D9714E"/>
+    <text x="365" y="700">service B</text>
+
+    <rect x="480" y="620" width="170" height="140" rx="12" fill="#D9714E"/>
+    <text x="565" y="700">service C</text>
+
+    <rect x="680" y="620" width="170" height="140" rx="12" fill="#D9714E"/>
+    <text x="765" y="700">service D</text>
+
+    <rect x="880" y="620" width="120" height="140" rx="12" fill="#D9714E"/>
+    <text x="940" y="700">E</text>
+  </g>
+
+  <!-- gap / seam highlighted -->
+  <rect x="440" y="600" width="60" height="180" fill="#E9A23B" opacity="0.5"/>
+  <text x="470" y="830" font-family="Verdana, Geneva, sans-serif" font-size="24" font-weight="bold" fill="#D9714E" text-anchor="middle">the bug lives</text>
+  <text x="470" y="865" font-family="Verdana, Geneva, sans-serif" font-size="24" font-weight="bold" fill="#D9714E" text-anchor="middle">in the seam</text>
+
+  <text x="540" y="960" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46" text-anchor="middle">the hard part was never the architecture —</text>
+  <text x="540" y="1000" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46" text-anchor="middle">it was who still felt safe raising a hand</text>
+</svg>

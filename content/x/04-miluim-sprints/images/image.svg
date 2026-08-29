@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f4f1eb"/>
+  <text x="600" y="70" text-anchor="middle" font-size="30" fill="#26323a" font-weight="bold">Sprint board, reserve duty week</text>
+
+  <!-- sprint board columns -->
+  <g font-size="18" fill="#26323a">
+    <text x="220" y="120" text-anchor="middle" font-weight="bold">To do</text>
+    <text x="600" y="120" text-anchor="middle" font-weight="bold">In progress</text>
+    <text x="980" y="120" text-anchor="middle" font-weight="bold">Done</text>
+
+    <rect x="100" y="140" width="240" height="450" rx="10" fill="#ece5d6" stroke="#c8bfa8" stroke-width="2"/>
+    <rect x="480" y="140" width="240" height="450" rx="10" fill="#ece5d6" stroke="#c8bfa8" stroke-width="2"/>
+    <rect x="860" y="140" width="240" height="450" rx="10" fill="#ece5d6" stroke="#c8bfa8" stroke-width="2"/>
+  </g>
+
+  <!-- cards -->
+  <rect x="120" y="165" width="200" height="60" rx="8" fill="#ffffff" stroke="#a9762f" stroke-width="2"/>
+  <text x="220" y="200" text-anchor="middle" font-size="15" fill="#26323a">flaky test area</text>
+
+  <!-- a card with a person tag "called up" -->
+  <rect x="500" y="165" width="200" height="70" rx="8" fill="#f0dede" stroke="#c0463f" stroke-width="2" stroke-dasharray="5 4"/>
+  <text x="600" y="195" text-anchor="middle" font-size="15" fill="#8a4a45">card owner</text>
+  <text x="600" y="218" text-anchor="middle" font-size="14" fill="#c0463f" font-weight="bold">called up · miluim</text>
+
+  <rect x="500" y="250" width="200" height="60" rx="8" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+  <text x="600" y="285" text-anchor="middle" font-size="15" fill="#26323a">API cleanup</text>
+
+  <rect x="880" y="165" width="200" height="60" rx="8" fill="#dfe9e6" stroke="#2f5d62" stroke-width="2"/>
+  <text x="980" y="200" text-anchor="middle" font-size="15" fill="#26323a">shipped anyway</text>
+
+  <!-- reshuffled arrow -->
+  <path d="M 600 320 C 600 400, 300 400, 220 250" fill="none" stroke="#2f5d62" stroke-width="3" stroke-dasharray="6 4"/>
+  <text x="360" y="430" text-anchor="middle" font-size="16" fill="#2f5d62">team absorbs the gap, quietly</text>
+
+  <text x="600" y="620" text-anchor="middle" font-size="20" fill="#26323a" font-weight="bold">standup happens, someone's missing, everyone adjusts</text>
+</svg>

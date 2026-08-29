@@ -1,0 +1,30 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#FBF3E7"/>
+
+  <!-- speech bubble loop -->
+  <g>
+    <ellipse cx="540" cy="270" rx="330" ry="140" fill="#F5E6D3" stroke="#3E6E63" stroke-width="4"/>
+    <text x="540" y="255" font-family="Verdana, Geneva, sans-serif" font-size="30" font-weight="bold" fill="#2C4E46" text-anchor="middle">"where's the capital again?"</text>
+    <text x="540" y="305" font-family="Verdana, Geneva, sans-serif" font-size="24" fill="#D9714E" text-anchor="middle">— asked for the 4th time this week</text>
+    <path d="M470 400 L 440 460 L 520 415 Z" fill="#F5E6D3" stroke="#3E6E63" stroke-width="4"/>
+  </g>
+
+  <!-- two circular arrows representing repetition -->
+  <g fill="none" stroke="#E9A23B" stroke-width="10" stroke-linecap="round">
+    <path d="M300 620 A 140 140 0 1 1 300 900"/>
+    <path d="M780 620 A 140 140 0 1 0 780 900"/>
+  </g>
+  <path d="M300 600 l 30 40 l -50 10 Z" fill="#E9A23B"/>
+  <path d="M780 600 l -30 40 l 50 10 Z" fill="#E9A23B"/>
+
+  <text x="300" y="770" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46" text-anchor="middle">a kid</text>
+  <text x="300" y="805" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#2C4E46" text-anchor="middle">asking again</text>
+
+  <text x="780" y="770" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46" text-anchor="middle">a flaky test</text>
+  <text x="780" y="805" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#2C4E46" text-anchor="middle">failing again</text>
+
+  <text x="540" y="620" font-family="Verdana, Geneva, sans-serif" font-size="34" font-weight="bold" fill="#3E6E63" text-anchor="middle">same muscle,</text>
+  <text x="540" y="660" font-family="Verdana, Geneva, sans-serif" font-size="34" font-weight="bold" fill="#3E6E63" text-anchor="middle">different room</text>
+
+  <text x="540" y="1000" font-family="Verdana, Geneva, sans-serif" font-size="24" fill="#D9714E" text-anchor="middle">stay present. listen for what's actually being said.</text>
+</svg>

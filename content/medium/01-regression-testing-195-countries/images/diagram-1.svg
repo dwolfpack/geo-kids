@@ -1,0 +1,68 @@
+<svg viewBox="0 0 900 550" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="900" height="550" fill="#f7f3ea"/>
+  <text x="450" y="46" text-anchor="middle" font-size="24" fill="#2b2620" font-weight="bold">Country Record Schema</text>
+  <text x="450" y="70" text-anchor="middle" font-size="14" fill="#6b5f4d">one entry in the COUNTRIES array</text>
+
+  <!-- central object box -->
+  <rect x="300" y="100" width="300" height="70" rx="10" fill="#c65d3b" stroke="#2b2620" stroke-width="2"/>
+  <text x="450" y="130" text-anchor="middle" font-size="16" fill="#f7f3ea" font-weight="bold">code: "KI"</text>
+  <text x="450" y="152" text-anchor="middle" font-size="12" fill="#f7f3ea">ISO alpha-2 -&gt; drives flag image URL</text>
+
+  <!-- arrow down to flag -->
+  <line x1="450" y1="170" x2="450" y2="210" stroke="#2b2620" stroke-width="2" marker-end="url(#arrow)"/>
+  <rect x="350" y="212" width="200" height="46" rx="8" fill="#e8ddc8" stroke="#2b2620" stroke-width="1.5"/>
+  <text x="450" y="240" text-anchor="middle" font-size="12" fill="#2b2620">flagcdn.com/w320/KI.png</text>
+
+  <!-- field grid -->
+  <g font-size="13" fill="#2b2620">
+    <rect x="60" y="280" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="150" y="302" text-anchor="middle" font-weight="bold">name</text>
+    <text x="150" y="320" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="260" y="280" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="350" y="302" text-anchor="middle" font-weight="bold">capital</text>
+    <text x="350" y="320" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="460" y="280" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="550" y="302" text-anchor="middle" font-weight="bold">continent</text>
+    <text x="550" y="320" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="660" y="280" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="750" y="302" text-anchor="middle" font-weight="bold">pop</text>
+    <text x="750" y="320" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="160" y="350" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="250" y="372" text-anchor="middle" font-weight="bold">lang</text>
+    <text x="250" y="390" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="360" y="350" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="450" y="372" text-anchor="middle" font-weight="bold">landmark</text>
+    <text x="450" y="390" text-anchor="middle" font-size="11">{ he, en }</text>
+
+    <rect x="560" y="350" width="180" height="54" rx="8" fill="#e8ddc8" stroke="#8a7a5c"/>
+    <text x="650" y="372" text-anchor="middle" font-weight="bold">fact</text>
+    <text x="650" y="390" text-anchor="middle" font-size="11">{ he, en } original copy</text>
+  </g>
+
+  <!-- connecting lines from center to fields -->
+  <g stroke="#8a7a5c" stroke-width="1.2" stroke-dasharray="3,3">
+    <line x1="380" y1="170" x2="150" y2="280"/>
+    <line x1="420" y1="170" x2="350" y2="280"/>
+    <line x1="480" y1="170" x2="550" y2="280"/>
+    <line x1="520" y1="170" x2="750" y2="280"/>
+    <line x1="420" y1="170" x2="250" y2="350"/>
+    <line x1="450" y1="170" x2="450" y2="350"/>
+    <line x1="480" y1="170" x2="650" y2="350"/>
+  </g>
+
+  <!-- footer note -->
+  <rect x="150" y="440" width="600" height="70" rx="10" fill="#f0e6d2" stroke="#c65d3b" stroke-width="2"/>
+  <text x="450" y="465" text-anchor="middle" font-size="13" fill="#2b2620" font-weight="bold">Wrong code = wrong flag, no error thrown</text>
+  <text x="450" y="486" text-anchor="middle" font-size="12" fill="#6b5f4d">silently wrong is more dangerous than broken</text>
+
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2b2620"/>
+    </marker>
+  </defs>
+</svg>

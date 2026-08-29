@@ -1,0 +1,28 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+  <rect width="800" height="500" fill="#f7f4ee"/>
+  <text x="400" y="45" text-anchor="middle" font-size="24" font-weight="700" fill="#1f2a37">Trust vs. Process Speed</text>
+
+  <!-- axes -->
+  <line x1="90" y1="400" x2="740" y2="400" stroke="#8a8f98" stroke-width="1.5"/>
+  <line x1="90" y1="400" x2="90" y2="90" stroke="#8a8f98" stroke-width="1.5"/>
+  <text x="415" y="435" text-anchor="middle" font-size="13" fill="#5b6b73">time since re-org announced</text>
+  <text x="55" y="245" text-anchor="middle" font-size="13" fill="#5b6b73" transform="rotate(-90 55 245)">level</text>
+
+  <!-- process change line (steep, red) -->
+  <polyline points="90,370 220,300 350,200 480,140 610,110 740,95" fill="none" stroke="#b5533c" stroke-width="3"/>
+  <text x="620" y="80" font-size="13" fill="#b5533c" font-weight="700">process change</text>
+
+  <!-- human absorption line (gentle, green) -->
+  <polyline points="90,380 220,360 350,335 480,300 610,260 740,220" fill="none" stroke="#2f6f5e" stroke-width="3"/>
+  <text x="560" y="240" font-size="13" fill="#2f6f5e" font-weight="700">what people can absorb</text>
+
+  <!-- gap marker week 2 -->
+  <line x1="220" y1="300" x2="220" y2="360" stroke="#c9a227" stroke-width="2" stroke-dasharray="4 3"/>
+  <circle cx="220" cy="300" r="5" fill="#b5533c"/>
+  <circle cx="220" cy="360" r="5" fill="#2f6f5e"/>
+  <rect x="230" y="315" width="150" height="42" rx="6" fill="#f0ece1" stroke="#c9a227" stroke-width="1.5"/>
+  <text x="305" y="332" text-anchor="middle" font-size="11" fill="#7a6423">week 2:</text>
+  <text x="305" y="348" text-anchor="middle" font-size="11" fill="#7a6423">"what does this mean for me?"</text>
+
+  <text x="400" y="470" text-anchor="middle" font-size="13" fill="#5b6b73">The gap between the two lines is where trust is won or lost.</text>
+</svg>

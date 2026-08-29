@@ -1,0 +1,32 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#EFE6D8"/>
+
+  <text x="540" y="150" font-family="Verdana, Geneva, sans-serif" font-size="40" font-weight="bold" fill="#2C4E46" text-anchor="middle">how a kid tests an app</text>
+
+  <!-- path/flow of chaotic clicks -->
+  <g stroke="#D9714E" stroke-width="5" fill="none" stroke-linecap="round">
+    <path d="M180 320 L 380 260 L 300 460 L 620 380 L 560 600 L 880 500"/>
+  </g>
+  <g fill="#3E6E63">
+    <circle cx="180" cy="320" r="16"/>
+    <circle cx="380" cy="260" r="16"/>
+    <circle cx="300" cy="460" r="16"/>
+    <circle cx="620" cy="380" r="16"/>
+    <circle cx="560" cy="600" r="16"/>
+    <circle cx="880" cy="500" r="16"/>
+  </g>
+
+  <g font-family="Verdana, Geneva, sans-serif" font-size="20" fill="#2C4E46">
+    <text x="180" y="300">tap twice</text>
+    <text x="380" y="230">skip level 2</text>
+    <text x="260" y="500">go back mid-quiz</text>
+    <text x="620" y="350">mash flag</text>
+    <text x="500" y="650">get bored, tap fast</text>
+    <text x="800" y="470">found it.</text>
+  </g>
+
+  <rect x="120" y="750" width="840" height="220" rx="20" fill="#3E6E63"/>
+  <text x="540" y="830" font-family="Verdana, Geneva, sans-serif" font-size="30" font-weight="bold" fill="#FBF3E7" text-anchor="middle">no test plan.</text>
+  <text x="540" y="880" font-family="Verdana, Geneva, sans-serif" font-size="30" font-weight="bold" fill="#FBF3E7" text-anchor="middle">just curiosity, out of order.</text>
+  <text x="540" y="930" font-family="Verdana, Geneva, sans-serif" font-size="24" fill="#E9A23B" text-anchor="middle">that's exploratory testing</text>
+</svg>

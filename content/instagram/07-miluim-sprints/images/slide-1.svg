@@ -1,0 +1,48 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#EAF1EF"/>
+
+  <!-- flag-inspired stripes pattern top/bottom -->
+  <rect x="0" y="0" width="1080" height="40" fill="#3E6E63"/>
+  <rect x="0" y="1040" width="1080" height="40" fill="#3E6E63"/>
+  <g stroke="#3E6E63" stroke-width="8" fill="none">
+    <path d="M440 90 L 640 90 L 590 170 L 490 170 Z"/>
+    <path d="M440 90 L 640 90 L 490 170 L 540 170 Z" opacity="0"/>
+  </g>
+  <!-- simple star of david outline -->
+  <g stroke="#3E6E63" stroke-width="8" fill="none">
+    <polygon points="540,80 575,145 505,145"/>
+    <polygon points="540,175 575,110 505,110"/>
+  </g>
+
+  <text x="540" y="260" font-family="Verdana, Geneva, sans-serif" font-size="40" font-weight="bold" fill="#2C4E46" text-anchor="middle">sprint board, week of miluim</text>
+
+  <!-- calendar row of days -->
+  <g font-family="Verdana, Geneva, sans-serif" font-size="22" text-anchor="middle">
+    <rect x="140" y="330" width="120" height="120" rx="10" fill="#3E6E63"/>
+    <text x="200" y="400" fill="#FBF3E7">Sun</text>
+
+    <rect x="280" y="330" width="120" height="120" rx="10" fill="#3E6E63"/>
+    <text x="340" y="400" fill="#FBF3E7">Mon</text>
+
+    <rect x="420" y="330" width="120" height="120" rx="10" fill="#D9714E"/>
+    <text x="480" y="390" fill="#FBF3E7">Tue</text>
+    <text x="480" y="415" fill="#FBF3E7" font-size="16">call-up</text>
+
+    <rect x="560" y="330" width="120" height="120" rx="10" fill="#D9714E" opacity="0.6"/>
+    <text x="620" y="400" fill="#FBF3E7">Wed</text>
+
+    <rect x="700" y="330" width="120" height="120" rx="10" fill="#D9714E" opacity="0.6"/>
+    <text x="760" y="400" fill="#FBF3E7">Thu</text>
+
+    <rect x="840" y="330" width="120" height="120" rx="10" fill="#E9A23B"/>
+    <text x="900" y="400" fill="#2C4E46">Fri</text>
+  </g>
+
+  <text x="540" y="560" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#3E6E63" text-anchor="middle">two-person team → one-person team</text>
+  <text x="540" y="600" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#3E6E63" text-anchor="middle">the plan didn't check the calendar first</text>
+
+  <line x1="200" y1="680" x2="880" y2="680" stroke="#C99A5F" stroke-width="3" stroke-dasharray="10,10"/>
+
+  <text x="540" y="760" font-family="Verdana, Geneva, sans-serif" font-size="32" font-weight="bold" fill="#2C4E46" text-anchor="middle">you adjust. quietly.</text>
+  <text x="540" y="810" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#2C4E46" text-anchor="middle">it still ships.</text>
+</svg>

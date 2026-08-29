@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f6f1e9"/>
+  <text x="60" y="80" font-size="30" fill="#26323a" font-weight="bold">geo-kids · country list, Europe batch</text>
+
+  <!-- grid of country cards, one missing -->
+  <g font-size="20" fill="#26323a">
+    <!-- row 1 -->
+    <rect x="60" y="120" width="160" height="90" rx="10" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+    <text x="140" y="170" text-anchor="middle">France</text>
+
+    <rect x="250" y="120" width="160" height="90" rx="10" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+    <text x="330" y="170" text-anchor="middle">Italy</text>
+
+    <!-- the gap where Albania should be -->
+    <rect x="440" y="120" width="160" height="90" rx="10" fill="none" stroke="#c0463f" stroke-width="3" stroke-dasharray="8 6"/>
+    <text x="520" y="160" text-anchor="middle" fill="#c0463f" font-weight="bold">?</text>
+    <text x="520" y="188" text-anchor="middle" fill="#c0463f" font-size="15">no entry here</text>
+
+    <rect x="630" y="120" width="160" height="90" rx="10" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+    <text x="710" y="170" text-anchor="middle">Greece</text>
+
+    <rect x="820" y="120" width="160" height="90" rx="10" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+    <text x="900" y="170" text-anchor="middle">Serbia</text>
+
+    <rect x="1010" y="120" width="130" height="90" rx="10" fill="#ffffff" stroke="#c8bfa8" stroke-width="2"/>
+    <text x="1075" y="170" text-anchor="middle">Spain</text>
+  </g>
+
+  <!-- console line, no error -->
+  <rect x="60" y="260" width="1080" height="80" rx="8" fill="#26323a"/>
+  <text x="90" y="310" font-family="Menlo, Consolas, monospace" font-size="22" fill="#e8ddc0">$ validate-countries-data.js  →  0 errors</text>
+
+  <text x="600" y="420" text-anchor="middle" font-size="30" fill="#26323a" font-weight="bold">Albania: missing. Script: happy.</text>
+  <text x="600" y="470" text-anchor="middle" font-size="22" fill="#5c6b73">Found three days later, by a kid asking about a red flag.</text>
+
+  <!-- small flag hint -->
+  <g transform="translate(520,540)">
+    <rect x="0" y="0" width="160" height="100" rx="6" fill="#c0463f"/>
+    <circle cx="80" cy="50" r="26" fill="#26323a"/>
+    <text x="80" y="130" text-anchor="middle" font-size="18" fill="#5c6b73">the missing flag</text>
+  </g>
+</svg>

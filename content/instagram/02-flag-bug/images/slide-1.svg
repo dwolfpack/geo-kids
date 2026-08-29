@@ -1,0 +1,32 @@
+<svg viewBox="0 0 1080 1080" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1080" height="1080" fill="#EFE6D8"/>
+
+  <text x="540" y="120" font-family="Verdana, Geneva, sans-serif" font-size="40" font-weight="bold" fill="#2C4E46" text-anchor="middle">code: "code" drives the flag</text>
+
+  <!-- correct card -->
+  <g>
+    <rect x="130" y="220" width="360" height="440" rx="20" fill="#FBF3E7" stroke="#3E6E63" stroke-width="4"/>
+    <text x="310" y="280" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#3E6E63" text-anchor="middle">code: "JP"</text>
+    <rect x="200" y="330" width="220" height="150" fill="#D9714E"/>
+    <circle cx="310" cy="405" r="40" fill="#FBF3E7"/>
+    <text x="310" y="530" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#2C4E46" text-anchor="middle">Japan ✓</text>
+    <text x="310" y="600" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#3E6E63" text-anchor="middle">flag matches code</text>
+  </g>
+
+  <!-- wrong card -->
+  <g>
+    <rect x="590" y="220" width="360" height="440" rx="20" fill="#FBF3E7" stroke="#D9714E" stroke-width="6"/>
+    <text x="770" y="280" font-family="Verdana, Geneva, sans-serif" font-size="28" fill="#D9714E" text-anchor="middle">code: "SC"  (typo)</text>
+    <rect x="660" y="330" width="220" height="150" fill="#3E6E63"/>
+    <rect x="660" y="330" width="70" height="150" fill="#E9A23B"/>
+    <text x="770" y="530" font-family="Verdana, Geneva, sans-serif" font-size="26" fill="#D9714E" text-anchor="middle">wrong flag shown</text>
+    <text x="770" y="600" font-family="Verdana, Geneva, sans-serif" font-size="22" fill="#2C4E46" text-anchor="middle">no crash. no error.</text>
+  </g>
+
+  <!-- magnifying glass -->
+  <g>
+    <circle cx="540" cy="800" r="70" fill="none" stroke="#2C4E46" stroke-width="14"/>
+    <line x1="590" y1="850" x2="650" y2="910" stroke="#2C4E46" stroke-width="16" stroke-linecap="round"/>
+  </g>
+  <text x="540" y="990" font-family="Verdana, Geneva, sans-serif" font-size="30" font-weight="bold" fill="#2C4E46" text-anchor="middle">the "no error, just wrong" bug</text>
+</svg>

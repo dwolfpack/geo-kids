@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 675" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="675" fill="#f4f1eb"/>
+  <text x="600" y="65" text-anchor="middle" font-size="28" fill="#26323a" font-weight="bold">Schema valid. Content wrong.</text>
+
+  <!-- data object card -->
+  <rect x="120" y="110" width="960" height="420" rx="16" fill="#ffffff" stroke="#26323a" stroke-width="2"/>
+  <text x="160" y="150" font-family="Menlo, Consolas, monospace" font-size="18" fill="#26323a">{ code: "KI",</text>
+  <text x="180" y="185" font-family="Menlo, Consolas, monospace" font-size="18" fill="#26323a">name: { he: "קיריבטי", en: "Kiribati" },</text>
+  <text x="180" y="220" font-family="Menlo, Consolas, monospace" font-size="18" fill="#c0463f" font-weight="bold">capital: { he: "✗ wrong name", en: "South Tarawa" },</text>
+  <text x="180" y="255" font-family="Menlo, Consolas, monospace" font-size="18" fill="#26323a">continent: { he: "אוקיאניה", en: "Oceania" },</text>
+  <text x="180" y="290" font-family="Menlo, Consolas, monospace" font-size="18" fill="#26323a">lat: 1.87, lon: -157.36,</text>
+  <text x="180" y="325" font-family="Menlo, Consolas, monospace" font-size="18" fill="#26323a">fact: { he: "...", en: "..." } }</text>
+
+  <!-- checkmarks vs the one flagged field -->
+  <g font-size="16">
+    <text x="900" y="150" fill="#2f5d62">✓ present</text>
+    <text x="900" y="185" fill="#2f5d62">✓ present</text>
+    <text x="900" y="220" fill="#c0463f" font-weight="bold">✓ present, ✗ true</text>
+    <text x="900" y="255" fill="#2f5d62">✓ present</text>
+    <text x="900" y="325" fill="#2f5d62">✓ present</text>
+  </g>
+
+  <rect x="150" y="360" width="900" height="140" rx="10" fill="#f0dede" stroke="#c0463f" stroke-width="2" stroke-dasharray="6 5"/>
+  <text x="600" y="400" text-anchor="middle" font-size="20" fill="#8a4a45" font-weight="bold">validate-countries-data.js output: 0 errors</text>
+  <text x="600" y="435" text-anchor="middle" font-size="17" fill="#8a4a45">a schema only knows what should be there, not what's true</text>
+  <text x="600" y="465" text-anchor="middle" font-size="16" fill="#8a4a45">caught instead: a native speaker reading it out loud</text>
+
+  <text x="600" y="580" text-anchor="middle" font-size="20" fill="#26323a" font-weight="bold">completeness ≠ correctness</text>
+</svg>
