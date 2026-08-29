@@ -6,7 +6,9 @@ Each batch got a plan first, roughly what I'm adding and why, then a pass with m
 
 The interesting bugs lived in the parts no script can see: does this Hebrew sentence read naturally, does this capital name sound right out loud, does this fact actually match the tone of the other 194 facts around it. That's judgment, not verification.
 
-Exploratory testing, properly done, isn't "clicking around without a plan." It's forming a hypothesis about where the system is weak, based on experience, and going looking for exactly that weakness on purpose. My hypothesis every single batch was "the small countries are where I'll be sloppy," and I was right every time.
+Exploratory testing, properly done, isn't "clicking around without a plan." It's forming a hypothesis about where the system is weak, based on experience, and going looking for exactly that weakness on purpose.
+
+My hypothesis every single batch was "the small countries are where I'll be sloppy," and I was right every time.
 
 Regression discipline mattered more than I expected on a one-person project. Every batch got re-validated before I moved to the next continent, specifically because "I'll catch it later" is how a missing Albania survives three days undetected.
 
