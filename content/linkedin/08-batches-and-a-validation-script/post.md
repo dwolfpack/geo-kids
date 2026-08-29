@@ -1,0 +1,9 @@
+I ran a one-person "team" through a full regression discipline for a side project, and it taught me more about incremental delivery than most of the official processes I've sat through at work.
+
+Going from 100 to roughly 195 countries in my daughter's geography game, I could have just dumped all the new data in at once and hoped for the best. Instead I worked continent by continent, with a short plan for each batch before touching the data, and a small validation pass after. The validation itself is nothing fancy: a dependency-free Node script, just fs, path, and vm, checking that every entry has the full schema, that no country code repeats, and, with a levels flag, cross-checking the five difficulty tiers in the game against the country data so nothing gets silently dropped from every level or silently duplicated across two of them.
+
+The unglamorous part is what made it work. Adding one continent, running the check, fixing what it flagged, and only then moving to the next continent meant that when something broke, I knew exactly where to look. It was Africa, or it was Oceania, not "somewhere in 195 entries I touched last week." Compare that to the version of me who would've been tempted to just power through all five continents in one sitting and debug the whole mess afterward.
+
+This is the same argument I make for smaller batch sizes and tighter regression loops on real engineering teams, minus the excuse of "we don't have time to slow down." I had all the time in the world, on a side project, with no deadline, and I still nearly skipped the discipline because typing out five separate plan documents felt like overhead. It wasn't. It was the reason the bugs I did find were easy to trace, one continent at a time, instead of one hundred and ninety-five countries deep.
+
+Batch size is a QA decision as much as a delivery one.
