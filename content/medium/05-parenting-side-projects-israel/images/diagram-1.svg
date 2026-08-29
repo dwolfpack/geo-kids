@@ -1,0 +1,55 @@
+<svg viewBox="0 0 900 550" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="900" height="550" fill="#f5f1e9"/>
+  <text x="450" y="44" text-anchor="middle" font-size="22" font-weight="bold" fill="#33302a">Before / After: How the Difficulty Tiers Were Built</text>
+
+  <!-- before: population sorted -->
+  <text x="220" y="90" text-anchor="middle" font-size="15" font-weight="bold" fill="#33302a">Before — sorted by population</text>
+  <g>
+    <rect x="90" y="110" width="60" height="120" fill="#b5482f"/>
+    <text x="120" y="245" text-anchor="middle" font-size="12" fill="#33302a">30</text>
+    <rect x="160" y="110" width="60" height="120" fill="#b5482f"/>
+    <text x="190" y="245" text-anchor="middle" font-size="12" fill="#33302a">30</text>
+    <rect x="230" y="110" width="60" height="120" fill="#b5482f"/>
+    <text x="260" y="245" text-anchor="middle" font-size="12" fill="#33302a">30</text>
+    <rect x="300" y="205" width="60" height="25" fill="#b5482f"/>
+    <text x="330" y="245" text-anchor="middle" font-size="12" fill="#33302a">5</text>
+    <rect x="370" y="205" width="60" height="25" fill="#b5482f"/>
+    <text x="400" y="245" text-anchor="middle" font-size="12" fill="#33302a">5</text>
+  </g>
+  <text x="260" y="270" text-anchor="middle" font-size="12" fill="#71685a">tier sizes: 30 / 30 / 30 / 5 / 5</text>
+  <rect x="90" y="290" width="340" height="55" rx="8" fill="#efe0d3" stroke="#b5482f" stroke-width="1.5"/>
+  <text x="260" y="313" text-anchor="middle" font-size="12" fill="#33302a" font-weight="bold">"objective" metric, wrong proxy</text>
+  <text x="260" y="332" text-anchor="middle" font-size="11" fill="#33302a">big population ≠ kid recognizes it</text>
+
+  <!-- arrow -->
+  <line x1="450" y1="220" x2="500" y2="220" stroke="#33302a" stroke-width="2" marker-end="url(#a6)"/>
+
+  <!-- after: recognizability sorted -->
+  <text x="700" y="90" text-anchor="middle" font-size="15" font-weight="bold" fill="#33302a">After — sorted by kid recognizability</text>
+  <g>
+    <rect x="530" y="150" width="55" height="80" fill="#3f6f5e"/>
+    <text x="557" y="245" text-anchor="middle" font-size="12" fill="#33302a">39</text>
+    <rect x="595" y="150" width="55" height="80" fill="#3f6f5e"/>
+    <text x="622" y="245" text-anchor="middle" font-size="12" fill="#33302a">39</text>
+    <rect x="660" y="150" width="55" height="80" fill="#3f6f5e"/>
+    <text x="687" y="245" text-anchor="middle" font-size="12" fill="#33302a">39</text>
+    <rect x="725" y="150" width="55" height="80" fill="#3f6f5e"/>
+    <text x="752" y="245" text-anchor="middle" font-size="12" fill="#33302a">39</text>
+    <rect x="790" y="152" width="55" height="78" fill="#3f6f5e"/>
+    <text x="817" y="245" text-anchor="middle" font-size="12" fill="#33302a">38</text>
+  </g>
+  <text x="690" y="270" text-anchor="middle" font-size="12" fill="#71685a">tier sizes: 39 / 39 / 39 / 39 / 38</text>
+  <rect x="530" y="290" width="340" height="55" rx="8" fill="#e4ede8" stroke="#3f6f5e" stroke-width="1.5"/>
+  <text x="700" y="313" text-anchor="middle" font-size="12" fill="#33302a" font-weight="bold">measured the right thing</text>
+  <text x="700" y="332" text-anchor="middle" font-size="11" fill="#33302a">even tiers, matched to real recognition</text>
+
+  <rect x="180" y="390" width="540" height="80" rx="10" fill="#33302a"/>
+  <text x="450" y="420" text-anchor="middle" font-size="14" fill="#f5f1e9" font-weight="bold">A seven-year-old on the couch was the QA signal</text>
+  <text x="450" y="445" text-anchor="middle" font-size="12" fill="#f5f1e9">the most honest bug report a product manager can get</text>
+
+  <defs>
+    <marker id="a6" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#33302a"/>
+    </marker>
+  </defs>
+</svg>
