@@ -24,6 +24,48 @@ Keep that in mind rather than treating the checklist below as independent
 boxes to tick — the goal is a piece that reads like one person's uneven,
 committed voice, not a smoother version of the AI voice.
 
+## The trap: rewriting still sounds like AI
+
+Naively applying "vary sentence length" and "cut the hedging" produces text
+that is stylistically different from the input but is *still* recognizably
+machine-written, because the sentence-level cleanup doesn't touch the
+rhetorical *moves* language models default to. Detectors (and people) key
+off these moves as much as they key off word choice. Watch for them
+specifically and break them, not just the vocabulary around them:
+
+- **The setup-negation-reveal.** "It wasn't the rewriting logic. It was
+  naming what's wrong in the first place." This construction — deny the
+  obvious answer, then supply the real one — is one of the single most
+  recognizable LLM tics there is. If you catch yourself writing "X wasn't
+  the hard part, Y was" or "This isn't really about A — it's about B," cut
+  it and just state the thing directly.
+- **Rule-of-three lists inside a sentence.** "Everything is the same
+  length, every claim gets hedged, every paragraph ends in a bow." Three
+  parallel clauses in a row, especially with anaphora (repeating "every" or
+  "it's"), reads as generated even when every clause is true. Use two, use
+  four, or use one specific example instead of a clean triad.
+- **The epigrammatic clincher.** A short, quotable, slightly clever closing
+  line that resolves the whole piece — "not just a vibe," "and that's the
+  real lesson" — is a bow-tying reflex. Real writing is allowed to just
+  stop, trail into a caveat, or end on the least dramatic sentence in the
+  piece.
+- **Balanced antithesis.** "Not because X, but because Y" / "less A, more
+  B" sentence shapes are efficient and therefore overused by models. One
+  per piece is plenty; more than that starts to read as a pattern rather
+  than a thought.
+- **Meta-commentary that congratulates the piece on being honest or
+  self-aware.** "A good reminder that this is fixable, not just a vibe"
+  is the model complimenting its own insight. A person making the same
+  point usually just makes it and moves on.
+
+The fix isn't a synonym swap — it's noticing when a sentence is built out of
+one of these shapes and rebuilding it as a plain statement, a specific
+example, or an aside that doesn't resolve so neatly. Real human writing
+also just repeats a word instead of finding a fresh synonym for it,
+under-explains things the writer assumes the reader gets, and drops a
+sentence that doesn't quite finish its own thought. That's not a flaw to
+fix — it's part of what makes it read as human.
+
 ## What to do
 
 1. **Read the whole input first** and identify the core claims, facts,
@@ -70,6 +112,14 @@ committed voice, not a smoother version of the AI voice.
    piece read as natural; six read as a tic. Same with bullets — use them
    when a list is genuinely a list, not as a default way to present three
    sentences.
+
+9. **Reread specifically for the rhetorical tics above** (setup-negation-
+   reveal, rule-of-three, epigrammatic clincher, balanced antithesis,
+   self-congratulatory meta-commentary) once the sentence-level pass is
+   done. This is a separate check from rhythm and word choice — a piece can
+   have varied sentence lengths and contractions and still be built out of
+   these shapes underneath. Rebuild any sentence you find doing this into a
+   flatter, more specific, or less resolved version.
 
 ## What not to change
 
