@@ -45,11 +45,11 @@
       drums: 'x...o...x...o..o' },
 
     setup: function (g) {
-      g.lead = 220;          /* distance ahead of the breaking lip */
+      g.lead = 170;          /* distance ahead of the breaking lip */
       g.face = 0.55;         /* 0 = trough, 1 = lip */
       g.vFace = 0;
       g.speed = 190;
-      g.breakSpeed = 175;
+      g.breakSpeed = 205;
       g.ride = 0;
       g.air = 0; g.airSpin = 0; g.airPeak = 0;
       g.tubeT = 0; g.tubeTotal = 0; g.inTube = false;
@@ -79,7 +79,7 @@
       }
 
       g.ride += dt;
-      g.breakSpeed = 175 + g.ride * 3.4;      /* the wave gets meaner */
+      g.breakSpeed = 205 + g.ride * 3.4;      /* the wave gets meaner */
 
       /* ---- vertical position on the face ---- */
       var steer = -g.axisY();                  /* up = climb */
@@ -325,23 +325,34 @@
       }
       ctx.restore();
 
-      /* the curl throws over the rider - drawn last so you are inside it */
+      /* the curl throws over the rider - a translucent band, so you can still
+         see yourself standing inside the tube */
       if (barrel && g.lead < 260) {
         var cy = crestAt(lipX);
         ctx.save();
-        ctx.globalAlpha = 0.92;
-        ctx.fillStyle = '#0a4f7d';
+        ctx.globalAlpha = 0.5;
+        ctx.fillStyle = '#0d5f92';
         ctx.beginPath();
-        ctx.moveTo(lipX - 30, cy - 4);
-        ctx.quadraticCurveTo(lipX + 120, cy - 60, lipX + 260, cy + 90);
-        ctx.quadraticCurveTo(lipX + 130, cy + 6, lipX - 30, cy + 56);
+        ctx.moveTo(lipX - 60, cy + 6);
+        ctx.quadraticCurveTo(lipX + 90, cy - 78, lipX + 240, cy + 104);
+        ctx.lineTo(lipX + 198, cy + 118);
+        ctx.quadraticCurveTo(lipX + 78, cy - 18, lipX - 60, cy + 58);
         ctx.closePath(); ctx.fill();
+        ctx.globalAlpha = 0.95;
         ctx.strokeStyle = '#e6f7ff'; ctx.lineWidth = 5;
         ctx.shadowColor = '#cdefff'; ctx.shadowBlur = 16;
         ctx.beginPath();
-        ctx.moveTo(lipX - 30, cy - 2);
-        ctx.quadraticCurveTo(lipX + 120, cy - 58, lipX + 260, cy + 92);
+        ctx.moveTo(lipX - 60, cy + 6);
+        ctx.quadraticCurveTo(lipX + 90, cy - 78, lipX + 240, cy + 104);
         ctx.stroke();
+        /* spitting mist at the mouth of the tube */
+        ctx.globalAlpha = 0.35; ctx.fillStyle = '#ffffff'; ctx.shadowBlur = 0;
+        for (var mb = 0; mb < 10; mb++) {
+          var mxp = lipX + 150 + ((mb * 53 + g.time * 120) % 110);
+          ctx.beginPath();
+          ctx.arc(mxp, cy + 40 + Math.sin(mb + g.time * 5) * 14, 4 + (mb % 3) * 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.restore();
       }
 
