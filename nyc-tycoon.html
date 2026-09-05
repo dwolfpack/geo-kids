@@ -1,0 +1,2039 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>NYC METRO TYCOON</title>
+<style>
+:root{
+  --bg:#080b12; --panel:rgba(12,17,26,0.92); --panel2:rgba(18,25,38,0.95);
+  --line:#1e2a3d; --line2:#2c3d57;
+  --txt:#dbe6f5; --dim:#7d90ab; --gold:#ffcf4a; --green:#3ce88f; --red:#ff5c6b;
+  --cyan:#48d8ff; --violet:#b07dff; --orange:#ff9d3c;
+  --wall:#48d8ff; --times:#ff4fa3; --brook:#ff9d3c; --uptown:#8ef0a8;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:"Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;user-select:none}
+canvas{display:block;position:absolute;inset:0;cursor:grab}
+canvas.dragging{cursor:grabbing}
+#app{position:fixed;inset:0}
+
+/* ---------- TOP HUD ---------- */
+#hud{position:absolute;top:0;left:0;right:0;height:56px;display:flex;align-items:center;
+  gap:0;padding:0 12px;background:linear-gradient(180deg,rgba(6,9,15,.97),rgba(6,9,15,.75));
+  border-bottom:1px solid var(--line);backdrop-filter:blur(8px);z-index:20}
+.stat{display:flex;flex-direction:column;justify-content:center;padding:0 16px;
+  border-right:1px solid var(--line);height:36px;min-width:96px}
+.stat .k{font-size:9px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase}
+.stat .v{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2}
+.v.money{color:var(--gold)} .v.pos{color:var(--green)} .v.neg{color:var(--red)}
+.v.pres{color:var(--violet)} .v.inf{color:var(--cyan)}
+#logo{margin-left:auto;text-align:right;padding-left:18px;line-height:.95}
+#logo b{display:block;font-size:20px;font-weight:800;letter-spacing:.02em}
+#logo span{font-size:9px;letter-spacing:.34em;color:var(--dim)}
+#speedbox{display:flex;gap:4px;margin-left:14px}
+.sbtn{width:30px;height:28px;border:1px solid var(--line2);background:#0d1420;color:var(--dim);
+  border-radius:5px;font-size:11px;font-weight:700;cursor:pointer}
+.sbtn.on{background:var(--cyan);color:#04121a;border-color:var(--cyan)}
+.sbtn:hover{border-color:var(--cyan);color:var(--txt)}
+
+/* ---------- LEFT SIDEBAR ---------- */
+#side{position:absolute;left:0;top:56px;bottom:0;width:196px;background:var(--panel);
+  border-right:1px solid var(--line);overflow-y:auto;z-index:15;padding-bottom:60px}
+#side::-webkit-scrollbar{width:6px}#side::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.grp{padding:10px 12px 4px;font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
+.row{display:flex;align-items:center;gap:9px;padding:7px 12px;cursor:pointer;font-size:12px;
+  border-left:2px solid transparent;transition:.12s}
+.row:hover{background:rgba(72,216,255,.07);border-left-color:var(--line2)}
+.row.on{background:rgba(72,216,255,.13);border-left-color:var(--cyan);color:#fff}
+.dot{width:9px;height:9px;border-radius:2px;background:var(--line2);flex:0 0 auto}
+.row.on .dot{box-shadow:0 0 8px currentColor}
+.row .kbd{margin-left:auto;font-size:9px;color:var(--dim);border:1px solid var(--line2);
+  padding:0 4px;border-radius:3px}
+.dlist{padding:2px 12px 10px}
+.dcard{border:1px solid var(--line);border-radius:6px;padding:7px 9px;margin-bottom:6px;cursor:pointer;
+  background:#0b111b;transition:.12s}
+.dcard:hover{border-color:var(--line2);transform:translateX(2px)}
+.dcard .n{font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
+.dcard .s{font-size:9.5px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+.bar{height:3px;background:#182231;border-radius:2px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:2px;transition:width .4s}
+
+/* ---------- INSPECTOR ---------- */
+#insp{position:absolute;right:0;top:56px;bottom:34px;width:322px;background:var(--panel);
+  border-left:1px solid var(--line);z-index:15;display:flex;flex-direction:column}
+#insp.hidden{display:none}
+#ihead{padding:12px 14px;border-bottom:1px solid var(--line);position:relative}
+#ihead .tag{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+#ihead h2{font-size:17px;font-weight:800;margin-top:3px;letter-spacing:.01em}
+#ihead .sub{font-size:11px;color:var(--dim);margin-top:2px}
+#iclose{position:absolute;right:10px;top:10px;width:22px;height:22px;border:1px solid var(--line2);
+  background:transparent;color:var(--dim);border-radius:4px;cursor:pointer;font-size:12px}
+#iclose:hover{color:var(--red);border-color:var(--red)}
+#ibody{flex:1;overflow-y:auto;padding:12px 14px 22px}
+#ibody::-webkit-scrollbar{width:6px}#ibody::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+.kv{display:flex;justify-content:space-between;font-size:11.5px;padding:3.5px 0;
+  border-bottom:1px dotted rgba(255,255,255,.06);font-variant-numeric:tabular-nums}
+.kv span:first-child{color:var(--dim)}
+.kv b{font-weight:600}
+.sechead{font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase;
+  margin:14px 0 7px;padding-bottom:4px;border-bottom:1px solid var(--line)}
+.btn{display:block;width:100%;padding:9px 11px;margin-bottom:7px;border-radius:6px;
+  border:1px solid var(--line2);background:#101a29;color:var(--txt);font-size:12px;font-weight:600;
+  cursor:pointer;text-align:left;transition:.12s;font-family:inherit}
+.btn:hover:not(:disabled){background:#16263c;border-color:var(--cyan);transform:translateY(-1px)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn .c{float:right;color:var(--gold);font-weight:700;font-variant-numeric:tabular-nums}
+.btn .d{display:block;font-size:10px;color:var(--dim);font-weight:400;margin-top:3px;clear:both}
+.btn.buy{background:linear-gradient(90deg,#0d3b2a,#0f5c3f);border-color:#1f8a5f}
+.btn.buy:hover:not(:disabled){border-color:var(--green);background:linear-gradient(90deg,#11553c,#126f4a)}
+.btn.danger{background:#2a0f14;border-color:#5c2029}
+.btn.danger:hover:not(:disabled){border-color:var(--red)}
+.biz{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px}
+.bizc{border:1px solid var(--line2);border-radius:6px;padding:8px;cursor:pointer;background:#0d1420;
+  font-size:11px;transition:.12s}
+.bizc:hover{border-color:var(--cyan);background:#132135}
+.bizc .t{font-weight:700;display:block;margin-bottom:3px}
+.bizc .p{color:var(--gold);font-variant-numeric:tabular-nums;font-size:10.5px}
+.bizc .r{color:var(--green);font-size:10px}
+.up{display:flex;align-items:center;gap:8px;padding:7px;border:1px solid var(--line);
+  border-radius:6px;margin-bottom:6px;background:#0b111b}
+.up .ic{width:26px;height:26px;border-radius:5px;display:grid;place-items:center;font-size:13px;flex:0 0 auto}
+.up .info{flex:1;min-width:0}
+.up .info b{font-size:11.5px;display:block}
+.up .info small{font-size:9.5px;color:var(--dim);display:block;line-height:1.3}
+.up button{padding:6px 9px;border-radius:5px;border:1px solid var(--line2);background:#122033;
+  color:var(--gold);font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+.up button:hover:not(:disabled){border-color:var(--gold);background:#1b2c44}
+.up button:disabled{opacity:.35;cursor:not-allowed}
+.pips{display:flex;gap:2px;margin-top:3px}
+.pip{width:11px;height:3px;border-radius:1px;background:#243348}
+.pip.f{background:var(--cyan);box-shadow:0 0 5px var(--cyan)}
+
+/* ---------- TICKER ---------- */
+#ticker{position:absolute;left:0;right:0;bottom:0;height:34px;background:#05080d;
+  border-top:1px solid var(--line);display:flex;align-items:center;z-index:18;overflow:hidden}
+#tlabel{flex:0 0 auto;background:var(--gold);color:#101010;font-size:10px;font-weight:800;
+  letter-spacing:.13em;padding:0 12px;height:100%;display:flex;align-items:center}
+#tscroll{white-space:nowrap;font-size:12px;padding-left:30%;animation:sc 38s linear infinite;
+  font-variant-numeric:tabular-nums}
+@keyframes sc{to{transform:translateX(-100%)}}
+.ti{margin-right:46px;display:inline-block}
+.ti b{color:var(--gold)}
+.ti.good b{color:var(--green)}.ti.bad b{color:var(--red)}
+
+/* ---------- TOASTS / EVENT BANNER ---------- */
+#toasts{position:absolute;right:340px;top:70px;z-index:30;display:flex;flex-direction:column;gap:7px;
+  align-items:flex-end;pointer-events:none;max-width:330px}
+.toast{background:var(--panel2);border:1px solid var(--line2);border-left-width:3px;border-radius:6px;
+  padding:9px 13px;font-size:12px;box-shadow:0 8px 26px rgba(0,0,0,.6);animation:tin .3s ease-out;
+  backdrop-filter:blur(6px)}
+.toast b{display:block;font-size:12.5px;margin-bottom:2px}
+.toast small{color:var(--dim);font-size:10.5px;line-height:1.35;display:block}
+.toast.good{border-left-color:var(--green)}.toast.bad{border-left-color:var(--red)}
+.toast.info{border-left-color:var(--cyan)}.toast.gold{border-left-color:var(--gold)}
+@keyframes tin{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:none}}
+
+/* ---------- MODAL ---------- */
+.modal{position:absolute;inset:0;background:rgba(3,6,11,.82);z-index:50;display:none;
+  align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal.open{display:flex}
+.mbox{width:min(760px,92vw);max-height:86vh;overflow-y:auto;background:var(--panel2);
+  border:1px solid var(--line2);border-radius:12px;padding:26px 30px;box-shadow:0 30px 90px rgba(0,0,0,.8)}
+.mbox h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:.01em}
+.mbox h3{font-size:12px;letter-spacing:.16em;color:var(--dim);text-transform:uppercase;margin:18px 0 9px}
+.mbox p{font-size:13px;color:var(--dim);line-height:1.65;margin-bottom:8px}
+.mbox .close{margin-top:18px}
+.lob{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:9px}
+.lobc{border:1px solid var(--line);border-radius:8px;padding:11px;background:#0b111b;cursor:pointer;transition:.14s}
+.lobc:hover{border-color:var(--cyan);transform:translateY(-2px)}
+.lobc.dis{opacity:.42;cursor:not-allowed}
+.lobc b{font-size:12.5px;display:block;margin-bottom:4px}
+.lobc small{font-size:10.5px;color:var(--dim);line-height:1.45;display:block}
+.lobc .cost{margin-top:7px;font-size:11px;color:var(--gold);font-weight:700}
+.wins{display:grid;gap:8px}
+.wc{border:1px solid var(--line);border-radius:8px;padding:11px 13px;background:#0b111b}
+.wc b{font-size:12.5px}.wc small{color:var(--dim);font-size:10.5px;display:block;margin:2px 0 6px}
+kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1px 5px;font-size:11px}
+
+/* ---------- HELPERS ---------- */
+#hint{position:absolute;left:206px;bottom:44px;font-size:11.5px;color:var(--txt);z-index:16;max-width:46vw;
+  background:rgba(8,12,19,.8);padding:6px 11px;border-radius:6px;border:1px solid var(--line)}
+.flash{animation:fl .5s}
+@keyframes fl{0%,100%{background:transparent}50%{background:rgba(255,207,74,.22)}}
+@media (max-width:1100px){#insp{width:280px}#toasts{right:292px}}
+@media (max-width:860px){#side{width:150px}#insp{width:250px}}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="cv"></canvas>
+
+  <div id="hud">
+    <div class="stat"><div class="k">City Funds</div><div class="v money" id="s-cash">$250,000</div></div>
+    <div class="stat"><div class="k">Net / sec</div><div class="v pos" id="s-net">+$0</div></div>
+    <div class="stat"><div class="k">Net Worth</div><div class="v" id="s-worth">$250,000</div></div>
+    <div class="stat"><div class="k">Prestige</div><div class="v pres" id="s-pres">0</div></div>
+    <div class="stat"><div class="k">Influence</div><div class="v inf" id="s-inf">0</div></div>
+    <div class="stat"><div class="k">Portfolio</div><div class="v" id="s-own">0 / 0</div></div>
+    <div class="stat"><div class="k">Audit Risk</div><div class="v" id="s-risk">0%</div></div>
+    <div class="stat"><div class="k">Date</div><div class="v" id="s-date">JAN 2025</div></div>
+    <div id="speedbox">
+      <button class="sbtn" id="sp0" title="Pause">II</button>
+      <button class="sbtn on" id="sp1">1x</button>
+      <button class="sbtn" id="sp2">2x</button>
+      <button class="sbtn" id="sp3">4x</button>
+    </div>
+    <div id="logo"><b>NYC METRO</b><span>TYCOON</span></div>
+  </div>
+
+  <div id="side">
+    <div class="grp">Overlays</div>
+    <div class="row on" data-ov="none"><i class="dot" style="background:#5f7793"></i>None<span class="kbd">1</span></div>
+    <div class="row" data-ov="zoning"><i class="dot" style="background:#48d8ff;color:#48d8ff"></i>Zoning<span class="kbd">2</span></div>
+    <div class="row" data-ov="traffic"><i class="dot" style="background:#ff9d3c;color:#ff9d3c"></i>Foot Traffic<span class="kbd">3</span></div>
+    <div class="row" data-ov="profit"><i class="dot" style="background:#3ce88f;color:#3ce88f"></i>Profit<span class="kbd">4</span></div>
+    <div class="row" data-ov="risk"><i class="dot" style="background:#ff5c6b;color:#ff5c6b"></i>Audit Risk<span class="kbd">5</span></div>
+    <div class="grp">Districts</div>
+    <div class="dlist" id="dlist"></div>
+    <div class="grp">Management</div>
+    <div class="row" id="btn-lobby"><i class="dot" style="background:#b07dff"></i>City Hall<span class="kbd">L</span></div>
+    <div class="row" id="btn-goals"><i class="dot" style="background:#ffcf4a"></i>Objectives<span class="kbd">G</span></div>
+    <div class="row" id="btn-help"><i class="dot" style="background:#48d8ff"></i>How To Play<span class="kbd">H</span></div>
+    <div class="row" id="btn-save"><i class="dot" style="background:#3ce88f"></i>Save Empire</div>
+    <div class="row" id="btn-reset"><i class="dot" style="background:#ff5c6b"></i>Demolish Save</div>
+  </div>
+
+  <div id="insp" class="hidden">
+    <div id="ihead">
+      <button id="iclose">✕</button>
+      <div class="tag" id="i-tag">SELECTED BLOCK</div>
+      <h2 id="i-name">—</h2>
+      <div class="sub" id="i-sub">—</div>
+    </div>
+    <div id="ibody"></div>
+  </div>
+
+  <div id="ticker"><div id="tlabel">NYSE WIRE</div><div id="tscroll"></div></div>
+  <div id="toasts"></div>
+  <div id="hint">Drag to pan · Scroll to zoom · Click a block to inspect</div>
+
+  <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
+</div>
+<script>
+"use strict";
+/* =====================================================================
+   NYC METRO TYCOON  —  single-file business empire simulator
+   Sections: 0 utils · 1 config · 2 world gen · 3 economy · 4 events
+             5 render · 6 UI · 7 input · 8 persistence · 9 main loop
+   ===================================================================== */
+
+/* ---------- 0. UTILITIES ---------- */
+const TAU = Math.PI * 2;
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const rnd = (a, b) => a + Math.random() * (b - a);
+const rint = (a, b) => Math.floor(rnd(a, b + 1));
+const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+
+/** Deterministic 2D hash used for stable per-plot cosmetic variation. */
+function hash2(x, y) {
+  let h = x * 374761393 + y * 668265263;
+  h = (h ^ (h >> 13)) * 1274126177;
+  return ((h ^ (h >> 16)) >>> 0) / 4294967296;
+}
+
+/** Compact currency formatter: $1.24M, $980K, $12.7B, $4.10T */
+function money(n) {
+  const s = n < 0 ? "-" : "";
+  n = Math.abs(n);
+  if (n >= 1e12) return s + "$" + (n / 1e12).toFixed(2) + "T";
+  if (n >= 1e9) return s + "$" + (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return s + "$" + (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return s + "$" + (n / 1e3).toFixed(1) + "K";
+  return s + "$" + n.toFixed(0);
+}
+function rate(n) { return (n >= 0 ? "+" : "") + money(n) + "/s"; }
+function pct(n) { return (n * 100).toFixed(0) + "%"; }
+
+/* ---------- 1. CONFIGURATION ---------- */
+const GRID_W = 15, GRID_H = 14;      // logical cells (includes streets + river)
+const TILE_W = 64, TILE_H = 32;      // isometric tile footprint
+const RIVER_X = 9;                   // East River column
+
+const DISTRICTS = {
+  wall: {
+    id: "wall", name: "Wall Street", short: "FiDi",
+    color: "#48d8ff", ground: "#16324a", roof: "#20455f", accent: "#7ee9ff",
+    land: 3.1, rev: 2.25, prestige: 1.0, cap: 9, density: 1.55, civ: [66, 78, 100],
+    blurb: "Financial District. Brutal land prices, colossal corporate payouts.",
+    bias: "finance"
+  },
+  times: {
+    id: "times", name: "Times Square", short: "Broadway",
+    color: "#ff4fa3", ground: "#3a1730", roof: "#54204a", accent: "#ff8fc8",
+    land: 2.4, rev: 1.85, prestige: 1.2, cap: 8, density: 1.05, civ: [82, 70, 90],
+    blurb: "Neon canyon. Tourist floods drive insane ad and retail revenue.",
+    bias: "retail"
+  },
+  brooklyn: {
+    id: "brooklyn", name: "Brooklyn", short: "DUMBO",
+    color: "#ff9d3c", ground: "#3b2416", roof: "#5a361f", accent: "#ffc37a",
+    land: 0.85, rev: 1.0, prestige: 0.8, cap: 7, density: 0.5, civ: [96, 66, 50],
+    blurb: "Industrial chic. Cheap entry, gentrification compounds your yield.",
+    bias: "tech"
+  },
+  uptown: {
+    id: "uptown", name: "Upper East Side", short: "Central Park",
+    color: "#8ef0a8", ground: "#1c3a26", roof: "#2a5236", accent: "#c4ffd6",
+    land: 2.7, rev: 1.35, prestige: 2.4, cap: 7, density: 0.78, civ: [92, 84, 70],
+    blurb: "Old money. Safe dividends, enormous prestige, park-adjacency premiums.",
+    bias: "resi"
+  }
+};
+
+/* Business archetypes. mult = revenue coefficient, cost = build cost coefficient. */
+const BIZ = {
+  food: {
+    id: "food", name: "Food & Hospitality", icon: "🍽", color: "#ff9d3c",
+    mult: 1.00, cost: 0.55, traffic: 1.45, prestige: 0.6, risk: 0.0,
+    tiers: ["Halal Cart", "Corner Deli", "Brunch Spot", "Cocktail Bar", "Steakhouse",
+            "Rooftop Lounge", "Michelin Bistro", "Culinary Empire", "Global Restaurant Group"]
+  },
+  retail: {
+    id: "retail", name: "Retail & Media", icon: "🛍", color: "#ff4fa3",
+    mult: 1.15, cost: 0.7, traffic: 1.7, prestige: 0.9, risk: 0.0,
+    tiers: ["Souvenir Stand", "Sneaker Shop", "Flagship Store", "Ad Billboard",
+            "Media House", "Jumbotron Tower", "Broadcast Center", "Ad Network HQ", "Global Media Empire"]
+  },
+  tech: {
+    id: "tech", name: "Technology", icon: "💾", color: "#48d8ff",
+    mult: 1.35, cost: 0.95, traffic: 0.75, prestige: 1.1, risk: 0.05,
+    tiers: ["Garage Startup", "Co-working Loft", "SaaS Studio", "Series B Office",
+            "Data Center", "Unicorn Campus", "AI Research Lab", "Compute Conglomerate", "Singularity Tower"]
+  },
+  finance: {
+    id: "finance", name: "Finance", icon: "📈", color: "#3ce88f",
+    mult: 1.7, cost: 1.35, traffic: 0.5, prestige: 1.4, risk: 0.18,
+    tiers: ["Check Cashing", "Boutique Broker", "Hedge Fund", "Investment Bank",
+            "Prime Brokerage", "Clearing House", "Sovereign Fund", "Shadow Bank", "Central Bank"]
+  },
+  resi: {
+    id: "resi", name: "Residential", icon: "🏛", color: "#b07dff",
+    mult: 0.85, cost: 0.6, traffic: 0.95, prestige: 1.8, risk: 0.0,
+    tiers: ["Walk-up", "Brownstone", "Condo Block", "Doorman Building", "Luxury Tower",
+            "Penthouse Stack", "Sky Residences", "Billionaires' Row", "Crown Residences"]
+  }
+};
+
+/* Per-building micro-upgrade tracks. */
+const UPG = {
+  marketing: { name: "Marketing", icon: "📣", color: "#ff4fa3", max: 5,
+    desc: "+22% foot traffic drawn to this block", base: 0.9 },
+  synergy: { name: "Synergy", icon: "🔗", color: "#48d8ff", max: 5,
+    desc: "+9% revenue to every adjacent owned block", base: 1.3 },
+  automation:{ name: "Automation", icon: "⚙", color: "#3ce88f", max: 5,
+    desc: "+18% revenue, collected even while you are away", base: 1.1 },
+  luxury: { name: "Luxury", icon: "💎", color: "#b07dff", max: 5,
+    desc: "+1 prestige/level and +14% revenue", base: 1.7 }
+};
+
+/* City Hall lobbying actions. */
+const LOBBY = [
+  { id: "taxbreak", name: "Corporate Tax Break", cost: 12, cash: 4e6, repeat: true,
+    desc: "Cut the corporate tax rate by 3 points (floor 6%).",
+    can: () => G.taxRate > 0.061, run: () => { G.taxRate = Math.max(0.06, G.taxRate - 0.03); } },
+  { id: "rezone", name: "Rezoning Permit", cost: 18, cash: 9e6, repeat: true,
+    desc: "Raise the height cap in every district by 1 floor tier.",
+    can: () => G.zoneBonus < 6, run: () => { G.zoneBonus++; } },
+  { id: "subway", name: "Subway Expansion", cost: 15, cash: 7e6, repeat: true,
+    desc: "+18% global foot traffic. Cabs and crowds surge.",
+    can: () => G.transitLv < 8, run: () => { G.transitLv++; } },
+  { id: "cleanup", name: "Regulatory Cleanup", cost: 22, cash: 12e6, repeat: true,
+    desc: "Erase 45% of accumulated audit risk. The files simply vanish.",
+    can: () => G.risk > 0.02, run: () => { G.risk *= 0.55; } },
+  { id: "tourism", name: "Tourism Board Blitz", cost: 20, cash: 15e6, repeat: true,
+    desc: "+25% permanent Times Square & retail revenue.",
+    can: () => G.tourismLv < 6, run: () => { G.tourismLv++; } },
+  { id: "eminent", name: "Eminent Domain Writ", cost: 45, cash: 60e6, repeat: true,
+    desc: "Seize one random unowned block in your weakest district, free.",
+    can: () => G.plots.some(p => !p.owned && !p.park), run: () => {
+      const free = G.plots.filter(p => !p.owned && !p.park);
+      if (!free.length) return;
+      const p = pick(free); p.owned = true; p.biz = null; p.level = 0;
+      toast("gold", "Eminent Domain", p.name + " seized by decree.");
+    } },
+  { id: "charter", name: "Bank Charter", cost: 30, cash: 40e6, repeat: false,
+    desc: "Permanently +30% revenue from all Finance businesses.",
+    can: () => !G.perks.charter, run: () => { G.perks.charter = true; } },
+  { id: "landmark", name: "Landmark Status", cost: 26, cash: 25e6, repeat: false,
+    desc: "Permanently +50% prestige generation across the empire.",
+    can: () => !G.perks.landmark, run: () => { G.perks.landmark = true; } }
+];
+
+/* Macroeconomic event deck. Each has duration (sim seconds) and modifier hooks. */
+const EVENTS = [
+  { id:"crash", t:"bad", name:"Wall Street Flash Crash",
+    text:"Algos cascade. Financial District revenue halved for 45s.",
+    dur:45, mod:{ district:{ wall:0.5 }, biz:{ finance:0.6 } } },
+  { id:"revival", t:"good", name:"Broadway Revival",
+    text:"A sold-out season. Times Square tourism spikes 200%.",
+    dur:50, mod:{ district:{ times:3.0 }, traffic:1.6 } },
+  { id:"strike", t:"bad", name:"Subway Strike",
+    text:"The MTA walks out. Global foot traffic collapses.",
+    dur:40, mod:{ traffic:0.45 } },
+  { id:"ipo", t:"good", name:"Tech IPO Window",
+    text:"Bankers are printing. Tech revenue +140%.",
+    dur:45, mod:{ biz:{ tech:2.4 } } },
+  { id:"gentri", t:"good", name:"Brooklyn Gentrification Wave",
+    text:"Lofts flip overnight. Brooklyn yields +120% and land values climb.",
+    dur:55, mod:{ district:{ brooklyn:2.2 } }, once:()=>{ G.gentri += 0.12; } },
+  { id:"rates", t:"bad", name:"Fed Hikes Rates 75bps",
+    text:"Cost of capital spikes. Operating costs +60% city-wide.",
+    dur:50, mod:{ opex:1.6 } },
+  { id:"tourists", t:"good", name:"Record Tourist Season",
+    text:"14 million visitors. Foot traffic +75% everywhere.",
+    dur:50, mod:{ traffic:1.75 } },
+  { id:"blackout", t:"bad", name:"Grid Blackout",
+    text:"Con Ed is down. All revenue cut 35% until power returns.",
+    dur:30, mod:{ global:0.65 } },
+  { id:"gala", t:"good", name:"Met Gala Weekend",
+    text:"Uptown is the center of the universe. UES revenue and prestige surge.",
+    dur:45, mod:{ district:{ uptown:2.4 }, prestige:2.0 } },
+  { id:"sec", t:"bad", name:"SEC Sweep Announced",
+    text:"Enforcement season. Audit risk accrues twice as fast.",
+    dur:60, mod:{ riskRate:2.0 } },
+  { id:"boom", t:"good", name:"Bull Market Melt-Up",
+    text:"Everything is up. Global revenue +55%.",
+    dur:45, mod:{ global:1.55 } },
+  { id:"rent", t:"bad", name:"Rent Control Bill Passes",
+    text:"Residential yields capped hard for the duration.",
+    dur:50, mod:{ biz:{ resi:0.55 } } },
+  { id:"film", t:"good", name:"Blockbuster Films On Location",
+    text:"Studios rent your blocks. Retail and food revenue +90%.",
+    dur:40, mod:{ biz:{ retail:1.9, food:1.9 } } },
+  { id:"snow", t:"bad", name:"Nor'easter Shuts The City",
+    text:"Two feet of snow. Foot traffic and revenue drop sharply.",
+    dur:35, mod:{ traffic:0.5, global:0.8 } }
+];
+
+/* ---------- 2. WORLD GENERATION ---------- */
+const G = {
+  cash: 250000, prestige: 0, influence: 0, risk: 0,
+  taxRate: 0.28, zoneBonus: 0, transitLv: 0, tourismLv: 0, gentri: 0,
+  perks: {}, plots: [], grid: [], selected: null, hovered: null,
+  overlay: "none", speed: 1, time: 0, month: 0,
+  netHistory: [], lastNet: 0, grossRate: 0, opexRate: 0,
+  activeEvents: [], nextEvent: 45, tickerItems: [],
+  cars: [], peds: [], fx: [],
+  won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, statsTimer: 0,
+  totalEarned: 0, started: Date.now()
+};
+
+function districtAt(x, y) {
+  if (x > RIVER_X) return "brooklyn";
+  if (y < 4) return "uptown";
+  if (y < 8) return "times";
+  return "wall";
+}
+function isStreet(x, y) {
+  return (x % 3 === 2) || (y % 4 === 3);
+}
+function isPark(x, y) {
+  return x >= 0 && x <= 1 && y >= 0 && y <= 2;   // Central Park wedge
+}
+
+/* Named landmark parcels: bigger existing structures, prestige and yield premiums. */
+const LANDMARKS = [
+  { x: 7, y: 12, n: "One World Trade" },
+  { x: 6, y: 9,  n: "The Exchange Floor" },
+  { x: 7, y: 5,  n: "One Times Square" },
+  { x: 5, y: 6,  n: "The Flatiron" },
+  { x: 3, y: 4,  n: "Grand Central Terminal" },
+  { x: 1, y: 5,  n: "Empire State Site" },
+  { x: 4, y: 1,  n: "The Museum Mile" },
+  { x: 11, y: 9, n: "Brooklyn Bridge Landing" },
+  { x: 13, y: 4, n: "The Navy Yard" }
+];
+
+const NAMES = {
+  wall: ["Broad St", "Exchange Pl", "Pine St", "Wall & Water", "Stone St", "Liberty Plaza",
+         "Battery Row", "Beaver St", "Hanover Sq", "Trinity Pl", "Maiden Ln", "Cedar St",
+         "Gold St", "Fulton Sq", "Whitehall", "Bowling Green"],
+  times: ["W 42nd St", "Duffy Sq", "Shubert Alley", "Broadway & 45th", "Restaurant Row",
+          "8th Ave Arcade", "One Times Sq", "Hell's Kitchen", "Theater Row", "Bryant North",
+          "W 47th St", "Great White Way", "Herald North", "Neon Row", "Playhouse Blk", "Marquee Row"],
+  brooklyn: ["Bedford Ave", "Wythe Yard", "DUMBO Docks", "N 6th St", "Kent Loft", "Berry St",
+             "Water St Arch", "Greenpoint Row", "Metropolitan", "Havemeyer", "Grand St",
+             "Jay St Works", "Front St Mill", "Bushwick Edge", "Union Ave", "Driggs Blk"],
+  uptown: ["Park Ave 72", "Madison Row", "5th & 79th", "Museum Mile", "Lex & 68th",
+           "Carnegie Hill", "The Reservoir", "Fifth Terrace", "Gracie Row", "Yorkville",
+           "E 66th St", "Central Green", "The Dakota Row", "Sutton Place", "Cathedral Blk", "Astor Row"]
+};
+
+function generateWorld() {
+  G.plots = [];
+  G.grid = [];
+  const counters = { wall: 0, times: 0, brooklyn: 0, uptown: 0 };
+  for (let y = 0; y < GRID_H; y++) {
+    G.grid[y] = [];
+    for (let x = 0; x < GRID_W; x++) {
+      if (x === RIVER_X) { G.grid[y][x] = { water: true, x, y }; continue; }
+      if (isStreet(x, y)) { G.grid[y][x] = { street: true, x, y }; continue; }
+      const d = districtAt(x, y);
+      const park = d === "uptown" && isPark(x, y);
+      const list = NAMES[d];
+      const cell = {
+        x, y, d, park,
+        name: park ? "Central Park" : list[counters[d] % list.length] +
+              (counters[d] >= list.length ? " " + (1 + Math.floor(counters[d] / list.length)) : ""),
+        owned: false, biz: null, level: 0, up: { marketing: 0, synergy: 0, automation: 0, luxury: 0 },
+        sketchy: false, seed: hash2(x, y), built: 0, glow: 0, revenue: 0, mega: false,
+        landBase: 0
+      };
+      if (!park) counters[d]++;
+      cell.landBase = 78000 * DISTRICTS[d].land * (0.8 + cell.seed * 0.55);
+      /* pre-existing city fabric: every block already has a building you buy out */
+      const dens = DISTRICTS[d].density;
+      cell.civH = park ? 0 : (0.3 + Math.pow(hash2(x * 7, y * 13), 1.6) * 2.3) * dens;
+      cell.civTone = 0.35 + hash2(y * 5 + 3, x * 11) * 0.4;
+      const lm = LANDMARKS.find(l => l.x === x && l.y === y);
+      if (lm && !park) { cell.landmark = lm.n; cell.name = lm.n; cell.civH *= 1.9; }
+      G.grid[y][x] = cell;
+      G.plots.push(cell);
+    }
+  }
+  spawnTraffic(true);
+}
+
+/* Buildable (non-park) plot helpers */
+const buildable = () => G.plots.filter(p => !p.park);
+const ownedPlots = () => G.plots.filter(p => p.owned && !p.park);
+function districtPlots(d) { return G.plots.filter(p => p.d === d && !p.park); }
+
+/* ---------- 3. ECONOMY ---------- */
+
+/** Current land price for a plot — scales with portfolio size and gentrification. */
+function landPrice(p) {
+  const scarcity = 1 + ownedPlots().length * 0.032;
+  const gent = p.d === "brooklyn" ? 1 + G.gentri : 1;
+  const lm = p.landmark ? 2.6 : 1;
+  return p.landBase * scarcity * gent * lm * (1 + G.prestige * 0.0015);
+}
+
+/** Cost to found a business on an owned empty plot. */
+function foundCost(p, bizId) {
+  return landPrice(p) * 0.75 * BIZ[bizId].cost;
+}
+
+/** Cost of the next level on a developed plot. */
+function upgradeCost(p) {
+  const b = BIZ[p.biz];
+  const lateTier = p.level >= 9 ? Math.pow(1.55, p.level - 8) : 1;   // supertall premium
+  return 52000 * DISTRICTS[p.d].land * b.cost * Math.pow(p.level + 1, 2.5) * lateTier *
+         (1 + G.prestige * 0.0012);
+}
+
+/** Cost of the next tier in a micro-upgrade track. */
+function microCost(p, key) {
+  const u = UPG[key];
+  return 44000 * u.base * DISTRICTS[p.d].land * Math.pow(3.0, p.up[key]) * Math.max(1, p.level * 0.55);
+}
+
+function levelCap(p) {
+  return Math.min(15, DISTRICTS[p.d].cap + G.zoneBonus + (G.policy && G.policy[p.d] === "deregulate" ? 1 : 0));
+}
+
+/** True when every developable block of a district is yours (+35% district revenue). */
+function hasMonopoly(d) {
+  const ps = districtPlots(d);
+  return ps.length > 0 && ps.every(p => p.owned);
+}
+
+/** Global foot-traffic multiplier (transit, events, marketing spread). */
+function globalTraffic() {
+  let t = 1 + G.transitLv * 0.18;
+  for (const e of G.activeEvents) if (e.def.mod.traffic) t *= e.def.mod.traffic;
+  return t;
+}
+
+/** Sum of active event multipliers relevant to a plot. */
+function eventMult(p) {
+  let m = 1;
+  for (const e of G.activeEvents) {
+    const mod = e.def.mod;
+    if (mod.global) m *= mod.global;
+    if (mod.district && mod.district[p.d]) m *= mod.district[p.d];
+    if (mod.biz && p.biz && mod.biz[p.biz]) m *= mod.biz[p.biz];
+  }
+  return m;
+}
+
+/** Neighbour synergy: adjacent owned plots with synergy upgrades boost this one. */
+function synergyMult(p) {
+  let bonus = 1;
+  for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1],[2,0],[-2,0],[0,2],[0,-2]]) {
+    const n = G.grid[p.y + dy] && G.grid[p.y + dy][p.x + dx];
+    if (n && n.owned && n.biz) bonus += 0.03 + n.up.synergy * 0.09;
+    if (n && n.park) bonus += 0.10;                 // park adjacency premium
+  }
+  return bonus;
+}
+
+/** Gross revenue per second for a single developed plot. */
+function plotRevenue(p) {
+  if (!p.owned || !p.biz || p.level < 1) return 0;
+  const b = BIZ[p.biz], d = DISTRICTS[p.d];
+  let r = 55 * b.mult * d.rev * Math.pow(p.level, 2.85);
+  r *= 1 + p.up.marketing * 0.22 * (b.traffic * 0.6);
+  r *= 1 + p.up.automation * 0.18;
+  r *= 1 + p.up.luxury * 0.14;
+  r *= synergyMult(p);
+  r *= 1 + (globalTraffic() - 1) * b.traffic * 0.55;
+  if (p.d === "brooklyn") r *= 1 + G.gentri;
+  if (p.d === "times" || p.biz === "retail") r *= 1 + G.tourismLv * 0.25;
+  if (p.biz === "finance" && G.perks.charter) r *= 1.3;
+  if (p.sketchy) r *= 1.85;
+  if (p.mega) r *= 3.5;
+  r *= eventMult(p);
+  if (p.landmark) r *= 1.35;
+  r *= policyMult(p, "rev");
+  if (hasMonopoly(p.d)) r *= 1.35;           // district monopoly premium
+  r *= 1 + G.prestige * 0.004;               // empire-wide prestige multiplier
+  return r;
+}
+
+function plotOpex(p) {
+  if (!p.owned) return 0;
+  let c = 6.5 * Math.pow(p.level, 2.2) * DISTRICTS[p.d].land + 40 * DISTRICTS[p.d].land;
+  for (const e of G.activeEvents) if (e.def.mod.opex) c *= e.def.mod.opex;
+  c *= policyMult(p, "opex");
+  return c;
+}
+
+function prestigeRate(p) {
+  if (!p.owned || !p.biz) return 0;
+  let v = (BIZ[p.biz].prestige * DISTRICTS[p.d].prestige * p.level * 0.055)
+        + p.up.luxury * 0.09;
+  if (p.landmark) v *= 2;
+  if (p.mega) v *= 6;
+  for (const e of G.activeEvents) if (e.def.mod.prestige) v *= e.def.mod.prestige;
+  if (G.perks.landmark) v *= 1.5;
+  v *= policyMult(p, "prestige");
+  return v;
+}
+
+function netWorth() {
+  let w = G.cash;
+  for (const p of ownedPlots()) {
+    w += landPrice(p) * 0.85;
+    if (p.biz) w += plotRevenue(p) * 55;
+  }
+  return w;
+}
+
+/** One simulation second. dt is already speed-scaled. */
+function simulate(dt) {
+  let gross = 0, opex = 0, pres = 0, riskAdd = 0;
+  for (const p of G.plots) {
+    if (!p.owned) continue;
+    const r = plotRevenue(p);
+    p.revenue = r;
+    gross += r;
+    opex += plotOpex(p);
+    pres += prestigeRate(p);
+    if (p.sketchy) riskAdd += 0.0016 + BIZ[p.biz].risk * 0.0022 * p.level;
+    if (p.biz && BIZ[p.biz].risk > 0 && p.level > 5) riskAdd += 0.00012 * BIZ[p.biz].risk * p.level;
+    if (p.built < 1) p.built = Math.min(1, p.built + dt * 0.55);
+    if (p.glow > 0) p.glow = Math.max(0, p.glow - dt * 1.6);
+  }
+  for (const e of G.activeEvents) if (e.def.mod.riskRate) riskAdd *= e.def.mod.riskRate;
+
+  G.grossRate = gross; G.opexRate = opex;
+  const profit = gross - opex;
+  G.lastNet = profit - Math.max(0, profit) * G.taxRate;   // after corporate tax accrual
+  G.cash += profit * dt;
+  G.totalEarned += Math.max(0, profit * dt);
+  G.taxPool += Math.max(0, profit * dt);                  // taxes are levied on profit
+  G.prestige += pres * dt;
+  G.influence += (0.055 + G.prestige * 0.0032 + ownedPlots().length * 0.006) * dt;
+  G.risk = clamp(G.risk + riskAdd * dt, 0, 1);
+
+  /* quarterly corporate taxes */
+  G.taxTimer += dt;
+  if (G.taxTimer >= 20) {
+    G.taxTimer = 0;
+    const bill = G.taxPool * G.taxRate;
+    G.taxPool = 0;
+    if (bill > 1) {
+      G.cash -= bill;
+      if (bill > Math.abs(G.cash) * 0.01 || bill > 1e6)
+        pushTicker("bad", "IRS quarterly assessment — " + money(bill) + " at " + pct(G.taxRate));
+    }
+  }
+
+  /* audit roll */
+  G.auditTimer += dt;
+  if (G.auditTimer >= 25) {
+    G.auditTimer = 0;
+    if (Math.random() < G.risk * 0.55) triggerAudit();
+  }
+
+  /* credit line: negative balances accrue punishing interest */
+  if (G.cash < 0) {
+    G.cash *= 1 + 0.0055 * dt;
+    G.debtWarn = (G.debtWarn || 0) + dt;
+    if (G.debtWarn > 6) {
+      G.debtWarn = 0;
+      pushTicker("bad", "CREDIT LINE DRAWN — " + money(-G.cash) + " outstanding at 0.55%/s");
+      const worth = netWorth();
+      if (G.cash < -Math.max(5e5, worth * 0.35)) forcedLiquidation();
+    }
+  } else G.debtWarn = 0;
+
+  G.trafficTimer = (G.trafficTimer || 0) + dt;
+  if (G.trafficTimer > 5) { G.trafficTimer = 0; spawnTraffic(); }
+
+  G.time += dt;
+  G.month = Math.floor(G.time / 12);
+
+  /* macro events */
+  G.nextEvent -= dt;
+  if (G.nextEvent <= 0) { fireEvent(); G.nextEvent = rnd(48, 72); }
+  for (let i = G.activeEvents.length - 1; i >= 0; i--) {
+    const e = G.activeEvents[i];
+    e.left -= dt;
+    if (e.left <= 0) {
+      G.activeEvents.splice(i, 1);
+      pushTicker("info", e.def.name + " has ended.");
+    }
+  }
+  checkWin();
+}
+
+/** Creditors seize your weakest asset when debt outruns the balance sheet. */
+function forcedLiquidation() {
+  const owned = ownedPlots();
+  if (!owned.length) { G.cash = Math.max(G.cash, -1e5); return; }
+  owned.sort((a, b) => (a.revenue || 0) - (b.revenue || 0));
+  const p = owned[0];
+  const v = landPrice(p) * 0.55 + (p.revenue || 0) * 18;
+  G.cash += v;
+  p.owned = false; p.biz = null; p.level = 0; p.sketchy = false; p.mega = false;
+  p.up = { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+  toast("bad", "CREDITORS SEIZE ASSET", p.name + " liquidated for " + money(v) + " to service your debt.");
+  if (G.selected === p) renderInspector();
+}
+
+function triggerAudit() {
+  const worth = netWorth();
+  const fine = Math.min(G.cash * 0.45 + worth * 0.05, worth * 0.3) * (0.5 + G.risk);
+  G.cash -= fine;
+  G.risk *= 0.35;
+  const agency = pick(["SEC", "IRS", "NY State AG", "FinCEN", "DOJ Southern District"]);
+  toast("bad", agency + " ENFORCEMENT ACTION", "Fined " + money(fine) +
+    ". Audit risk reduced but your books are now on file.");
+  pushTicker("bad", agency + " fines your holdings " + money(fine));
+  for (const p of ownedPlots()) if (p.sketchy && Math.random() < 0.3) p.sketchy = false;
+}
+
+/* ---------- 4. EVENTS, TICKER, TOASTS ---------- */
+function fireEvent() {
+  const pool = EVENTS.filter(e => !G.activeEvents.some(a => a.def.id === e.id));
+  if (!pool.length) return;
+  const def = pick(pool);
+  G.activeEvents.push({ def, left: def.dur });
+  if (def.once) def.once();
+  toast(def.t === "good" ? "good" : "bad", def.name, def.text);
+  pushTicker(def.t, def.name + " — " + def.text);
+  flashScreen(def.t === "good" ? "#3ce88f" : "#ff5c6b");
+}
+
+function toast(kind, title, body) {
+  const el = document.createElement("div");
+  el.className = "toast " + kind;
+  el.innerHTML = "<b>" + title + "</b><small>" + body + "</small>";
+  const box = document.getElementById("toasts");
+  box.appendChild(el);
+  setTimeout(() => {
+    el.style.transition = "opacity .4s, transform .4s";
+    el.style.opacity = "0"; el.style.transform = "translateX(24px)";
+    setTimeout(() => el.remove(), 420);
+  }, 6200);
+  while (box.children.length > 3) box.firstChild.remove();
+}
+
+function pushTicker(kind, text) {
+  if (G.tickerItems[0] && G.tickerItems[0].text === text) return;   // no duplicate spam
+  G.tickerItems.unshift({ kind, text });
+  if (G.tickerItems.length > 14) G.tickerItems.pop();
+  renderTicker();
+}
+
+function renderTicker() {
+  const el = document.getElementById("tscroll");
+  const base = [
+    { kind: "", text: "NET WORTH <b>" + money(netWorth()) + "</b>" },
+    { kind: "", text: "BLOCKS OWNED <b>" + ownedPlots().length + "/" + buildable().length + "</b>" },
+    { kind: "", text: "TAX RATE <b>" + pct(G.taxRate) + "</b>" }
+  ];
+  el.innerHTML = base.concat(G.tickerItems).map(i =>
+    '<span class="ti ' + i.kind + '">' + i.text + '</span>').join("");
+}
+
+let flashCol = null, flashT = 0;
+function flashScreen(c) { flashCol = c; flashT = 0.6; }
+
+/* ---------- 5. RENDERING ---------- */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const cam = { x: 0, y: 0, z: 1, tz: 1 };
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.style.width = W + "px"; cv.style.height = H + "px";
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener("resize", resize);
+
+function iso(x, y) {
+  return { x: (x - y) * TILE_W / 2, y: (x + y) * TILE_H / 2 };
+}
+function worldToScreen(x, y) {
+  const p = iso(x, y);
+  return { x: (p.x - cam.x) * cam.z + W / 2, y: (p.y - cam.y) * cam.z + H / 2 };
+}
+function screenToGrid(sx, sy) {
+  const wx = (sx - W / 2) / cam.z + cam.x;
+  const wy = (sy - H / 2) / cam.z + cam.y;
+  const gx = (wy / (TILE_H / 2) + wx / (TILE_W / 2)) / 2;
+  const gy = (wy / (TILE_H / 2) - wx / (TILE_W / 2)) / 2;
+  return { x: Math.floor(gx), y: Math.floor(gy) };
+}
+
+/* --- traffic + pedestrian particle systems --- */
+function spawnTraffic(initial) {
+  if (initial) { G.cars = []; G.peds = []; }
+  const targetCars = Math.min(150, 26 + ownedPlots().length * 1.1 + G.transitLv * 6);
+  while (G.cars.length < targetCars) {
+    const horiz = Math.random() < 0.55;
+    let x, y, dir;
+    if (horiz) {
+      y = 3 + 4 * rint(0, 3); x = rnd(0, GRID_W); dir = Math.random() < .5 ? 1 : -1;
+    } else {
+      x = 2 + 3 * rint(0, 4); y = rnd(0, GRID_H); dir = Math.random() < .5 ? 1 : -1;
+    }
+    if (y > GRID_H - 1) y = GRID_H - 1;
+    if (x > GRID_W - 1) x = GRID_W - 1;
+    G.cars.push({ x, y, horiz, dir, sp: rnd(1.1, 2.3), cab: Math.random() < 0.62,
+                  off: rnd(-0.16, 0.16) });
+  }
+  while (G.cars.length > targetCars) G.cars.pop();
+}
+
+function updateParticles(dt) {
+  for (const c of G.cars) {
+    const s = c.sp * dt * (0.6 + globalTraffic() * 0.5);
+    if (c.horiz) { c.x += c.dir * s; if (c.x > GRID_W) c.x = -1; if (c.x < -1) c.x = GRID_W; }
+    else { c.y += c.dir * s; if (c.y > GRID_H) c.y = -1; if (c.y < -1) c.y = GRID_H; }
+  }
+  /* pedestrians cluster around developed, high-traffic blocks */
+  const owned = ownedPlots().filter(p => p.biz);
+  const want = Math.min(cam.z < 0.8 ? 90 : 220, Math.floor(owned.reduce((a, p) =>
+    a + p.level * BIZ[p.biz].traffic * (1 + p.up.marketing * 0.4), 0) * 0.9 * globalTraffic()));
+  const pool = owned.length ? owned : buildable();
+  while (G.peds.length < Math.max(want, 55) && pool.length) {
+    const p = pick(pool);
+    G.peds.push({ hx: p.x, hy: p.y, a: rnd(0, TAU), r: rnd(0.42, 0.95), sp: rnd(0.25, 0.75),
+                  c: Math.random() < 0.3 ? "#ffd9a0" : "#cfe3ff" });
+  }
+  while (G.peds.length > Math.max(want, 55)) G.peds.pop();
+  for (const q of G.peds) q.a += q.sp * dt * 0.55;
+
+  for (let i = G.fx.length - 1; i >= 0; i--) {
+    const f = G.fx[i];
+    f.life -= dt; f.y -= dt * 26;
+    if (f.life <= 0) G.fx.splice(i, 1);
+  }
+}
+
+/* Timed cash pickups: reward players who watch the board. */
+function updatePickups(dt) {
+  G.pickTimer = (G.pickTimer || 0) + dt;
+  G.pickups = G.pickups || [];
+  const owned = ownedPlots().filter(p => p.biz);
+  if (G.pickTimer > 18 && owned.length && G.pickups.length < 3) {
+    G.pickTimer = 0;
+    const p = pick(owned);
+    G.pickups.push({ p, life: 15, bob: Math.random() * TAU,
+      value: Math.max(25000, Math.max(0, G.lastNet) * 45 + p.revenue * 30) });
+  }
+  for (let i = G.pickups.length - 1; i >= 0; i--) {
+    const q = G.pickups[i];
+    q.life -= dt; q.bob += dt * 3;
+    if (q.life <= 0) G.pickups.splice(i, 1);
+  }
+}
+
+function drawPickups() {
+  if (!G.pickups) return;
+  for (const q of G.pickups) {
+    const s = worldToScreen(q.p.x + 0.5, q.p.y + 0.5);
+    const h = 46 * cam.z + Math.sin(q.bob) * 5 * cam.z;
+    const y = s.y - h;
+    ctx.globalAlpha = clamp(q.life / 2, 0, 1);
+    ctx.shadowColor = "#ffcf4a"; ctx.shadowBlur = 18 * cam.z;
+    ctx.fillStyle = "#ffcf4a";
+    ctx.fillRect(s.x - 7 * cam.z, y - 5 * cam.z, 14 * cam.z, 10 * cam.z);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#7a5a10";
+    ctx.fillRect(s.x - 2 * cam.z, y - 8 * cam.z, 4 * cam.z, 3 * cam.z);
+    ctx.fillRect(s.x - 7 * cam.z, y - 0.6 * cam.z, 14 * cam.z, 1.4 * cam.z);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/** Returns true if a click at screen (sx,sy) collected a pickup. */
+function tryCollect(sx, sy) {
+  if (!G.pickups) return false;
+  for (let i = 0; i < G.pickups.length; i++) {
+    const q = G.pickups[i];
+    const s = worldToScreen(q.p.x + 0.5, q.p.y + 0.5);
+    const h = 46 * cam.z + Math.sin(q.bob) * 5 * cam.z;
+    if (Math.abs(sx - s.x) < 16 * cam.z && Math.abs(sy - (s.y - h)) < 16 * cam.z) {
+      G.cash += q.value;
+      floatText(q.p.x, q.p.y, "+" + money(q.value), "#ffcf4a");
+      toast("gold", "Bearer Bonds Recovered", money(q.value) + " collected at " + q.p.name + ".");
+      G.pickups.splice(i, 1);
+      return true;
+    }
+  }
+  return false;
+}
+
+function floatText(gx, gy, text, color) {
+  const s = worldToScreen(gx + .5, gy + .5);
+  G.fx.push({ x: s.x, y: s.y, text, color, life: 1.5 });
+}
+
+/* --- tile drawing helpers --- */
+function diamond(sx, sy, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(sx, sy - h / 2);
+  ctx.lineTo(sx + w / 2, sy);
+  ctx.lineTo(sx, sy + h / 2);
+  ctx.lineTo(sx - w / 2, sy);
+  ctx.closePath();
+}
+
+/** Lighten (amt>0) or darken (amt<0) a colour. Accepts "#rrggbb" or "rgb(r,g,b)". */
+function shade(col, amt) {
+  let r, g, b;
+  if (col.charCodeAt(0) === 35) {           // '#'
+    const n = parseInt(col.slice(1), 16);
+    r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
+  } else {
+    const m = col.match(/-?\d+/g);
+    r = +m[0]; g = +m[1]; b = +m[2];
+  }
+  r = clamp(Math.round(r + amt * 255), 0, 255);
+  g = clamp(Math.round(g + amt * 255), 0, 255);
+  b = clamp(Math.round(b + amt * 255), 0, 255);
+  return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+function overlayColor(p) {
+  if (G.overlay === "none" || p.park) return null;
+  if (G.overlay === "zoning") return DISTRICTS[p.d].color;
+  if (G.overlay === "traffic") {
+    const t = p.owned && p.biz ? clamp(p.level * BIZ[p.biz].traffic / 9, 0, 1) : 0.04;
+    return "rgba(255," + Math.round(120 + t * 110) + ",60," + (0.12 + t * 0.6) + ")";
+  }
+  if (G.overlay === "profit") {
+    const r = clamp(p.revenue / Math.max(1, maxRev), 0, 1);
+    return "rgba(" + Math.round(60 + (1 - r) * 120) + ",232," + Math.round(120 + r * 60) + "," + (0.1 + r * 0.65) + ")";
+  }
+  if (G.overlay === "risk") {
+    const r = p.sketchy ? 0.75 : (p.biz && BIZ[p.biz].risk > 0 ? 0.28 : 0.05);
+    return "rgba(255,70,90," + r + ")";
+  }
+  return null;
+}
+
+let maxRev = 1, blink = 0;
+
+function draw(dt) {
+  blink += dt;
+  maxRev = 1;
+  for (const p of G.plots) if (p.revenue > maxRev) maxRev = p.revenue;
+
+  /* harbor backdrop */
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, "#050810"); g.addColorStop(0.55, "#0a1120"); g.addColorStop(1, "#071626");
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  drawHarbor();
+
+  const tw = TILE_W * cam.z, th = TILE_H * cam.z;
+
+  /* pass 1: ground plane (all tiles flat) so nothing overlaps the pavement */
+  for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
+    const c = G.grid[y][x];
+    const s = worldToScreen(x + 0.5, y + 0.5);
+    if (s.x < -180 || s.x > W + 180 || s.y < -160 || s.y > H + 180) continue;
+    if (c.water) drawWater(c, s, tw, th);
+    else if (c.street) drawStreet(c, s, tw, th);
+    else drawGround(c, s, tw, th);
+  }
+
+  /* pass 2: everything with height, painted back-to-front by depth (x+y) */
+  const items = [];
+  for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
+    const c = G.grid[y][x];
+    if (c.water || c.street) continue;
+    items.push({ k: 0, d: x + y, c });
+  }
+  for (const c of G.cars) items.push({ k: 1, d: c.x + c.y + 0.35, c });
+  if (cam.z >= 0.6) for (const q of G.peds) {
+    const gx = q.hx + 0.5 + Math.cos(q.a) * q.r, gy = q.hy + 0.5 + Math.sin(q.a) * q.r;
+    items.push({ k: 2, d: gx + gy + 0.3, c: q, gx, gy });
+  }
+  items.sort((a, b) => a.d - b.d || a.k - b.k);
+  for (const it of items) {
+    if (it.k === 0) {
+      const s = worldToScreen(it.c.x + 0.5, it.c.y + 0.5);
+      if (s.x < -220 || s.x > W + 220 || s.y < -560 || s.y > H + 220) continue;
+      drawPlot(it.c, s, tw, th);
+    } else if (it.k === 1) drawCar(it.c, tw, th);
+    else drawPed(it.c, it.gx, it.gy);
+  }
+  drawPickups();
+  drawFx();
+  drawTooltip();
+
+  drawDistrictLabels();
+  /* vignette */
+  const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.78);
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.62)");
+  ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+  if (flashT > 0) {
+    flashT -= dt;
+    ctx.fillStyle = flashCol;
+    ctx.globalAlpha = clamp(flashT, 0, 1) * 0.12;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/** Open harbor water surrounding the island, with drifting light bands. */
+function drawHarbor() {
+  const pad = 5;
+  ctx.save();
+  ctx.beginPath();
+  const corners = [iso(-pad, -pad), iso(GRID_W + pad, -pad), iso(GRID_W + pad, GRID_H + pad), iso(-pad, GRID_H + pad)];
+  corners.forEach((c, i) => {
+    const x = (c.x - cam.x) * cam.z + W / 2, y = (c.y - cam.y) * cam.z + H / 2;
+    i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+  });
+  ctx.closePath();
+  ctx.fillStyle = "#071a29"; ctx.fill();
+  ctx.clip();
+  for (let i = 0; i < 22; i++) {
+    const yy = ((i * 47 + blink * 9) % (H + 120)) - 60;
+    ctx.fillStyle = "rgba(72,190,255," + (0.012 + (i % 3) * 0.006) + ")";
+    ctx.fillRect(0, yy, W, 14);
+  }
+  ctx.restore();
+}
+
+/** Big translucent district names floating over the grid. */
+function drawDistrictLabels() {
+  if (cam.z < 0.62) return;
+  ctx.textAlign = "center";
+  for (const id in DISTRICTS) {
+    const d = DISTRICTS[id], ps = districtPlots(id);
+    if (!ps.length) continue;
+    const cx = ps.reduce((a, p) => a + p.x, 0) / ps.length;
+    const cy = ps.reduce((a, p) => a + p.y, 0) / ps.length;
+    const s = worldToScreen(cx + .5, cy + .5);
+    if (s.x < -100 || s.x > W + 100 || s.y < -40 || s.y > H + 40) continue;
+    ctx.globalAlpha = 0.30;
+    ctx.font = "800 " + (13 * clamp(cam.z, .7, 1.5)) + "px system-ui";
+    ctx.fillStyle = d.color;
+    ctx.fillText(d.name.toUpperCase(), s.x, s.y - 4);
+    ctx.font = (8.5 * clamp(cam.z, .7, 1.5)) + "px system-ui";
+    ctx.globalAlpha = 0.22;
+    ctx.fillText(hasMonopoly(id) ? "MONOPOLY HELD" : d.short.toUpperCase(), s.x, s.y + 9);
+    ctx.globalAlpha = 1;
+  }
+}
+
+function drawWater(c, s, tw, th) {
+  const wob = Math.sin(blink * 1.4 + c.y * 0.6) * 0.5;
+  ctx.fillStyle = "#0a2233";
+  diamond(s.x, s.y + wob, tw, th); ctx.fill();
+  ctx.strokeStyle = "rgba(80,190,255,0.10)"; ctx.lineWidth = 1;
+  diamond(s.x, s.y + wob, tw * 0.7, th * 0.7); ctx.stroke();
+}
+
+function drawStreet(c, s, tw, th) {
+  ctx.fillStyle = "#131a24";
+  diamond(s.x, s.y, tw, th); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.045)"; ctx.lineWidth = 1;
+  ctx.stroke();
+  if (cam.z > 0.75) {
+    ctx.strokeStyle = "rgba(255,220,140,0.16)";
+    ctx.setLineDash([4 * cam.z, 6 * cam.z]);
+    ctx.beginPath();
+    if (c.y % 4 === 3) { ctx.moveTo(s.x - tw / 2, s.y); ctx.lineTo(s.x + tw / 2, s.y); }
+    else { ctx.moveTo(s.x, s.y - th / 2); ctx.lineTo(s.x, s.y + th / 2); }
+    ctx.stroke(); ctx.setLineDash([]);
+    if ((c.x + c.y) % 3 === 0) {
+      ctx.fillStyle = "rgba(255,214,140,0.75)";
+      ctx.beginPath(); ctx.arc(s.x - tw * 0.3, s.y - 6 * cam.z, 1.5 * cam.z, 0, TAU); ctx.fill();
+      ctx.shadowColor = "rgba(255,200,110,0.9)"; ctx.shadowBlur = 9 * cam.z;
+      ctx.beginPath(); ctx.arc(s.x - tw * 0.3, s.y - 6 * cam.z, 1.1 * cam.z, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
+}
+
+/** Flat ground pass: district-tinted pavement, park lawns and overlay washes. */
+function drawGround(p, s, tw, th) {
+  const D = DISTRICTS[p.d];
+  if (p.park) {
+    ctx.fillStyle = "#14311d"; diamond(s.x, s.y, tw, th); ctx.fill();
+    ctx.fillStyle = "rgba(70,200,110,0.14)"; diamond(s.x, s.y, tw * .8, th * .8); ctx.fill();
+    if (p.seed > 0.55) { ctx.fillStyle = "rgba(60,150,210,0.55)"; diamond(s.x, s.y, tw * .42, th * .42); ctx.fill(); }
+    ctx.strokeStyle = "rgba(210,200,160,0.18)"; ctx.lineWidth = 1.4 * cam.z;
+    ctx.beginPath(); ctx.moveTo(s.x - tw / 2, s.y); ctx.lineTo(s.x + tw / 2, s.y); ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = p.owned ? shade(D.ground, 0.08) : shade(D.ground, -0.09);
+  diamond(s.x, s.y, tw, th); ctx.fill();
+  ctx.strokeStyle = p.owned ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)";
+  ctx.lineWidth = 1; ctx.stroke();
+  const oc = overlayColor(p);
+  if (oc) {
+    ctx.globalAlpha = G.overlay === "zoning" ? 0.22 : 1;
+    ctx.fillStyle = oc; diamond(s.x, s.y, tw, th); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+}
+
+/** Height pass: structures, selection rings and lot markers. */
+function drawPlot(p, s, tw, th) {
+  const D = DISTRICTS[p.d];
+  const sel = G.selected === p, hov = G.hovered === p;
+
+  if (p.park) {
+    for (let i = 0; i < 4; i++) {
+      const a = p.seed * 9 + i * 1.7;
+      const tx = s.x + Math.cos(a) * tw * 0.24, ty = s.y + Math.sin(a) * th * 0.3;
+      ctx.fillStyle = "#1f6b36";
+      ctx.beginPath(); ctx.arc(tx, ty - 5 * cam.z, 5.5 * cam.z, 0, TAU); ctx.fill();
+      ctx.fillStyle = "#0d2f19"; ctx.fillRect(tx - .8 * cam.z, ty - 4 * cam.z, 1.7 * cam.z, 5 * cam.z);
+    }
+    return;
+  }
+
+  if (p.owned && p.biz && p.level > 0) drawBuilding(p, s, tw, th);
+  else if (!p.owned) drawCivBuilding(p, s, tw, th);
+  else if (p.owned) {
+    /* cleared lot: fence + crane pad */
+    ctx.strokeStyle = "rgba(255,207,74,0.5)"; ctx.setLineDash([3, 3]);
+    diamond(s.x, s.y, tw * .78, th * .78); ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  if (sel || hov) {
+    ctx.strokeStyle = sel ? "#ffcf4a" : "rgba(255,255,255,0.5)";
+    ctx.lineWidth = sel ? 2.4 : 1.6;
+    diamond(s.x, s.y, tw * .98, th * .98); ctx.stroke();
+    if (sel) {
+      ctx.strokeStyle = "rgba(255,207,74," + (0.25 + Math.sin(blink * 4) * 0.2) + ")";
+      ctx.lineWidth = 6; diamond(s.x, s.y, tw * .98, th * .98); ctx.stroke();
+    }
+  }
+}
+
+/** Pre-existing (unowned) city fabric — desaturated concrete blocks with a few lit windows. */
+function drawCivBuilding(p, s, tw, th) {
+  const h = p.civH * 30 * cam.z;
+  if (h < 3) return;
+  ctx.fillStyle = "rgba(0,0,0,0.34)";
+  diamond(s.x + tw * 0.06, s.y + th * 0.08, tw * 0.8, th * 0.74); ctx.fill();
+  const w = tw * 0.74, d = th * 0.74, top = s.y - h;
+  const t = p.civTone, cv = DISTRICTS[p.d].civ;
+  const base = "rgb(" + Math.round(cv[0] * (0.72 + t * 0.5)) + "," +
+                        Math.round(cv[1] * (0.72 + t * 0.5)) + "," +
+                        Math.round(cv[2] * (0.72 + t * 0.5)) + ")";
+  ctx.fillStyle = shade(base, 0.05);
+  ctx.beginPath();
+  ctx.moveTo(s.x - w / 2, s.y); ctx.lineTo(s.x, s.y + d / 2);
+  ctx.lineTo(s.x, s.y + d / 2 - h); ctx.lineTo(s.x - w / 2, s.y - h);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = shade(base, -0.09);
+  ctx.beginPath();
+  ctx.moveTo(s.x + w / 2, s.y); ctx.lineTo(s.x, s.y + d / 2);
+  ctx.lineTo(s.x, s.y + d / 2 - h); ctx.lineTo(s.x + w / 2, s.y - h);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = shade(base, 0.14);
+  diamond(s.x, top, w, d); ctx.fill();
+  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1; ctx.stroke();
+  if (cam.z > 0.7 && h > 18) {
+    const rows = clamp(Math.floor(h / (8 * cam.z)), 1, 10);
+    for (let r = 0; r < rows; r++) for (let c = 0; c < 3; c++) {
+      if (hash2(p.x * 91 + r * 7, p.y * 53 + c) > 0.6) {
+        ctx.fillStyle = "rgba(214,226,250,0.5)";
+        ctx.fillRect(s.x - w * 0.34 + c * w * 0.18, s.y - 6 * cam.z - r * (h / rows), 2 * cam.z, 2 * cam.z);
+      }
+    }
+  }
+  /* brick course lines on the low-rise stock */
+  if (p.d === "brooklyn" && cam.z > 0.85 && h > 8) {
+    ctx.strokeStyle = "rgba(0,0,0,0.18)"; ctx.lineWidth = 1;
+    for (let r = 1; r < 4; r++) {
+      const yy = s.y - (h * r / 4);
+      ctx.beginPath(); ctx.moveTo(s.x - w / 2, yy); ctx.lineTo(s.x, yy + d / 2); ctx.stroke();
+    }
+  }
+  /* rooftop water tower — pure NYC */
+  if (p.civH > 0.9 && cam.z > 0.7) {
+    ctx.fillStyle = "#3a3128";
+    ctx.fillRect(s.x + w * 0.14, top - 7 * cam.z, 4.5 * cam.z, 6 * cam.z);
+  }
+  if (p.landmark && cam.z > 0.65) {
+    ctx.strokeStyle = "rgba(255,207,74,0.5)"; ctx.lineWidth = 1;
+    diamond(s.x, s.y, tw * 0.9, th * 0.9); ctx.stroke();
+  }
+}
+
+/* Facade palettes per business archetype: [light face, dark face, roof, window] */
+const FACADE = {
+  food:    ["#8a5a34", "#5d3a20", "#a8703f", "rgba(255,206,140,0.95)"],
+  retail:  ["#9c3a68", "#66203f", "#c04b81", "rgba(255,160,220,0.95)"],
+  tech:    ["#3e6c92", "#26445e", "#4f87b2", "rgba(150,235,255,0.95)"],
+  finance: ["#2f7d5c", "#1d4f3a", "#3d9a71", "rgba(140,255,200,0.95)"],
+  resi:    ["#6a5a92", "#42375e", "#8271ad", "rgba(230,215,255,0.9)"]
+};
+
+/** Player-owned tower: stacked setbacks, lit windows, roof detail, ground shadow. */
+function drawBuilding(p, s, tw, th) {
+  const D = DISTRICTS[p.d], B = BIZ[p.biz];
+  const pal = p.mega ? ["#d8c06a", "#9c8637", "#f0dd92", "rgba(255,245,190,0.95)"] : FACADE[p.biz];
+  const grow = 0.22 + 0.78 * p.built;
+  const floors = p.level;
+  const totalH = (13 + Math.pow(floors, 1.34) * 9.5) * cam.z * grow * (p.mega ? 2.4 : 1);
+
+  /* soft ground shadow anchors the tower to the block */
+  ctx.fillStyle = "rgba(0,0,0,0.40)";
+  diamond(s.x + tw * 0.07, s.y + th * 0.09, tw * 0.86, th * 0.8); ctx.fill();
+
+  /* segments: taller towers step inward (classic NYC setbacks) */
+  const segs = floors >= 10 ? 3 : floors >= 6 ? 2 : 1;
+  let baseY = s.y, inset = clamp(0.9 - floors * 0.008, 0.66, 0.9);
+  for (let i = 0; i < segs; i++) {
+    const segH = totalH * (segs === 1 ? 1 : (i === 0 ? 0.5 : i === 1 ? 0.32 : 0.18));
+    const w = tw * inset, d = th * inset;
+    const top = baseY - segH;
+    /* left (lit) face */
+    ctx.fillStyle = shade(pal[0], -0.02 + p.seed * 0.04);
+    ctx.beginPath();
+    ctx.moveTo(s.x - w / 2, baseY); ctx.lineTo(s.x, baseY + d / 2);
+    ctx.lineTo(s.x, baseY + d / 2 - segH); ctx.lineTo(s.x - w / 2, top);
+    ctx.closePath(); ctx.fill();
+    /* right (shaded) face */
+    ctx.fillStyle = pal[1];
+    ctx.beginPath();
+    ctx.moveTo(s.x + w / 2, baseY); ctx.lineTo(s.x, baseY + d / 2);
+    ctx.lineTo(s.x, baseY + d / 2 - segH); ctx.lineTo(s.x + w / 2, top);
+    ctx.closePath(); ctx.fill();
+    /* roof slab + rim light */
+    ctx.fillStyle = pal[2];
+    diamond(s.x, top, w, d); ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1; ctx.stroke();
+
+    /* windows */
+    if (cam.z > 0.68 && segH > 16) {
+      const rows = clamp(Math.floor(segH / (7.5 * cam.z)), 1, 12);
+      for (let r = 0; r < rows; r++) {
+        const yy = baseY - 5 * cam.z - r * (segH / rows);
+        for (let c = 0; c < 3; c++) {
+          if (hash2(p.x * 41 + r * 3 + i * 11, p.y * 29 + c + Math.floor(blink * 0.25)) > 0.42) {
+            ctx.fillStyle = pal[3];
+            ctx.fillRect(s.x - w * 0.36 + c * w * 0.17, yy, 2.6 * cam.z, 2.4 * cam.z);
+          }
+          if (hash2(p.y * 61 + r * 5 + i * 7, p.x * 23 + c) > 0.55) {
+            ctx.fillStyle = "rgba(255,236,180,0.55)";
+            ctx.fillRect(s.x + w * 0.12 + c * w * 0.1, yy - d * 0.05, 2.4 * cam.z, 2.2 * cam.z);
+          }
+        }
+      }
+    }
+    /* Times Square: giant illuminated signboard bolted to the facade */
+    if (p.d === "times" && p.level >= 2 && i === 0 && cam.z > 0.55) {
+      const pulse = 0.5 + Math.sin(blink * 3 + p.seed * 9) * 0.35;
+      const gh = Math.min(segH * 0.45, 22 * cam.z);
+      const gy = baseY - segH * 0.55;
+      const grad = ctx.createLinearGradient(s.x - w / 2, gy, s.x, gy + gh);
+      grad.addColorStop(0, "rgba(255,79,163," + pulse + ")");
+      grad.addColorStop(1, "rgba(72,216,255," + pulse * 0.8 + ")");
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(s.x - w / 2, gy); ctx.lineTo(s.x, gy + d / 2);
+      ctx.lineTo(s.x, gy + d / 2 + gh); ctx.lineTo(s.x - w / 2, gy + gh);
+      ctx.closePath(); ctx.fill();
+    }
+    baseY = top;
+    inset *= 0.72;
+  }
+
+  const top = baseY;
+  /* spire / antenna on genuine skyscrapers */
+  if (floors >= 8 || p.mega) {
+    const sh = (14 + floors * 1.6) * cam.z * (p.mega ? 2 : 1);
+    ctx.strokeStyle = pal[2]; ctx.lineWidth = 2.2 * cam.z;
+    ctx.beginPath(); ctx.moveTo(s.x, top); ctx.lineTo(s.x, top - sh); ctx.stroke();
+  }
+  /* aviation beacon */
+  if (floors >= 6 || p.mega) {
+    const on = Math.sin(blink * 2.4 + p.seed * 5) > 0;
+    const by = top - ((floors >= 8 || p.mega) ? (14 + floors * 1.6) * cam.z * (p.mega ? 2 : 1) : 3 * cam.z);
+    ctx.fillStyle = on ? "#ff4d4d" : "rgba(120,30,30,.6)";
+    ctx.beginPath(); ctx.arc(s.x, by, 2.4 * cam.z, 0, TAU); ctx.fill();
+    if (on) {
+      ctx.shadowColor = "#ff3b3b"; ctx.shadowBlur = 16 * cam.z;
+      ctx.beginPath(); ctx.arc(s.x, by, 2 * cam.z, 0, TAU); ctx.fill(); ctx.shadowBlur = 0;
+    }
+  }
+  /* mega tower halo */
+  if (p.mega) {
+    ctx.strokeStyle = "rgba(255,207,74," + (0.3 + Math.sin(blink * 2) * 0.2) + ")";
+    ctx.lineWidth = 3; diamond(s.x, s.y, tw * 1.05, th * 1.05); ctx.stroke();
+  }
+  /* back-room operation marker */
+  if (p.sketchy) {
+    ctx.fillStyle = "rgba(255,92,107,.95)";
+    ctx.beginPath(); ctx.arc(s.x + tw * 0.26, top - 3 * cam.z, 2.8 * cam.z, 0, TAU); ctx.fill();
+    ctx.shadowColor = "#ff5c6b"; ctx.shadowBlur = 10 * cam.z;
+    ctx.beginPath(); ctx.arc(s.x + tw * 0.26, top - 3 * cam.z, 1.8 * cam.z, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  /* crane while a tier is under construction */
+  if (p.built < 1) {
+    ctx.strokeStyle = "#ffcf4a"; ctx.lineWidth = 1.6 * cam.z;
+    ctx.beginPath();
+    ctx.moveTo(s.x + tw * 0.28, s.y); ctx.lineTo(s.x + tw * 0.28, top - 16 * cam.z);
+    ctx.lineTo(s.x - tw * 0.1, top - 16 * cam.z); ctx.stroke();
+    ctx.fillStyle = "rgba(255,207,74,0.85)";
+    ctx.fillRect(s.x - tw * 0.12, top - 16 * cam.z, 3 * cam.z, 5 * cam.z);
+  }
+  if (p.glow > 0) {
+    ctx.strokeStyle = "rgba(60,232,143," + p.glow * 0.85 + ")";
+    ctx.lineWidth = 2.4; diamond(s.x, s.y, tw * .92, th * .92); ctx.stroke();
+  }
+  if (cam.z > 1.15) {
+    ctx.font = (10 * cam.z) + "px system-ui"; ctx.textAlign = "center";
+    ctx.globalAlpha = 0.9;
+    ctx.fillText(B.icon, s.x, top - (floors >= 8 ? (18 + floors * 1.6) : 8) * cam.z);
+    ctx.globalAlpha = 1;
+  }
+}
+
+let mouse = { x: 0, y: 0 };
+/** Floating info card under the cursor for the hovered block. */
+function drawTooltip() {
+  const p = G.hovered;
+  if (!p || drag) return;
+  const lines = [];
+  lines.push({ t: p.name, c: "#ffffff", b: true });
+  lines.push({ t: DISTRICTS[p.d].name + (p.landmark ? " · LANDMARK" : ""), c: DISTRICTS[p.d].color });
+  if (p.park) lines.push({ t: "Protected parkland", c: "#8ef0a8" });
+  else if (!p.owned) lines.push({ t: "For sale · " + money(landPrice(p)), c: "#ffcf4a" });
+  else if (!p.biz) lines.push({ t: "Owned · vacant lot", c: "#7d90ab" });
+  else {
+    lines.push({ t: BIZ[p.biz].icon + " " + BIZ[p.biz].tiers[Math.min(p.level - 1, 8)] + " · T" + p.level, c: BIZ[p.biz].color });
+    lines.push({ t: rate(p.revenue), c: "#3ce88f" });
+    if (p.sketchy) lines.push({ t: "⚠ back-room operation", c: "#ff5c6b" });
+  }
+  ctx.font = "12px system-ui";
+  let w = 0;
+  for (const l of lines) w = Math.max(w, ctx.measureText(l.t).width);
+  w += 20;
+  const h = 12 + lines.length * 16;
+  let x = mouse.x + 16, y = mouse.y + 16;
+  if (x + w > W - 10) x = mouse.x - w - 16;
+  if (y + h > H - 40) y = mouse.y - h - 16;
+  ctx.fillStyle = "rgba(10,15,24,0.94)";
+  ctx.strokeStyle = "rgba(120,150,190,0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, 6); else ctx.rect(x, y, w, h);
+  ctx.fill(); ctx.stroke();
+  ctx.textAlign = "left";
+  lines.forEach((l, i) => {
+    ctx.font = (l.b ? "700 12.5px" : "11.5px") + " system-ui";
+    ctx.fillStyle = l.c;
+    ctx.fillText(l.t, x + 10, y + 19 + i * 16);
+  });
+  ctx.textAlign = "center";
+}
+
+function drawCar(c, tw, th) {
+  const gx = c.horiz ? c.x : c.x + c.off;
+  const gy = c.horiz ? c.y + c.off : c.y;
+  const s = worldToScreen(gx + 0.5, gy + 0.5);
+  if (s.x < -30 || s.x > W + 30 || s.y < -30 || s.y > H + 30) return;
+  const w = 7 * cam.z, h = 4 * cam.z;
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  diamond(s.x + 1, s.y - 0.5 * cam.z, w * 0.9, h * 0.8); ctx.fill();
+  ctx.fillStyle = c.cab ? "#ffd23f"
+    : (hash2(Math.floor(c.x * 7), Math.floor(c.y * 3)) > .5 ? "#5b6b85" : "#8d99ad");
+  diamond(s.x, s.y - 2 * cam.z, w, h); ctx.fill();
+  if (cam.z > 0.9) {
+    ctx.fillStyle = "rgba(255,240,190,.6)";
+    ctx.fillRect(s.x + (c.dir > 0 ? w * .3 : -w * .4), s.y - 3 * cam.z, w * .12, h * .3);
+  }
+}
+
+function drawPed(q, gx, gy) {
+  const s = worldToScreen(gx, gy);
+  if (s.x < 0 || s.x > W || s.y < 0 || s.y > H) return;
+  ctx.fillStyle = q.c;
+  ctx.fillRect(s.x, s.y - 3 * cam.z, 1.6 * cam.z, 3 * cam.z);
+}
+
+function drawFx() {
+  ctx.textAlign = "center";
+  for (const f of G.fx) {
+    ctx.globalAlpha = clamp(f.life, 0, 1);
+    ctx.fillStyle = f.color;
+    ctx.font = "700 13px system-ui";
+    ctx.fillText(f.text, f.x, f.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+/* ---------- 6. USER INTERFACE ---------- */
+const $ = id => document.getElementById(id);
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+/* Rotating contextual advice so the player always has a next move. */
+function advisorLine() {
+  const own = ownedPlots(), free = buildable().filter(p => !p.owned);
+  if (G.cash < 0) return "⚠ You are in debt at 0.55%/s — sell a block or wait for revenue to clear it.";
+  if (!own.length) {
+    const cheap = free.slice().sort((a, b) => landPrice(a) - landPrice(b))[0];
+    return "Start small: " + cheap.name + " in " + DISTRICTS[cheap.d].name + " costs " + money(landPrice(cheap)) + ".";
+  }
+  if (own.some(p => !p.biz)) return "You own a vacant lot — click it and found a business to start earning.";
+  if (G.risk > 0.4) return "⚠ Audit risk " + pct(G.risk) + " — close a back room or buy a Regulatory Cleanup at City Hall.";
+  if (G.influence >= 12 && G.taxRate > 0.1) return "You have " + Math.floor(G.influence) +
+    " influence. City Hall (L) will cut your " + pct(G.taxRate) + " tax rate.";
+  const capped = own.filter(p => p.biz && p.level >= levelCap(p)).length;
+  if (capped > 2) return capped + " towers have hit the height cap — buy a Rezoning Permit at City Hall (L).";
+  const afford = free.filter(p => landPrice(p) <= G.cash).length;
+  if (afford > 0) return "You can afford " + afford + " more block" + (afford > 1 ? "s" : "") +
+    ". Own a whole district for a +35% monopoly premium.";
+  return "Build up: revenue scales at the 2.85 power of tier. Height beats width.";
+}
+
+function updateHUD() {
+  $("s-cash").textContent = money(G.cash);
+  $("s-cash").className = "v " + (G.cash < 0 ? "neg" : "money");
+  const n = $("s-net");
+  n.textContent = rate(G.lastNet);
+  n.className = "v " + (G.lastNet >= 0 ? "pos" : "neg");
+  $("s-worth").textContent = money(netWorth());
+  $("s-pres").textContent = Math.floor(G.prestige).toLocaleString();
+  $("s-inf").textContent = Math.floor(G.influence);
+  $("s-own").textContent = ownedPlots().length + " / " + buildable().length;
+  const r = $("s-risk");
+  r.textContent = pct(G.risk);
+  r.className = "v " + (G.risk > 0.45 ? "neg" : G.risk > 0.18 ? "money" : "pos");
+  $("s-date").textContent = MONTHS[G.month % 12] + " " + (2025 + Math.floor(G.month / 12));
+  const hint = $("hint");
+  if (hint) {
+    const line = advisorLine();
+    if (hint.dataset.line !== line) { hint.dataset.line = line; hint.textContent = line; }
+  }
+}
+
+function updateDistrictList() {
+  const el = $("dlist");
+  el.innerHTML = Object.values(DISTRICTS).map(d => {
+    const ps = districtPlots(d.id);
+    const own = ps.filter(p => p.owned).length;
+    const rev = ps.reduce((a, p) => a + p.revenue, 0);
+    const mono = own === ps.length;
+    return '<div class="dcard" data-d="' + d.id + '"' + (mono ? ' style="border-color:' + d.color + '"' : '') + '>' +
+      '<div class="n"><i class="dot" style="background:' + d.color + '"></i>' + d.name + '</div>' +
+      '<div class="s">' + own + '/' + ps.length + ' blocks · ' + rate(rev) +
+        (mono ? ' · <b style="color:' + d.color + '">MONOPOLY</b>' : '') + '</div>' +
+      '<div class="bar"><i style="width:' + (own / ps.length * 100) + '%;background:' + d.color + '"></i></div>' +
+      '</div>';
+  }).join("");
+  el.querySelectorAll(".dcard").forEach(c => c.onclick = () => { focusDistrict(c.dataset.d); openDistrict(c.dataset.d); });
+}
+
+function focusDistrict(id, quiet) {
+  const ps = districtPlots(id);
+  const cx = ps.reduce((a, p) => a + p.x, 0) / ps.length;
+  const cy = ps.reduce((a, p) => a + p.y, 0) / ps.length;
+  const t = iso(cx + .5, cy + .5);
+  cam.x = t.x; cam.y = t.y; cam.tz = Math.max(cam.tz, 1.15);
+  if (!quiet) toast("info", DISTRICTS[id].name, DISTRICTS[id].blurb);
+}
+
+function select(p) {
+  G.selected = p;
+  if (p) { $("insp").classList.remove("hidden"); renderInspector(); }
+  else $("insp").classList.add("hidden");
+}
+
+function renderInspector() {
+  const p = G.selected;
+  if (!p) return;
+  const D = DISTRICTS[p.d];
+  $("i-tag").textContent = D.name.toUpperCase() + (p.park ? " · PROTECTED" : "");
+  $("i-tag").style.color = D.color;
+  $("i-name").textContent = p.name;
+  const body = $("ibody");
+
+  if (p.park) {
+    $("i-sub").textContent = "Public parkland — cannot be developed";
+    body.innerHTML = '<p style="font-size:12px;color:var(--dim);line-height:1.6">' +
+      'Central Park is untouchable, even by you. Blocks adjacent to the park receive a permanent ' +
+      '<b style="color:var(--green)">+10% revenue</b> premium per adjacent park tile.</p>';
+    return;
+  }
+
+  const price = landPrice(p);
+  let html = "";
+
+  html += '<div class="kv"><span>Land value</span><b>' + money(price) + '</b></div>';
+  html += '<div class="kv"><span>District yield</span><b>×' + D.rev.toFixed(2) + '</b></div>';
+  html += '<div class="kv"><span>Height cap</span><b>' + levelCap(p) + ' tiers</b></div>';
+  html += '<div class="kv"><span>Synergy</span><b>×' + synergyMult(p).toFixed(2) + '</b></div>';
+
+  if (!p.owned) {
+    $("i-sub").textContent = "Unowned parcel · " + D.short;
+    html += '<div class="sechead">Acquisition</div>';
+    html += '<button class="btn buy" id="a-buy"' + (G.cash < price ? " disabled" : "") + '>' +
+      'Acquire Deed <span class="c">' + money(price) + '</span>' +
+      '<span class="d">Take ownership of this block. You may then found a business on it.</span></button>';
+    body.innerHTML = html;
+    const b = $("a-buy"); if (b) b.onclick = () => buyPlot(p);
+    return;
+  }
+
+  if (!p.biz) {
+    $("i-sub").textContent = "Owned · vacant lot";
+    html += '<div class="sechead">Found A Business</div><div class="biz">';
+    for (const k in BIZ) {
+      const b = BIZ[k], c = foundCost(p, k);
+      const preview = 26 * b.mult * D.rev * Math.pow(1, 2.6);
+      html += '<div class="bizc" data-biz="' + k + '" style="border-color:' + (D.bias === k ? b.color : "var(--line2)") + '">' +
+        '<span class="t" style="color:' + b.color + '">' + b.icon + ' ' + b.name + '</span>' +
+        '<span class="p">' + money(c) + '</span><br>' +
+        '<span class="r">' + rate(preview) + ' at tier 1</span>' +
+        (D.bias === k ? '<br><span style="color:var(--gold);font-size:9.5px">DISTRICT SPECIALTY</span>' : '') +
+        '</div>';
+    }
+    html += '</div>';
+    html += '<button class="btn danger" id="a-sell">Liquidate Deed <span class="c">' + money(price * 0.7) + '</span>' +
+      '<span class="d">Sell the parcel back at 70% of market.</span></button>';
+    body.innerHTML = html;
+    body.querySelectorAll(".bizc").forEach(c => c.onclick = () => foundBiz(p, c.dataset.biz));
+    $("a-sell").onclick = () => sellPlot(p);
+    return;
+  }
+
+  /* developed plot */
+  const B = BIZ[p.biz];
+  $("i-sub").textContent = B.icon + " " + B.tiers[Math.min(p.level - 1, B.tiers.length - 1)] +
+    " · Tier " + p.level + "/" + levelCap(p);
+  html += '<div class="kv"><span>Gross revenue</span><b id="live-rev" style="color:var(--green)">' + rate(p.revenue) + '</b></div>';
+  html += '<div class="kv"><span>Operating cost</span><b id="live-opex" style="color:var(--red)">-' + money(plotOpex(p)) + '/s</b></div>';
+  html += '<div class="kv"><span>Prestige</span><b style="color:var(--violet)">+' + prestigeRate(p).toFixed(3) + '/s</b></div>';
+
+  html += '<div class="sechead">Development</div>';
+  if (p.level < levelCap(p)) {
+    const uc = upgradeCost(p);
+    const nextName = B.tiers[Math.min(p.level, B.tiers.length - 1)];
+    html += '<button class="btn" id="a-up"' + (G.cash < uc ? " disabled" : "") + '>' +
+      'Build Up → ' + nextName + ' <span class="c">' + money(uc) + '</span>' +
+      '<span class="d">Tier ' + (p.level + 1) + '. Revenue scales at the 2.6 power of tier.</span></button>';
+  } else {
+    html += '<button class="btn" disabled>Height Cap Reached<span class="d">' +
+      'Lobby City Hall for a Rezoning Permit to build higher.</span></button>';
+  }
+
+  html += '<div class="sechead">Micro-Upgrades</div>';
+  for (const k in UPG) {
+    const u = UPG[k], lv = p.up[k], c = microCost(p, k), maxed = lv >= u.max;
+    html += '<div class="up"><div class="ic" style="background:' + u.color + '22;color:' + u.color + '">' + u.icon + '</div>' +
+      '<div class="info"><b>' + u.name + '</b><small>' + u.desc + '</small>' +
+      '<div class="pips">' + Array.from({ length: u.max }, (_, i) =>
+        '<i class="pip' + (i < lv ? " f" : "") + '" style="' + (i < lv ? "background:" + u.color : "") + '"></i>').join("") +
+      '</div></div>' +
+      '<button data-up="' + k + '"' + (maxed || G.cash < c ? " disabled" : "") + '>' +
+      (maxed ? "MAX" : money(c)) + '</button></div>';
+  }
+
+  html += '<div class="sechead">Risk Ventures</div>';
+  html += '<button class="btn ' + (p.sketchy ? "danger" : "") + '" id="a-sketch">' +
+    (p.sketchy ? "Shut Down Back Room" : "Open Back Room Operation") +
+    '<span class="d">' + (p.sketchy
+      ? "Currently +85% revenue and accruing audit risk every second."
+      : "Unlicensed speakeasy / offshore shelter: +85% revenue, adds audit risk. Getting caught costs a fortune.") +
+    '</span></button>';
+
+  if (!G.won.mega && p.level >= levelCap(p) && p.d === "wall" && !p.mega) {
+    const cost = 8e9;
+    html += '<div class="sechead">Ultimate Project</div>' +
+      '<button class="btn buy" id="a-mega"' + (G.cash < cost ? " disabled" : "") + '>' +
+      'Build Empire State Megatower <span class="c">' + money(cost) + '</span>' +
+      '<span class="d">×3.5 revenue, ×6 prestige, and one of the three win conditions.</span></button>';
+  }
+
+  html += '<div class="sechead">Divest</div>';
+  html += '<button class="btn danger" id="a-sell">Sell Property <span class="c">' +
+    money(price * 0.7 + p.revenue * 30) + '</span><span class="d">Liquidate land and business at a discount.</span></button>';
+
+  body.innerHTML = html;
+  const up = $("a-up"); if (up) up.onclick = () => levelUp(p);
+  body.querySelectorAll("[data-up]").forEach(b => b.onclick = () => buyMicro(p, b.dataset.up));
+  $("a-sketch").onclick = () => { p.sketchy = !p.sketchy; renderInspector(); };
+  const mg = $("a-mega"); if (mg) mg.onclick = () => buildMega(p);
+  $("a-sell").onclick = () => sellPlot(p);
+}
+
+/* ---------- transactions ---------- */
+function spend(n) {
+  if (G.cash < 0) {
+    toast("bad", "Credit Frozen", "Clear your negative balance before making new commitments.");
+    return false;
+  }
+  if (G.cash < n) { toast("bad", "Insufficient Funds", "You need " + money(n - G.cash) + " more."); return false; }
+  G.cash -= n; return true;
+}
+function buyPlot(p) {
+  const c = landPrice(p);
+  if (!spend(c)) return;
+  p.owned = true; p.glow = 1;
+  floatText(p.x, p.y, "-" + money(c), "#ffcf4a");
+  toast("gold", "Deed Acquired", p.name + " for " + money(c) + ".");
+  pushTicker("", "Acquisition: <b>" + p.name + "</b> for " + money(c));
+  renderInspector(); updateDistrictList(); spawnTraffic();
+}
+function foundBiz(p, k) {
+  const c = foundCost(p, k);
+  if (!spend(c)) return;
+  p.biz = k; p.level = 1; p.built = 0; p.glow = 1;
+  floatText(p.x, p.y, BIZ[k].icon + " OPEN", BIZ[k].color);
+  toast("good", "Now Open", BIZ[k].tiers[0] + " at " + p.name + ".");
+  renderInspector(); updateDistrictList(); spawnTraffic();
+}
+function levelUp(p) {
+  const c = upgradeCost(p);
+  if (!spend(c)) return;
+  p.level++; p.built = 0.55; p.glow = 1;
+  floatText(p.x, p.y, "TIER " + p.level, "#3ce88f");
+  renderInspector(); updateDistrictList();
+}
+function buyMicro(p, k) {
+  const c = microCost(p, k);
+  if (!spend(c)) return;
+  p.up[k]++; p.glow = 1;
+  floatText(p.x, p.y, UPG[k].icon + " +1", UPG[k].color);
+  renderInspector();
+}
+function sellPlot(p) {
+  if (p.biz && p.level >= 3 && !confirm("Sell " + p.name + " (tier " + p.level + ")? This cannot be undone."))
+    return;
+  const v = landPrice(p) * 0.7 + p.revenue * 30;
+  G.cash += v;
+  p.owned = false; p.biz = null; p.level = 0; p.sketchy = false; p.mega = false;
+  p.up = { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+  toast("info", "Divested", p.name + " sold for " + money(v) + ".");
+  renderInspector(); updateDistrictList();
+}
+function buildMega(p) {
+  if (!spend(8e9)) return;
+  p.mega = true; p.built = 0; G.won.mega = true;
+  toast("gold", "EMPIRE STATE MEGATOWER", "The tallest structure ever built rises over " + p.name + ".");
+  pushTicker("good", "<b>MEGATOWER TOPPED OUT</b> — the skyline belongs to you");
+  flashScreen("#ffcf4a");
+  renderInspector(); checkWin();
+}
+
+/* ---------- modals ---------- */
+function openModal(html) {
+  $("mbox").innerHTML = html + '<button class="btn close" id="m-close">Close</button>';
+  $("modal").classList.add("open");
+  $("m-close").onclick = closeModal;
+}
+function closeModal() { $("modal").classList.remove("open"); }
+$("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+
+function openLobby() {
+  let html = '<h1>City Hall</h1><p>Influence accrues from prestige and portfolio size. ' +
+    'Spend it — with the customary cash "consulting fee" — to bend the city to your balance sheet.</p>' +
+    '<p style="color:var(--cyan)">Influence available: <b>' + Math.floor(G.influence) +
+    '</b> &nbsp;·&nbsp; Cash: <b style="color:var(--gold)">' + money(G.cash) + '</b></p>' +
+    '<h3>Lobbying Actions</h3><div class="lob">';
+  for (const l of LOBBY) {
+    const ok = l.can() && G.influence >= l.cost && G.cash >= l.cash;
+    html += '<div class="lobc' + (ok ? "" : " dis") + '" data-l="' + l.id + '">' +
+      '<b>' + l.name + '</b><small>' + l.desc + '</small>' +
+      '<div class="cost">' + l.cost + ' influence + ' + money(l.cash) + '</div></div>';
+  }
+  html += '</div><h3>Current Policy</h3>' +
+    '<div class="kv"><span>Corporate tax rate</span><b>' + pct(G.taxRate) + '</b></div>' +
+    '<div class="kv"><span>Zoning height bonus</span><b>+' + G.zoneBonus + ' tiers</b></div>' +
+    '<div class="kv"><span>Transit level</span><b>' + G.transitLv + ' (+' + pct(G.transitLv * 0.18) + ' traffic)</b></div>' +
+    '<div class="kv"><span>Tourism board</span><b>' + G.tourismLv + ' (+' + pct(G.tourismLv * 0.25) + ' retail)</b></div>';
+  openModal(html);
+  $("mbox").querySelectorAll(".lobc").forEach(c => c.onclick = () => {
+    const l = LOBBY.find(x => x.id === c.dataset.l);
+    if (!l.can() || G.influence < l.cost || G.cash < l.cash) return;
+    G.influence -= l.cost; G.cash -= l.cash; l.run();
+    toast("good", l.name, "Passed. The city adjusts.");
+    pushTicker("good", "City Hall enacts <b>" + l.name + "</b>");
+    openLobby();
+  });
+}
+
+/* Per-district policy programmes. One active policy per district at a time. */
+const POLICIES = {
+  retailPush: { n: "Promote High-End Retail", d: "+35% retail & food revenue here, +12% operating costs.", cost: 2.2 },
+  techIncubator:{ n: "Establish Tech Incubator", d: "+45% tech revenue here, tech blocks upgrade cheaper.", cost: 2.6 },
+  artsGrant: { n: "Encourage Arts & Culture", d: "+30% foot traffic and +60% prestige from this district.", cost: 2.0 },
+  deregulate: { n: "Deregulate Zoning", d: "+1 height tier in this district, +40% audit-risk accrual here.", cost: 3.4 }
+};
+G.policy = {};
+
+function policyMult(p, kind) {
+  const pol = G.policy[p.d];
+  if (!pol) return 1;
+  if (pol === "retailPush" && (p.biz === "retail" || p.biz === "food") && kind === "rev") return 1.35;
+  if (pol === "techIncubator" && p.biz === "tech" && kind === "rev") return 1.45;
+  if (pol === "artsGrant" && kind === "prestige") return 1.6;
+  if (pol === "retailPush" && kind === "opex") return 1.12;
+  return 1;
+}
+
+function openDistrict(id) {
+  const d = DISTRICTS[id], ps = districtPlots(id);
+  const own = ps.filter(p => p.owned).length;
+  const rev = ps.reduce((a, p) => a + p.revenue, 0);
+  let html = '<h1 style="color:' + d.color + '">' + d.name + '</h1><p>' + d.blurb + '</p>' +
+    '<div class="kv"><span>Blocks owned</span><b>' + own + ' / ' + ps.length + '</b></div>' +
+    '<div class="kv"><span>District revenue</span><b style="color:var(--green)">' + rate(rev) + '</b></div>' +
+    '<div class="kv"><span>Yield multiplier</span><b>×' + d.rev.toFixed(2) + (hasMonopoly(id) ? ' ×1.35 monopoly' : '') + '</b></div>' +
+    '<div class="kv"><span>Land cost index</span><b>×' + d.land.toFixed(2) + '</b></div>' +
+    '<div class="kv"><span>Height cap</span><b>' + Math.min(15, d.cap + G.zoneBonus + (G.policy[id] === "deregulate" ? 1 : 0)) + ' tiers</b></div>' +
+    '<h3>District Policy — costs influence, one active at a time</h3><div class="lob">';
+  for (const k in POLICIES) {
+    const pol = POLICIES[k], active = G.policy[id] === k, ok = G.influence >= pol.cost;
+    html += '<div class="lobc' + (ok || active ? "" : " dis") + '" data-p="' + k + '" style="' +
+      (active ? 'border-color:' + d.color : '') + '"><b>' + (active ? "✔ " : "") + pol.n + '</b>' +
+      '<small>' + pol.d + '</small><div class="cost">' +
+      (active ? "ACTIVE — click to repeal" : pol.cost.toFixed(1) + " influence") + '</div></div>';
+  }
+  html += '</div><h3>Bulk Actions</h3>' +
+    '<button class="btn buy" id="d-buyall">Acquire Every Affordable Block Here' +
+    '<span class="d">Sweeps the district cheapest-first while funds last.</span></button>';
+  openModal(html);
+  $("mbox").querySelectorAll(".lobc").forEach(c => c.onclick = () => {
+    const k = c.dataset.p;
+    if (G.policy[id] === k) { G.policy[id] = null; openDistrict(id); return; }
+    if (G.influence < POLICIES[k].cost) return;
+    G.influence -= POLICIES[k].cost; G.policy[id] = k;
+    toast("good", d.name + " Policy", POLICIES[k].n + " enacted.");
+    openDistrict(id);
+  });
+  $("d-buyall").onclick = () => {
+    const free = districtPlots(id).filter(p => !p.owned).sort((a, b) => landPrice(a) - landPrice(b));
+    let n = 0, spent = 0;
+    for (const p of free) {
+      const c = landPrice(p);
+      if (c > G.cash) break;
+      G.cash -= c; p.owned = true; p.glow = 1; n++; spent += c;
+    }
+    toast(n ? "gold" : "bad", n ? "Portfolio Sweep" : "No Funds",
+      n ? "Acquired " + n + " blocks in " + d.name + " for " + money(spent) + "." : "You cannot afford any block here.");
+    updateDistrictList(); openDistrict(id);
+  };
+}
+
+function goalState() {
+  const own = ownedPlots().length, total = buildable().length;
+  return [
+    { k: "buyout", n: "Buy Out City Hall", d: "Accumulate $100B in net worth.",
+      p: clamp(netWorth() / 1e11, 0, 1), v: money(netWorth()) + " / $100.00B" },
+    { k: "monopoly", n: "Total Real Estate Monopoly", d: "Own 100% of every developable block.",
+      p: own / total, v: own + " / " + total + " blocks" },
+    { k: "mega", n: "The Empire State Megatower", d: "Max out a Wall Street tower, then build the Megatower.",
+      p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : "Not built" }
+  ];
+}
+function openGoals() {
+  const gs = goalState();
+  let html = '<h1>Objectives</h1><p>Complete all three to become the undisputed owner of New York City.</p><div class="wins">';
+  for (const g of gs) {
+    html += '<div class="wc"><b>' + (g.p >= 1 ? "✔ " : "") + g.n + '</b><small>' + g.d + '</small>' +
+      '<div class="bar"><i style="width:' + (g.p * 100).toFixed(1) + '%;background:' +
+      (g.p >= 1 ? "var(--green)" : "var(--gold)") + '"></i></div>' +
+      '<div class="kv"><span>Progress</span><b>' + g.v + '</b></div></div>';
+  }
+  html += '</div><h3>Empire Statistics</h3>' +
+    '<div class="kv"><span>Total earned</span><b>' + money(G.totalEarned) + '</b></div>' +
+    '<div class="kv"><span>Gross income</span><b>' + rate(G.grossRate) + '</b></div>' +
+    '<div class="kv"><span>Operating costs</span><b>-' + money(G.opexRate) + '/s</b></div>' +
+    '<div class="kv"><span>Prestige</span><b>' + Math.floor(G.prestige) + '</b></div>' +
+    '<div class="kv"><span>Audit risk</span><b>' + pct(G.risk) + '</b></div>';
+  openModal(html);
+}
+
+function openHelp() {
+  openModal('<h1>How To Play</h1>' +
+    '<p><b>1. Acquire.</b> Click any dark block and buy the deed. Brooklyn is cheap; Wall Street pays.</p>' +
+    '<p><b>2. Develop.</b> Found a business — Food, Retail, Tech, Finance or Residential — then build up tiers. ' +
+    'Revenue scales at the 2.6 power of tier, so height is everything.</p>' +
+    '<p><b>3. Optimize.</b> Micro-upgrades stack: Marketing pulls foot traffic, Synergy boosts neighbours, ' +
+    'Automation raises yield, Luxury feeds prestige.</p>' +
+    '<p><b>4. Lobby.</b> Prestige generates Influence. Spend it at City Hall for tax cuts, rezoning ' +
+    '(higher building caps), subway expansions and — if you are shameless — regulatory cleanups.</p>' +
+    '<p><b>5. Gamble.</b> Back-room operations pay +85% but accrue audit risk. When the SEC arrives, fines scale with your empire.</p>' +
+    '<p><b>6. Collect.</b> Golden bearer-bond cases appear on your buildings every few seconds. ' +
+    'Click one before it fades for an instant cash bonus scaled to your income.</p>' +
+    '<p><b>7. Survive the market.</b> Macro events hit every ~60 seconds and can halve a district or triple it.</p>' +
+    '<h3>Controls</h3>' +
+    '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
+    '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
+    '<kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<h3>Win Conditions</h3>' +
+    '<p>Reach <b>$100B net worth</b>, own <b>every block in all four districts</b>, and build the ' +
+    '<b>Empire State Megatower</b> on a maxed-out Wall Street tower.</p>');
+}
+
+function checkWin() {
+  const gs = goalState();
+  if (!G.won.buyout && gs[0].p >= 1) { G.won.buyout = true; toast("gold", "CITY HALL BOUGHT", "$100B net worth reached."); }
+  if (!G.won.monopoly && gs[1].p >= 1) { G.won.monopoly = true; toast("gold", "TOTAL MONOPOLY", "Every block in New York is yours."); }
+  if (G.won.buyout && G.won.monopoly && G.won.mega && !G.won.all) {
+    G.won.all = true;
+    openModal('<h1 style="color:var(--gold)">YOU OWN NEW YORK</h1>' +
+      '<p>Net worth <b>' + money(netWorth()) + '</b> · Prestige <b>' + Math.floor(G.prestige) + '</b> · ' +
+      'Every block, every tower, and City Hall itself.</p>' +
+      '<p>The Megatower blinks red above a skyline that answers to one balance sheet. ' +
+      'You may keep playing — there is always more to own.</p>');
+    flashScreen("#ffcf4a");
+  }
+}
+
+/* ---------- 7. INPUT ---------- */
+let drag = null, moved = 0;
+cv.addEventListener("pointerdown", e => {
+  drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y };
+  moved = 0; cv.classList.add("dragging"); cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener("pointermove", e => {
+  if (drag) {
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    moved = Math.max(moved, Math.abs(dx) + Math.abs(dy));
+    cam.x = drag.cx - dx / cam.z; cam.y = drag.cy - dy / cam.z;
+  } else {
+    mouse.x = e.clientX; mouse.y = e.clientY;
+    const g = screenToGrid(e.clientX, e.clientY);
+    const c = G.grid[g.y] && G.grid[g.y][g.x];
+    G.hovered = (c && !c.street && !c.water) ? c : null;
+  }
+});
+cv.addEventListener("pointerup", e => {
+  cv.classList.remove("dragging");
+  if (drag && moved < 6 && tryCollect(e.clientX, e.clientY)) { drag = null; return; }
+  if (drag && moved < 6) {
+    const g = screenToGrid(e.clientX, e.clientY);
+    const c = G.grid[g.y] && G.grid[g.y][g.x];
+    select(c && !c.street && !c.water ? c : null);
+  }
+  drag = null;
+});
+cv.addEventListener("pointerleave", () => { drag = null; G.hovered = null; cv.classList.remove("dragging"); });
+/* two-finger pinch zoom */
+const touches = new Map();
+cv.addEventListener("pointerdown", e => { if (e.pointerType === "touch") touches.set(e.pointerId, e); });
+cv.addEventListener("pointermove", e => {
+  if (e.pointerType !== "touch" || !touches.has(e.pointerId)) return;
+  touches.set(e.pointerId, e);
+  if (touches.size === 2) {
+    const [a, b] = [...touches.values()];
+    const d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    if (cv._pd) cam.tz = clamp(cam.tz * (d / cv._pd), 0.42, 2.6);
+    cv._pd = d;
+    drag = null;
+  }
+});
+["pointerup", "pointercancel", "pointerleave"].forEach(t =>
+  cv.addEventListener(t, e => { touches.delete(e.pointerId); if (touches.size < 2) cv._pd = 0; }));
+
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  cam.tz = clamp(cam.tz * (e.deltaY > 0 ? 0.88 : 1.13), 0.42, 2.6);
+}, { passive: false });
+
+const keys = {};
+document.addEventListener("keyup", e => { keys[e.key.toLowerCase()] = false; });
+document.addEventListener("keydown", e => {
+  const k = e.key.toLowerCase();
+  keys[k] = true;
+  if (k === "arrowleft" || k === "arrowright" || k === "arrowup" || k === "arrowdown") e.preventDefault();
+  if (k === "escape") { closeModal(); select(null); }
+  if (k === " ") { e.preventDefault(); setSpeed(G.speed === 0 ? 1 : 0); }
+  if (k === "l") openLobby();
+  if (k === "g") openGoals();
+  if (k === "h") openHelp();
+  const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
+  if (ovs[k]) setOverlay(ovs[k]);
+});
+
+function setOverlay(o) {
+  G.overlay = o;
+  document.querySelectorAll("[data-ov]").forEach(r => r.classList.toggle("on", r.dataset.ov === o));
+}
+document.querySelectorAll("[data-ov]").forEach(r => r.onclick = () => setOverlay(r.dataset.ov));
+
+function setSpeed(s) {
+  G.speed = s;
+  ["sp0", "sp1", "sp2", "sp3"].forEach((id, i) => {
+    const v = [0, 1, 2, 4][i];
+    $(id).classList.toggle("on", v === s);
+  });
+}
+$("sp0").onclick = () => setSpeed(0); $("sp1").onclick = () => setSpeed(1);
+$("sp2").onclick = () => setSpeed(2); $("sp3").onclick = () => setSpeed(4);
+$("iclose").onclick = () => select(null);
+$("btn-lobby").onclick = openLobby;
+$("btn-goals").onclick = openGoals;
+$("btn-help").onclick = openHelp;
+$("btn-save").onclick = () => { save(); toast("good", "Empire Saved", "Progress written to local storage."); };
+$("btn-reset").onclick = () => {
+  if (!confirm("Demolish your saved empire and start over?")) return;
+  localStorage.removeItem(SAVE_KEY); location.reload();
+};
+
+/* ---------- 8. PERSISTENCE ---------- */
+const SAVE_KEY = "nyc-metro-tycoon-v1";
+function save() {
+  const d = {
+    cash: G.cash, prestige: G.prestige, influence: G.influence, risk: G.risk,
+    taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
+    tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy,
+    time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
+    plots: G.plots.map(p => p.owned ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega } : null)
+      .filter(Boolean)
+  };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (err) { /* storage may be blocked */ }
+}
+function load() {
+  let d;
+  try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (err) { d = null; }
+  if (!d) return false;
+  Object.assign(G, {
+    cash: d.cash, prestige: d.prestige, influence: d.influence, risk: d.risk,
+    taxRate: d.taxRate, zoneBonus: d.zoneBonus, transitLv: d.transitLv,
+    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {},
+    time: d.time || 0, totalEarned: d.totalEarned || 0
+  });
+  for (const s of d.plots) {
+    const p = G.grid[s.y] && G.grid[s.y][s.x];
+    if (!p || p.park) continue;
+    p.owned = true; p.biz = s.b; p.level = s.l; p.up = s.u; p.sketchy = s.s; p.mega = s.m; p.built = 1;
+  }
+  /* offline automation earnings */
+  const away = clamp((Date.now() - (d.ts || Date.now())) / 1000, 0, 8 * 3600);
+  if (away > 30) {
+    let off = 0;
+    for (const p of ownedPlots()) if (p.biz) off += plotRevenue(p) * (p.up.automation * 0.09);
+    const total = off * away;
+    if (total > 1) {
+      G.cash += total;
+      toast("gold", "Automated Operations", "Your automated blocks earned " + money(total) +
+        " over " + Math.floor(away / 60) + " minutes away.");
+    }
+  }
+  return true;
+}
+setInterval(save, 15000);
+window.addEventListener("beforeunload", save);
+
+/* ---------- 9. MAIN LOOP ---------- */
+let last = performance.now(), acc = 0, uiAcc = 0;
+function frame(now) {
+  const raw = Math.min((now - last) / 1000, 0.1);
+  last = now;
+  const dt = raw * G.speed;
+
+  /* keyboard panning */
+  const pan = 620 * raw / cam.z;
+  if (keys.a || keys.arrowleft) cam.x -= pan;
+  if (keys.d || keys.arrowright) cam.x += pan;
+  if (keys.w || keys.arrowup) cam.y -= pan;
+  if (keys.s || keys.arrowdown) cam.y += pan;
+  cam.z = lerp(cam.z, cam.tz, 1 - Math.pow(0.001, raw));
+  if (dt > 0) {
+    acc += dt;
+    while (acc >= 0.1) { simulate(0.1); acc -= 0.1; }
+    updateParticles(dt);
+    updatePickups(dt);
+  }
+  draw(raw);
+
+  uiAcc += raw;
+  if (uiAcc > 0.25) {
+    uiAcc = 0;
+    updateHUD();
+    updateDistrictList();
+    renderTicker();
+    if (G.selected && !$("insp").classList.contains("hidden")) {
+      /* refresh only live numbers to avoid nuking focus while clicking */
+      const p = G.selected, lr = $("live-rev"), lo = $("live-opex");
+      if (p.owned && p.biz && lr) { lr.textContent = rate(p.revenue); lo.textContent = "-" + money(plotOpex(p)) + "/s"; }
+    }
+  }
+  requestAnimationFrame(frame);
+}
+
+/* ---------- BOOT ---------- */
+generateWorld();
+resize();
+const loaded = load();
+focusDistrict("times", true);
+cam.x = iso(GRID_W / 2, GRID_H / 2).x;
+cam.y = iso(GRID_W / 2, GRID_H / 2).y - 40;
+cam.z = cam.tz = 1.22;
+setOverlay("none");
+setSpeed(1);
+updateHUD(); updateDistrictList(); renderTicker();
+if (!loaded) {
+  setTimeout(() => toast("info", "Welcome to New York", "You have " + money(G.cash) +
+    " and no property. Buy a cheap Brooklyn block and start compounding. Press H for help."), 700);
+} else {
+  toast("info", "Empire Restored", "Welcome back. " + ownedPlots().length + " blocks under management.");
+}
+spawnTraffic(true);
+requestAnimationFrame(frame);
+
+/* test hook for headless QA */
+window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen, buyPlot, foundBiz, levelUp };
+</script>
+</body>
+</html>
