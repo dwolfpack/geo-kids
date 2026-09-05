@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#07040f">
+<meta name="description" content="NEON ARCADE 95 - six original mid-90s arcade games: pseudo-3D racing, an Olympic meet, downhill skiing, surfing, a raycaster shooter and a beat-em-up. Free, no installs, plays on any phone.">
+<meta name="mobile-web-app-capable" content="yes">
+<title>NEON ARCADE 95 // 6 GAMES // INSERT COIN</title>
+<link rel="icon" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/css/arcade.css">
+<style>
+  .coin-row { display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin-top:16px; }
+  .coin-btn {
+    font-family: var(--font); font-size: 9px; cursor: pointer;
+    color: #06010f; background: var(--yellow); border: 2px solid #fff2a8;
+    padding: 11px 14px; border-radius: 8px;
+    box-shadow: 0 4px 0 #a58a00, 0 0 18px rgba(255,212,0,0.55);
+  }
+  .coin-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #a58a00; }
+  .coin-btn.alt { background: var(--cyan); border-color:#c2f6ff; box-shadow: 0 4px 0 #0b7fa0, 0 0 18px rgba(34,224,255,0.5); }
+  .stats { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin: 18px 0 4px; font-size:8px; color:var(--dim); }
+  .stats b { color: var(--green); font-weight: normal; }
+  .howto { margin: 26px auto 0; max-width: 760px; border:2px solid var(--line); border-radius:10px;
+           background: rgba(0,0,0,0.4); padding: 16px 18px; font-size: 8px; color: var(--steel); line-height: 2.2; }
+  .howto b { color: var(--yellow); font-weight: normal; }
+</style>
+</head>
+<body>
+<div class="hub">
+
+  <div class="marquee">
+    <div class="bulbs top"></div>
+    <div class="bulbs bot"></div>
+    <h1 class="logo">NEON <span class="n2">ARCADE</span><span class="n3">95</span></h1>
+    <div class="sub">
+      SIX NEW CABINETS FOR THE 32-BIT ERA &nbsp;//&nbsp; NO QUARTERS NEEDED<br>
+      <span class="coin">&#9679;</span> RACING &middot; OLYMPICS &middot; SKI &middot; SURF &middot; FPS &middot; BEAT-EM-UP <span class="coin">&#9679;</span>
+    </div>
+    <div class="coin-row">
+      <button class="coin-btn" id="randomBtn">INSERT COIN - RANDOM GAME</button>
+      <button class="coin-btn alt" id="resetBtn">CLEAR HIGH SCORES</button>
+    </div>
+  </div>
+
+  <div class="ticker"><span id="tickerText">WELCOME TO NEON ARCADE 95 &nbsp;***&nbsp; NOW WITH MODE-7 RACING, A RAYCASTER SHOOTER AND A FOUR EVENT OLYMPIC MEET &nbsp;***&nbsp; TOUCH THE SCREEN OR USE THE ARROW KEYS &nbsp;***&nbsp; HIGH SCORES ARE SAVED ON YOUR DEVICE &nbsp;***&nbsp; PICK A CABINET AND PRESS START &nbsp;***&nbsp;</span></div>
+
+  <div class="stats">
+    <div>CABINETS <b id="statCount">6</b></div>
+    <div>GAMES PLAYED <b id="statPlayed">0</b></div>
+    <div>TOTAL SCORE <b id="statTotal">000000</b></div>
+  </div>
+
+  <h2 class="section-title">SELECT YOUR CABINET</h2>
+  <div class="rack" id="rack"></div>
+
+  <div class="howto">
+    <b>CONTROLS</b> &mdash; ARROW KEYS OR WASD MOVE. SPACE = A, X = B, C = C. P PAUSES, R RESTARTS.<br>
+    <b>ON A PHONE</b> &mdash; A TOUCH D-PAD AND UP TO THREE BUTTONS APPEAR UNDER THE SCREEN. YOU CAN ALSO DRAG ON THE SCREEN ITSELF.<br>
+    <b>EVERY CABINET</b> &mdash; ORIGINAL CODE ON HTML5 CANVAS. NO PLUGINS, NO ADS, NO TRACKING, NO NETWORK.
+  </div>
+
+  <div class="hub-foot">
+    A MODERN SEQUEL TO THE ORIGINAL <b>NEON ARCADE</b> &mdash; SAME CABINET, BIGGER GAMES<br>
+    BUILT WITH <b>HTML5 CANVAS</b> AND TOO MUCH NEON<br>
+    &copy; 1995-<span id="yr">2026</span> NEON ARCADE 95
+  </div>
+</div>
+
+<script src="assets/js/games-list.js"></script>
+<script>
+(function () {
+  var rack = document.getElementById('rack');
+  var games = window.ARCADE_GAMES || [];
+  var total = 0, played = 0;
+
+  function best(id) {
+    try { return parseInt(localStorage.getItem('neon95:hs:' + id) || '0', 10) || 0; }
+    catch (e) { return 0; }
+  }
+
+  function drawArt(cv, game) {
+    var art = game.art, cols = art[0].length, rows = art.length;
+    var cell = 14;
+    cv.width = cols * cell;
+    cv.height = Math.round(cols * cell * 0.75);
+    var ctx = cv.getContext('2d');
+    var grd = ctx.createLinearGradient(0, 0, 0, cv.height);
+    grd.addColorStop(0, game.bg[0]);
+    grd.addColorStop(1, game.bg[1]);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+    ctx.lineWidth = 1;
+    for (var x = 0; x <= cv.width; x += cell) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, cv.height); ctx.stroke(); }
+    for (var y = 0; y <= cv.height; y += cell) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(cv.width, y + .5); ctx.stroke(); }
+
+    var oy = Math.round((cv.height - rows * cell) / 2);
+    ctx.shadowBlur = 10;
+    for (var r = 0; r < rows; r++) {
+      for (var c = 0; c < art[r].length; c++) {
+        var ch = art[r][c];
+        if (ch === '.' || ch === ' ') continue;
+        var col = game.pal[ch] || '#fff';
+        ctx.shadowColor = col;
+        ctx.fillStyle = col;
+        ctx.fillRect(c * cell, oy + r * cell, cell, cell);
+      }
+    }
+    ctx.shadowBlur = 0;
+  }
+
+  games.forEach(function (game) {
+    var hs = best(game.id);
+    total += hs;
+    if (hs > 0) played++;
+
+    var a = document.createElement('a');
+    a.className = 'cabinet';
+    a.href = 'games/' + game.id + '.html';
+    a.innerHTML =
+      (game.badge ? '<div class="badge">' + game.badge + '</div>' : '') +
+      '<div class="screen"><canvas></canvas></div>' +
+      '<div class="play">PLAY</div>' +
+      '<div class="name">' + game.title + '</div>' +
+      '<div class="kind">' + game.kind + ' &middot; ' + game.blurb + '</div>' +
+      '<div class="hs">HI ' + String(hs).padStart(6, '0') + '</div>';
+    rack.appendChild(a);
+    drawArt(a.querySelector('canvas'), game);
+  });
+
+  document.getElementById('statCount').textContent = games.length;
+  document.getElementById('statPlayed').textContent = played;
+  document.getElementById('statTotal').textContent = String(total).padStart(6, '0');
+  document.getElementById('yr').textContent = new Date().getFullYear();
+
+  document.getElementById('randomBtn').addEventListener('click', function () {
+    var g = games[Math.floor(Math.random() * games.length)];
+    location.href = 'games/' + g.id + '.html';
+  });
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    try { games.forEach(function (g) { localStorage.removeItem('neon95:hs:' + g.id); }); } catch (e) {}
+    location.reload();
+  });
+})();
+</script>
+</body>
+</html>
