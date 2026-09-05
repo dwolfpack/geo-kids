@@ -40,7 +40,10 @@ canvas.dragging{cursor:grabbing}
 .sbtn:hover{border-color:var(--cyan);color:var(--txt)}
 
 /* ---------- LEFT SIDEBAR ---------- */
-#side{position:absolute;left:0;top:56px;bottom:0;width:196px;background:var(--panel);
+#sidetog{position:absolute;left:8px;top:64px;z-index:22;width:30px;height:28px;display:none;
+  border:1px solid var(--line2);background:var(--panel);color:var(--txt);border-radius:5px;cursor:pointer}
+#side.collapsed{transform:translateX(-100%)}
+#side{position:absolute;left:0;top:56px;bottom:0;width:196px;transition:transform .2s;background:var(--panel);
   border-right:1px solid var(--line);overflow-y:auto;z-index:15;padding-bottom:60px}
 #side::-webkit-scrollbar{width:6px}#side::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
 .grp{padding:10px 12px 4px;font-size:9px;letter-spacing:.18em;color:var(--dim);text-transform:uppercase}
@@ -164,7 +167,16 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
 .flash{animation:fl .5s}
 @keyframes fl{0%,100%{background:transparent}50%{background:rgba(255,207,74,.22)}}
 @media (max-width:1100px){#insp{width:280px}#toasts{right:292px}}
-@media (max-width:860px){#side{width:150px}#insp{width:250px}}
+@media (max-width:860px){#side{width:170px}#insp{width:250px}#hint{left:12px;max-width:60vw}}
+@media (max-width:720px){
+  #sidetog{display:block}
+  #side{box-shadow:0 0 40px rgba(0,0,0,.7)}
+  #hud{height:50px;overflow-x:auto}
+  .stat{min-width:78px;padding:0 10px}
+  #insp{width:100%;top:auto;bottom:34px;height:52vh;border-left:0;border-top:1px solid var(--line)}
+  #toasts{right:8px;max-width:64vw}
+  #hint{display:none}
+}
 </style>
 </head>
 <body>
@@ -189,6 +201,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div id="logo"><b>NYC METRO</b><span>TYCOON</span></div>
   </div>
 
+  <button id="sidetog" title="Toggle panel">☰</button>
   <div id="side">
     <div class="grp">Overlays</div>
     <div class="row on" data-ov="none"><i class="dot" style="background:#5f7793"></i>None<span class="kbd">1</span></div>
@@ -200,6 +213,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="dlist" id="dlist"></div>
     <div class="grp">Management</div>
     <div class="row" id="btn-lobby"><i class="dot" style="background:#b07dff"></i>City Hall<span class="kbd">L</span></div>
+    <div class="row" id="btn-port"><i class="dot" style="background:#3ce88f"></i>Portfolio<span class="kbd">P</span></div>
     <div class="row" id="btn-goals"><i class="dot" style="background:#ffcf4a"></i>Objectives<span class="kbd">G</span></div>
     <div class="row" id="btn-help"><i class="dot" style="background:#48d8ff"></i>How To Play<span class="kbd">H</span></div>
     <div class="row" id="btn-save"><i class="dot" style="background:#3ce88f"></i>Save Empire</div>
@@ -710,6 +724,7 @@ function simulate(dt) {
       pushTicker("info", e.def.name + " has ended.");
     }
   }
+  checkMilestones();
   checkWin();
 }
 
@@ -732,6 +747,7 @@ function triggerAudit() {
   const fine = Math.min(G.cash * 0.45 + worth * 0.05, worth * 0.3) * (0.5 + G.risk);
   G.cash -= fine;
   G.risk *= 0.35;
+  G.audits = (G.audits || 0) + 1;
   const agency = pick(["SEC", "IRS", "NY State AG", "FinCEN", "DOJ Southern District"]);
   toast("bad", agency + " ENFORCEMENT ACTION", "Fined " + money(fine) +
     ". Audit risk reduced but your books are now on file.");
@@ -799,7 +815,12 @@ function resize() {
   cv.width = W * DPR; cv.height = H * DPR;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
-window.addEventListener("resize", resize);
+window.addEventListener("resize", () => {
+  resize();
+  /* keep the panel out of the way on phone-width viewports */
+  const side = document.getElementById("side");
+  if (side) side.classList.toggle("collapsed", window.innerWidth <= 720);
+});
 
 function iso(x, y) {
   return { x: (x - y) * TILE_W / 2, y: (x + y) * TILE_H / 2 };
@@ -1016,6 +1037,7 @@ function draw(dt) {
   drawTooltip();
 
   drawDistrictLabels();
+  drawLegend();
   /* vignette */
   const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.78);
   vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.62)");
@@ -1052,6 +1074,41 @@ function drawHarbor() {
 }
 
 /** Big translucent district names floating over the grid. */
+const LEGENDS = {
+  zoning: { t: "ZONING", rows: () => Object.values(DISTRICTS).map(d => [d.color, d.name]) },
+  traffic: { t: "FOOT TRAFFIC", rows: () => [["rgba(255,120,60,0.25)", "Low / undeveloped"],
+    ["rgba(255,175,60,0.6)", "Moderate"], ["rgba(255,230,60,0.9)", "Heavy footfall"]] },
+  profit: { t: "PROFIT PER BLOCK", rows: () => [["rgba(180,232,120,0.3)", "Weak earner"],
+    ["rgba(120,232,150,0.6)", "Solid"], ["rgba(60,232,180,0.9)", "Top earner in the city"]] },
+  risk: { t: "AUDIT EXPOSURE", rows: () => [["rgba(255,70,90,0.1)", "Clean books"],
+    ["rgba(255,70,90,0.35)", "Regulated vertical"], ["rgba(255,70,90,0.8)", "Back-room operation"]] }
+};
+
+/** Explains whatever overlay wash is currently painted on the ground. */
+function drawLegend() {
+  const L = LEGENDS[G.overlay];
+  if (!L) return;
+  const rows = L.rows();
+  const w = 176, h = 26 + rows.length * 17;
+  const x = 208, y = H - 44 - h - 34;
+  ctx.fillStyle = "rgba(10,15,24,0.9)";
+  ctx.strokeStyle = "rgba(120,150,190,0.3)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  if (ctx.roundRect) ctx.roundRect(x, y, w, h, 6); else ctx.rect(x, y, w, h);
+  ctx.fill(); ctx.stroke();
+  ctx.textAlign = "left";
+  ctx.font = "700 9px system-ui"; ctx.fillStyle = "#7d90ab";
+  ctx.fillText(L.t, x + 11, y + 16);
+  rows.forEach((r, i) => {
+    const yy = y + 30 + i * 17;
+    ctx.fillStyle = r[0];
+    ctx.fillRect(x + 11, yy, 12, 9);
+    ctx.fillStyle = "#dbe6f5"; ctx.font = "11px system-ui";
+    ctx.fillText(r[1], x + 30, yy + 8);
+  });
+  ctx.textAlign = "center";
+}
+
 function drawDistrictLabels() {
   if (cam.z < 0.62) return;
   ctx.textAlign = "center";
@@ -1228,17 +1285,18 @@ function drawBuilding(p, s, tw, th) {
   const pal = p.mega ? ["#d8c06a", "#9c8637", "#f0dd92", "rgba(255,245,190,0.95)"] : FACADE[p.biz];
   const grow = 0.22 + 0.78 * p.built;
   const floors = p.level;
-  const totalH = (13 + Math.pow(floors, 1.34) * 9.5) * cam.z * grow * (p.mega ? 2.4 : 1);
+  const totalH = (13 + Math.pow(floors, 1.34) * 9.5) * cam.z * grow * (p.mega ? 1.55 : 1);
 
   /* soft ground shadow anchors the tower to the block */
   ctx.fillStyle = "rgba(0,0,0,0.40)";
   diamond(s.x + tw * 0.07, s.y + th * 0.09, tw * 0.86, th * 0.8); ctx.fill();
 
   /* segments: taller towers step inward (classic NYC setbacks) */
-  const segs = floors >= 10 ? 3 : floors >= 6 ? 2 : 1;
+  const segs = p.mega ? 5 : floors >= 10 ? 3 : floors >= 6 ? 2 : 1;
   let baseY = s.y, inset = clamp(0.9 - floors * 0.008, 0.66, 0.9);
   for (let i = 0; i < segs; i++) {
-    const segH = totalH * (segs === 1 ? 1 : (i === 0 ? 0.5 : i === 1 ? 0.32 : 0.18));
+    const segH = totalH * (segs === 5 ? [0.4, 0.24, 0.17, 0.12, 0.07][i]
+      : segs === 1 ? 1 : (i === 0 ? 0.5 : i === 1 ? 0.32 : 0.18));
     const w = tw * inset, d = th * inset;
     const top = baseY - segH;
     /* left (lit) face */
@@ -1276,7 +1334,7 @@ function drawBuilding(p, s, tw, th) {
       }
     }
     /* Times Square: giant illuminated signboard bolted to the facade */
-    if (p.d === "times" && p.level >= 2 && i === 0 && cam.z > 0.55) {
+    if (p.d === "times" && p.level >= 2 && i === 0 && cam.z > 0.45) {
       const pulse = 0.5 + Math.sin(blink * 3 + p.seed * 9) * 0.35;
       const gh = Math.min(segH * 0.45, 22 * cam.z);
       const gy = baseY - segH * 0.55;
@@ -1288,17 +1346,43 @@ function drawBuilding(p, s, tw, th) {
       ctx.moveTo(s.x - w / 2, gy); ctx.lineTo(s.x, gy + d / 2);
       ctx.lineTo(s.x, gy + d / 2 + gh); ctx.lineTo(s.x - w / 2, gy + gh);
       ctx.closePath(); ctx.fill();
+      ctx.shadowColor = "#ff4fa3"; ctx.shadowBlur = 14 * cam.z;
+      ctx.fill(); ctx.shadowBlur = 0;
+      /* scrolling marquee bar under the board */
+      const mx = ((blink * 26 + p.seed * 40) % (w * 0.5));
+      ctx.fillStyle = "rgba(255,240,120," + (0.55 + pulse * 0.4) + ")";
+      ctx.fillRect(s.x - w / 2 + mx * 0.5, gy + gh + 1.5 * cam.z, 6 * cam.z, 1.8 * cam.z);
     }
     baseY = top;
-    inset *= 0.72;
+    inset *= p.mega ? 0.82 : 0.72;
   }
 
   const top = baseY;
-  /* spire / antenna on genuine skyscrapers */
+  /* spire / antenna — the Megatower gets a stepped crown and a mooring mast */
   if (floors >= 8 || p.mega) {
-    const sh = (14 + floors * 1.6) * cam.z * (p.mega ? 2 : 1);
-    ctx.strokeStyle = pal[2]; ctx.lineWidth = 2.2 * cam.z;
-    ctx.beginPath(); ctx.moveTo(s.x, top); ctx.lineTo(s.x, top - sh); ctx.stroke();
+    const sh = (14 + floors * 1.6) * cam.z * (p.mega ? 1.5 : 1);
+    if (p.mega) {
+      for (let c = 0; c < 3; c++) {                    /* Art Deco crown steps */
+        const cw = tw * (0.28 - c * 0.07), ch = 6 * cam.z;
+        const cy = top - c * ch;
+        ctx.fillStyle = shade(pal[2], 0.05 + c * 0.05);
+        diamond(s.x, cy, cw, cw * 0.5); ctx.fill();
+        ctx.fillStyle = shade(pal[1], 0.02);
+        ctx.fillRect(s.x - cw / 2, cy, cw, ch);
+      }
+      ctx.strokeStyle = "#f2e3a4"; ctx.lineWidth = 2.6 * cam.z;
+      ctx.beginPath(); ctx.moveTo(s.x, top - 18 * cam.z); ctx.lineTo(s.x, top - 18 * cam.z - sh); ctx.stroke();
+      /* mast glow */
+      const gl = 0.4 + Math.sin(blink * 2.6) * 0.35;
+      ctx.fillStyle = "rgba(255,232,150," + gl + ")";
+      ctx.beginPath(); ctx.arc(s.x, top - 18 * cam.z - sh, 3.4 * cam.z, 0, TAU); ctx.fill();
+      ctx.shadowColor = "#ffcf4a"; ctx.shadowBlur = 22 * cam.z;
+      ctx.beginPath(); ctx.arc(s.x, top - 18 * cam.z - sh, 2.4 * cam.z, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+    } else {
+      ctx.strokeStyle = pal[2]; ctx.lineWidth = 2.2 * cam.z;
+      ctx.beginPath(); ctx.moveTo(s.x, top); ctx.lineTo(s.x, top - sh); ctx.stroke();
+    }
   }
   /* aviation beacon */
   if (floors >= 6 || p.mega) {
@@ -1490,6 +1574,16 @@ function focusDistrict(id, quiet) {
   if (!quiet) toast("info", DISTRICTS[id].name, DISTRICTS[id].blurb);
 }
 
+/** Frames a block, biasing the camera upward so a tall tower fits on screen. */
+function centerOn(p, zoom) {
+  const t = iso(p.x + 0.5, p.y + 0.5);
+  cam.tz = clamp(zoom || 1.3, 0.42, 2.6);
+  const est = p.owned && p.biz
+    ? (13 + Math.pow(p.level, 1.34) * 9.5) * (p.mega ? 1.55 : 1) : 0;
+  cam.x = t.x;
+  cam.y = t.y - est * 0.42;
+}
+
 function select(p) {
   G.selected = p;
   if (p) { $("insp").classList.remove("hidden"); renderInspector(); }
@@ -1594,12 +1688,13 @@ function renderInspector() {
       : "Unlicensed speakeasy / offshore shelter: +85% revenue, adds audit risk. Getting caught costs a fortune.") +
     '</span></button>';
 
-  if (!G.won.mega && p.level >= levelCap(p) && p.d === "wall" && !p.mega) {
+  if (!G.won.mega && p.landmark === "Empire State Site" && p.level >= levelCap(p) && !p.mega) {
     const cost = 8e9;
     html += '<div class="sechead">Ultimate Project</div>' +
       '<button class="btn buy" id="a-mega"' + (G.cash < cost ? " disabled" : "") + '>' +
       'Build Empire State Megatower <span class="c">' + money(cost) + '</span>' +
-      '<span class="d">×3.5 revenue, ×6 prestige, and one of the three win conditions.</span></button>';
+      '<span class="d">The tallest structure on earth: ×3.5 revenue, ×6 prestige, ' +
+      'and the third win condition.</span></button>';
   }
 
   html += '<div class="sechead">Divest</div>';
@@ -1667,6 +1762,7 @@ function sellPlot(p) {
 function buildMega(p) {
   if (!spend(8e9)) return;
   p.mega = true; p.built = 0; G.won.mega = true;
+  centerOn(p, 1.0);
   toast("gold", "EMPIRE STATE MEGATOWER", "The tallest structure ever built rises over " + p.name + ".");
   pushTicker("good", "<b>MEGATOWER TOPPED OUT</b> — the skyline belongs to you");
   flashScreen("#ffcf4a");
@@ -1773,6 +1869,16 @@ function openDistrict(id) {
   };
 }
 
+/** Human-readable progress toward unlocking the Megatower build. */
+function megaStatus() {
+  const site = G.plots.find(p => p.landmark === "Empire State Site");
+  if (!site) return "Site missing";
+  if (!site.owned) return "Site unowned — " + money(landPrice(site));
+  if (!site.biz) return "Site vacant — found a business";
+  if (site.level < levelCap(site)) return "Tier " + site.level + " / " + levelCap(site) + " at the site";
+  return "Ready to build — " + money(8e9);
+}
+
 function goalState() {
   const own = ownedPlots().length, total = buildable().length;
   return [
@@ -1780,8 +1886,9 @@ function goalState() {
       p: clamp(netWorth() / 1e11, 0, 1), v: money(netWorth()) + " / $100.00B" },
     { k: "monopoly", n: "Total Real Estate Monopoly", d: "Own 100% of every developable block.",
       p: own / total, v: own + " / " + total + " blocks" },
-    { k: "mega", n: "The Empire State Megatower", d: "Max out a Wall Street tower, then build the Megatower.",
-      p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : "Not built" }
+    { k: "mega", n: "The Empire State Megatower",
+      d: "Own the Empire State Site landmark, build it to its height cap, then raise the Megatower ($8B).",
+      p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : megaStatus() }
   ];
 }
 function openGoals() {
@@ -1793,13 +1900,70 @@ function openGoals() {
       (g.p >= 1 ? "var(--green)" : "var(--gold)") + '"></i></div>' +
       '<div class="kv"><span>Progress</span><b>' + g.v + '</b></div></div>';
   }
-  html += '</div><h3>Empire Statistics</h3>' +
+  const got = MILESTONES.filter(m => G.miles && G.miles[m.id]);
+  html += '</div><h3>Milestones — ' + got.length + ' / ' + MILESTONES.length + '</h3>' +
+    '<div class="lob">' + MILESTONES.map(m => {
+      const done = G.miles && G.miles[m.id];
+      return '<div class="lobc' + (done ? "" : " dis") + '"><b>' + (done ? "★ " : "☆ ") + m.n + '</b>' +
+        '<small>' + m.d + '</small></div>';
+    }).join("") + '</div>';
+  html += '<h3>Empire Statistics</h3>' +
     '<div class="kv"><span>Total earned</span><b>' + money(G.totalEarned) + '</b></div>' +
     '<div class="kv"><span>Gross income</span><b>' + rate(G.grossRate) + '</b></div>' +
     '<div class="kv"><span>Operating costs</span><b>-' + money(G.opexRate) + '/s</b></div>' +
     '<div class="kv"><span>Prestige</span><b>' + Math.floor(G.prestige) + '</b></div>' +
     '<div class="kv"><span>Audit risk</span><b>' + pct(G.risk) + '</b></div>';
   openModal(html);
+}
+
+/* Portfolio ledger — the only sane way to run 90 blocks at once. */
+G.sortBy = "rev";
+function openPortfolio() {
+  const own = ownedPlots();
+  if (!own.length) {
+    openModal('<h1>Portfolio</h1><p>You do not own anything yet. Click a block on the map and acquire the deed.</p>');
+    return;
+  }
+  const sorters = {
+    rev: (a, b) => b.revenue - a.revenue,
+    tier: (a, b) => b.level - a.level,
+    value: (a, b) => landPrice(b) - landPrice(a),
+    district: (a, b) => a.d.localeCompare(b.d) || b.revenue - a.revenue
+  };
+  const rows = own.slice().sort(sorters[G.sortBy]);
+  const gross = own.reduce((a, p) => a + p.revenue, 0);
+  const opex = own.reduce((a, p) => a + plotOpex(p), 0);
+  let html = '<h1>Portfolio</h1>' +
+    '<div class="kv"><span>Holdings</span><b>' + own.length + ' blocks</b></div>' +
+    '<div class="kv"><span>Gross / operating</span><b><span style="color:var(--green)">' + rate(gross) +
+    '</span> / <span style="color:var(--red)">-' + money(opex) + '/s</span></b></div>' +
+    '<div class="kv"><span>Upgrade headroom</span><b>' +
+    own.filter(p => p.biz && p.level < levelCap(p)).length + ' blocks below cap</b></div>' +
+    '<h3>Sort By</h3><div class="lob" style="grid-template-columns:repeat(4,1fr)">' +
+    [["rev", "Revenue"], ["tier", "Tier"], ["value", "Land value"], ["district", "District"]].map(o =>
+      '<div class="lobc" data-s="' + o[0] + '"' + (G.sortBy === o[0] ? ' style="border-color:var(--cyan)"' : '') +
+      '><b>' + (G.sortBy === o[0] ? "✔ " : "") + o[1] + '</b></div>').join("") +
+    '</div><h3>Holdings — click a row to jump to the block</h3><div class="wins">';
+  for (const p of rows.slice(0, 60)) {
+    const D = DISTRICTS[p.d], B = p.biz ? BIZ[p.biz] : null;
+    html += '<div class="wc pf" data-x="' + p.x + '" data-y="' + p.y + '" style="cursor:pointer;padding:8px 11px">' +
+      '<b style="color:' + D.color + '">' + p.name + '</b>' +
+      '<small>' + (B ? B.icon + " " + B.tiers[Math.min(p.level - 1, 8)] + " · tier " + p.level + "/" + levelCap(p)
+                     : "vacant lot") +
+        (p.sketchy ? ' · <span style="color:var(--red)">back room</span>' : '') +
+        (p.mega ? ' · <span style="color:var(--gold)">MEGATOWER</span>' : '') + '</small>' +
+      '<div class="kv" style="padding:2px 0;border:0"><span>' + D.name + '</span>' +
+      '<b style="color:var(--green)">' + rate(p.revenue) + '</b></div></div>';
+  }
+  if (rows.length > 60) html += '<p style="margin-top:8px">…and ' + (rows.length - 60) + ' more.</p>';
+  html += '</div>';
+  openModal(html);
+  $("mbox").querySelectorAll("[data-s]").forEach(c => c.onclick = () => { G.sortBy = c.dataset.s; openPortfolio(); });
+  $("mbox").querySelectorAll(".pf").forEach(c => c.onclick = () => {
+    const p = G.grid[+c.dataset.y][+c.dataset.x];
+    centerOn(p, 1.3);
+    closeModal(); select(p);
+  });
 }
 
 function openHelp() {
@@ -1818,10 +1982,45 @@ function openHelp() {
     '<h3>Controls</h3>' +
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
-    '<kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<kbd>P</kbd> portfolio · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
     '<h3>Win Conditions</h3>' +
     '<p>Reach <b>$100B net worth</b>, own <b>every block in all four districts</b>, and build the ' +
     '<b>Empire State Megatower</b> on a maxed-out Wall Street tower.</p>');
+}
+
+/* Milestones give the long climb visible punctuation. */
+const MILESTONES = [
+  { id: "m1", t: () => netWorth() >= 1e6, n: "First Million", d: "Net worth crossed $1M." },
+  { id: "m10", t: () => netWorth() >= 1e7, n: "Ten Million", d: "You are now a serious landlord." },
+  { id: "m100", t: () => netWorth() >= 1e8, n: "Nine Figures", d: "$100M. The brokers know your name." },
+  { id: "b1", t: () => netWorth() >= 1e9, n: "Billionaire", d: "$1B net worth. Forbes calls." },
+  { id: "b10", t: () => netWorth() >= 1e10, n: "Ten Billion", d: "You move markets by accident now." },
+  { id: "d5", t: () => ownedPlots().length >= 5, n: "Small Portfolio", d: "Five blocks under management." },
+  { id: "d25", t: () => ownedPlots().length >= 25, n: "Major Holder", d: "25 blocks. You shape the skyline." },
+  { id: "d50", t: () => ownedPlots().length >= 50, n: "Half The City", d: "50 blocks owned outright." },
+  { id: "t9", t: () => ownedPlots().some(p => p.level >= 9), n: "Supertall", d: "A tier-9 tower tops out." },
+  { id: "mono1", t: () => Object.keys(DISTRICTS).some(hasMonopoly), n: "District Monopoly",
+    d: "You own an entire neighbourhood — +35% revenue there." },
+  { id: "monoAll", t: () => Object.keys(DISTRICTS).every(hasMonopoly), n: "Four For Four",
+    d: "Every district is a monopoly." },
+  { id: "pres1k", t: () => G.prestige >= 1000, n: "Institution", d: "1,000 prestige. Old money treats you as old money." },
+  { id: "lob5", t: () => (G.zoneBonus + G.transitLv + G.tourismLv) >= 8, n: "City Hall Regular",
+    d: "Eight lobbying wins. The council takes your calls." },
+  { id: "audit", t: () => G.audits >= 1 && G.cash > 0, n: "Survived The Audit",
+    d: "Fined and still solvent. The cost of doing business." }
+];
+
+function checkMilestones() {
+  G.miles = G.miles || {};
+  for (const m of MILESTONES) {
+    if (G.miles[m.id]) continue;
+    let hit = false;
+    try { hit = m.t(); } catch (err) { hit = false; }
+    if (!hit) continue;
+    G.miles[m.id] = true;
+    toast("gold", "★ " + m.n, m.d);
+    pushTicker("good", "MILESTONE — <b>" + m.n + "</b>");
+  }
 }
 
 function checkWin() {
@@ -1900,6 +2099,7 @@ document.addEventListener("keydown", e => {
   if (k === " ") { e.preventDefault(); setSpeed(G.speed === 0 ? 1 : 0); }
   if (k === "l") openLobby();
   if (k === "g") openGoals();
+  if (k === "p") openPortfolio();
   if (k === "h") openHelp();
   const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
   if (ovs[k]) setOverlay(ovs[k]);
@@ -1921,8 +2121,11 @@ function setSpeed(s) {
 $("sp0").onclick = () => setSpeed(0); $("sp1").onclick = () => setSpeed(1);
 $("sp2").onclick = () => setSpeed(2); $("sp3").onclick = () => setSpeed(4);
 $("iclose").onclick = () => select(null);
+$("sidetog").onclick = () => $("side").classList.toggle("collapsed");
+if (window.innerWidth <= 720) $("side").classList.add("collapsed");
 $("btn-lobby").onclick = openLobby;
 $("btn-goals").onclick = openGoals;
+$("btn-port").onclick = openPortfolio;
 $("btn-help").onclick = openHelp;
 $("btn-save").onclick = () => { save(); toast("good", "Empire Saved", "Progress written to local storage."); };
 $("btn-reset").onclick = () => {
@@ -1936,7 +2139,7 @@ function save() {
   const d = {
     cash: G.cash, prestige: G.prestige, influence: G.influence, risk: G.risk,
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
-    tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy,
+    tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, miles: G.miles, audits: G.audits,
     time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
     plots: G.plots.map(p => p.owned ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega } : null)
       .filter(Boolean)
@@ -1950,7 +2153,7 @@ function load() {
   Object.assign(G, {
     cash: d.cash, prestige: d.prestige, influence: d.influence, risk: d.risk,
     taxRate: d.taxRate, zoneBonus: d.zoneBonus, transitLv: d.transitLv,
-    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {},
+    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {}, miles: d.miles || {}, audits: d.audits || 0,
     time: d.time || 0, totalEarned: d.totalEarned || 0
   });
   for (const s of d.plots) {
