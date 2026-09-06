@@ -124,6 +124,12 @@ canvas.dragging{cursor:grabbing}
   border-top:1px solid var(--line);display:flex;align-items:center;z-index:18;overflow:hidden}
 #tlabel{flex:0 0 auto;background:var(--gold);color:#101010;font-size:10px;font-weight:800;
   letter-spacing:.13em;padding:0 12px;height:100%;display:flex;align-items:center}
+@media (prefers-reduced-motion: reduce){
+  #tscroll{animation:none!important;padding-left:0!important}
+  .toast{animation:none!important}
+  #spot{transition:none!important}
+  .dcard:hover,.btn:hover:not(:disabled),.lobc:hover{transform:none!important}
+}
 #tscroll{white-space:nowrap;font-size:12px;padding-left:30%;animation:sc 38s linear infinite;
   font-variant-numeric:tabular-nums}
 @keyframes sc{to{transform:translateX(-100%)}}
@@ -215,6 +221,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="stat"><div class="k">Date</div><div class="v" id="s-date">JAN 2025</div></div>
     <div id="speedbox">
       <button class="sbtn on" id="sndbtn" title="Sound (M)">🔊</button>
+      <button class="sbtn" id="cbbtn" title="Colour-safe palette (C)">◑</button>
       <button class="sbtn" id="sp0" title="Pause">II</button>
       <button class="sbtn on" id="sp1">1x</button>
       <button class="sbtn" id="sp2">2x</button>
@@ -308,6 +315,32 @@ function money(n) {
 function rate(n) { return (n >= 0 ? "+" : "") + money(n) + "/s"; }
 function pct(n) { return (n * 100).toFixed(0) + "%"; }
 
+/* ===================== ACCESSIBILITY =====================
+   Status here is carried heavily by red/green, the most common colour-vision
+   deficiency. Colour-safe mode swaps those hues for a blue/orange axis that
+   stays distinguishable under deuteranopia and protanopia, and re-tints the
+   districts and rivals to match. */
+const CB = {
+  on: false,
+  swaps: {
+    "#3ce88f": "#4aa3ff",   // green  -> blue
+    "#ff5c6b": "#ff8a3d",   // red    -> orange
+    "#48d8ff": "#7ad3ff",   // wall street
+    "#ff4fa3": "#e46bff",   // times square
+    "#ff9d3c": "#ffc247",   // brooklyn
+    "#8ef0a8": "#c9d6ff",   // upper east side
+    "#b07dff": "#b7a0ff",
+    "#ffb03c": "#ffd166"
+  }
+};
+function cbc(hex) { return CB.on && CB.swaps[hex] ? CB.swaps[hex] : hex; }
+
+let REDUCE_MOTION = false;
+try {
+  REDUCE_MOTION = !!(window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+} catch (err) { REDUCE_MOTION = false; }
+
 /* ---------- 1. CONFIGURATION ---------- */
 const GRID_W = 15, GRID_H = 14;      // logical cells (includes streets + river)
 const TILE_W = 64, TILE_H = 32;      // isometric tile footprint
@@ -316,28 +349,28 @@ const RIVER_X = 9;                   // East River column
 const DISTRICTS = {
   wall: {
     id: "wall", name: "Wall Street", short: "FiDi",
-    color: "#48d8ff", ground: "#16324a", roof: "#20455f", accent: "#7ee9ff",
+    color: "#48d8ff", baseColor: "#48d8ff", ground: "#16324a", roof: "#20455f", accent: "#7ee9ff",
     land: 3.1, rev: 2.25, prestige: 1.0, cap: 9, density: 1.55, civ: [66, 78, 100],
     blurb: "Financial District. Brutal land prices, colossal corporate payouts.",
     bias: "finance"
   },
   times: {
     id: "times", name: "Times Square", short: "Broadway",
-    color: "#ff4fa3", ground: "#3a1730", roof: "#54204a", accent: "#ff8fc8",
+    color: "#ff4fa3", baseColor: "#ff4fa3", ground: "#3a1730", roof: "#54204a", accent: "#ff8fc8",
     land: 2.4, rev: 1.85, prestige: 1.2, cap: 8, density: 1.05, civ: [82, 70, 90],
     blurb: "Neon canyon. Tourist floods drive insane ad and retail revenue.",
     bias: "retail"
   },
   brooklyn: {
     id: "brooklyn", name: "Brooklyn", short: "DUMBO",
-    color: "#ff9d3c", ground: "#3b2416", roof: "#5a361f", accent: "#ffc37a",
+    color: "#ff9d3c", baseColor: "#ff9d3c", ground: "#3b2416", roof: "#5a361f", accent: "#ffc37a",
     land: 0.85, rev: 1.0, prestige: 0.8, cap: 7, density: 0.5, civ: [96, 66, 50],
     blurb: "Industrial chic. Cheap entry, gentrification compounds your yield.",
     bias: "tech"
   },
   uptown: {
     id: "uptown", name: "Upper East Side", short: "Central Park",
-    color: "#8ef0a8", ground: "#1c3a26", roof: "#2a5236", accent: "#c4ffd6",
+    color: "#8ef0a8", baseColor: "#8ef0a8", ground: "#1c3a26", roof: "#2a5236", accent: "#c4ffd6",
     land: 2.7, rev: 1.35, prestige: 2.4, cap: 7, density: 0.78, civ: [92, 84, 70],
     blurb: "Old money. Safe dividends, enormous prestige, park-adjacency premiums.",
     bias: "resi"
@@ -480,7 +513,7 @@ const G = {
   cars: [], peds: [], fx: [],
   won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, rivals: [], buyouts: 0, lobbyUsed: {},
   audits: 0, sold: 0, miles: {}, offer: null, offerTimer: 0, pickups: [], policy: {},
-  contracts: [], stats: { pickups: 0, lobby: 0, contracts: 0 },
+  contracts: [], stats: { pickups: 0, lobby: 0, contracts: 0 }, history: [], histTimer: 0,
   totalEarned: 0, started: Date.now(),
   /* meta-progression: survives every IPO reset */
   legacy: { shares: 0, earned: 0, ipos: 0, best: 0, up: {} }
@@ -578,7 +611,7 @@ function resetRun() {
   G.activeEvents = []; G.nextEvent = 60; G.taxPool = 0; G.taxTimer = 0;
   G.auditTimer = 0; G.time = 0; G.month = 0; G.totalEarned = 0;
   G.buyouts = 0; G.pickups = []; G.fx = []; G.selected = null;
-  G.offer = null; G.offerTimer = 0; G.contracts = [];
+  G.offer = null; G.offerTimer = 0; G.contracts = []; G.history = []; G.histTimer = 0;
   G.stats = { pickups: 0, lobby: 0, contracts: G.stats ? G.stats.contracts : 0 };
   G.rivals = RIVAL_DEFS.map(d => ({ ...d, aggression: d.aggression * legacyRivalMult(),
     cash: d.seed, income: 0, timer: 0, turns: 0, spite: 0, eliminated: false }));
@@ -890,6 +923,14 @@ function simulate(dt) {
   }
   for (const e of G.activeEvents) if (e.def.mod.riskRate) riskAdd *= e.def.mod.riskRate;
 
+  if (!Number.isFinite(gross)) gross = 0;
+  if (!Number.isFinite(opex)) opex = 0;
+  if (!Number.isFinite(G.cash)) {
+    G.cash = 0;
+    toast("bad", "Ledger Repaired", "A corrupt value was found in your accounts and reset to zero.");
+  }
+  if (!Number.isFinite(G.prestige)) G.prestige = 0;
+  if (!Number.isFinite(G.influence)) G.influence = 0;
   G.grossRate = gross; G.opexRate = opex;
   const profit = gross - opex;
   G.lastNet = profit - Math.max(0, profit) * G.taxRate;   // after corporate tax accrual
@@ -937,6 +978,14 @@ function simulate(dt) {
 
   G.trafficTimer = (G.trafficTimer || 0) + dt;
   if (G.trafficTimer > 5) { G.trafficTimer = 0; spawnTraffic(); }
+
+  /* net worth trace for the objectives chart: one sample per five sim-seconds */
+  G.histTimer += dt;
+  if (G.histTimer >= 5) {
+    G.histTimer = 0;
+    G.history.push([Math.round(G.time), netWorth()]);
+    if (G.history.length > 400) G.history.splice(0, G.history.length - 400);
+  }
 
   G.time += dt;
   G.month = Math.floor(G.time / 12);
@@ -1192,7 +1241,7 @@ function renderTicker() {
 }
 
 let flashCol = null, flashT = 0;
-function flashScreen(c) { flashCol = c; flashT = 0.6; }
+function flashScreen(c) { if (REDUCE_MOTION) return; flashCol = c; flashT = 0.6; }
 
 /* ===================== PROCEDURAL AUDIO =====================
    Everything is synthesised at runtime — no assets, no network. The context is
@@ -1303,6 +1352,31 @@ function updateAmbience() {
   const target = G.speed === 0 ? 0 : 0.02 + life * 0.075;
   const g = SFX.humGain;
   g.setTargetAtTime(target, SFX.ctx.currentTime, 0.8);
+}
+
+/** Re-tints every stored colour and the CSS custom properties in one pass. */
+function applyColourMode() {
+  const root = document.documentElement;
+  const set = (v, hex) => root.style.setProperty(v, cbc(hex));
+  set("--green", "#3ce88f"); set("--red", "#ff5c6b");
+  set("--cyan", "#48d8ff"); set("--violet", "#b07dff"); set("--orange", "#ff9d3c");
+  for (const k in DISTRICTS) DISTRICTS[k].color = cbc(DISTRICTS[k].baseColor);
+  for (const r of G.rivals || []) {
+    const def = RIVAL_DEFS.find(x => x.id === r.id);
+    if (def) r.color = cbc(def.color);
+  }
+  const b = document.getElementById("cbbtn");
+  if (b) { b.classList.toggle("on", CB.on);
+    b.title = CB.on ? "Colour-safe palette: on" : "Colour-safe palette: off"; }
+}
+
+function toggleColourMode() {
+  CB.on = !CB.on;
+  applyColourMode();
+  updateDistrictList();
+  try { localStorage.setItem("nyc-cb", CB.on ? "1" : "0"); } catch (err) { /* ignore */ }
+  toast("info", "Colour-Safe Palette " + (CB.on ? "On" : "Off"),
+    CB.on ? "Red and green swapped for a blue/orange axis." : "Original palette restored.");
 }
 
 function toggleAudio() {
@@ -1491,11 +1565,13 @@ function overlayColor(p) {
   }
   if (G.overlay === "profit") {
     const r = clamp(p.revenue / Math.max(1, maxRev), 0, 1);
-    return "rgba(" + Math.round(60 + (1 - r) * 120) + ",232," + Math.round(120 + r * 60) + "," + (0.1 + r * 0.65) + ")";
+    return CB.on
+      ? "rgba(" + Math.round(60 + (1 - r) * 40) + "," + Math.round(140 + r * 60) + ",255," + (0.1 + r * 0.65) + ")"
+      : "rgba(" + Math.round(60 + (1 - r) * 120) + ",232," + Math.round(120 + r * 60) + "," + (0.1 + r * 0.65) + ")";
   }
   if (G.overlay === "risk") {
     const r = p.sketchy ? 0.75 : (p.biz && BIZ[p.biz].risk > 0 ? 0.28 : 0.05);
-    return "rgba(255,70,90," + r + ")";
+    return CB.on ? "rgba(255,140,60," + r + ")" : "rgba(255,70,90," + r + ")";
   }
   return null;
 }
@@ -2862,6 +2938,47 @@ function goalState() {
       p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : megaStatus() }
   ];
 }
+/** Log-scaled net worth trace as inline SVG — legible across six orders of magnitude. */
+function worthChart(w, h) {
+  const pts = G.history.filter(p => p[1] > 0);
+  if (pts.length < 3)
+    return '<div style="font-size:11px;color:var(--dim);padding:10px 0">' +
+      'Not enough history yet — the curve appears after half a minute of trading.</div>';
+  const t0 = pts[0][0], t1 = Math.max(t0 + 1, pts[pts.length - 1][0]);
+  const vals = pts.map(p => Math.log10(Math.max(1, p[1])));
+  const lo = Math.min(...vals), hi = Math.max(...vals);
+  const span = Math.max(0.25, hi - lo);
+  const px = p => ((p[0] - t0) / (t1 - t0)) * (w - 44) + 38;
+  const py = v => h - 16 - ((v - lo) / span) * (h - 30);
+  const line = pts.map((p, i) => (i ? "L" : "M") + px(p).toFixed(1) + " " +
+    py(vals[i]).toFixed(1)).join(" ");
+  const area = line + " L" + px(pts[pts.length - 1]).toFixed(1) + " " + (h - 16) +
+    " L" + px(pts[0]).toFixed(1) + " " + (h - 16) + " Z";
+  /* one gridline per power of ten inside the range */
+  let grid = "";
+  for (let e = Math.ceil(lo); e <= Math.floor(hi); e++) {
+    const y = py(e).toFixed(1);
+    grid += '<line x1="38" y1="' + y + '" x2="' + (w - 6) + '" y2="' + y +
+      '" stroke="rgba(255,255,255,.08)"/>' +
+      '<text x="34" y="' + (+y + 3) + '" text-anchor="end" font-size="8" ' +
+      'fill="#7d90ab">' + money(Math.pow(10, e)) + '</text>';
+  }
+  const last = pts[pts.length - 1];
+  return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" height="' + h + '" ' +
+    'style="display:block;margin:6px 0 2px">' +
+    '<defs><linearGradient id="wg" x1="0" y1="0" x2="0" y2="1">' +
+    '<stop offset="0" stop-color="var(--gold)" stop-opacity=".35"/>' +
+    '<stop offset="1" stop-color="var(--gold)" stop-opacity="0"/></linearGradient></defs>' +
+    grid +
+    '<path d="' + area + '" fill="url(#wg)"/>' +
+    '<path d="' + line + '" fill="none" stroke="var(--gold)" stroke-width="1.6" ' +
+    'stroke-linejoin="round"/>' +
+    '<circle cx="' + px(last).toFixed(1) + '" cy="' + py(vals[vals.length - 1]).toFixed(1) +
+    '" r="2.6" fill="var(--gold)"/>' +
+    '<text x="' + (w - 6) + '" y="11" text-anchor="end" font-size="9" fill="#7d90ab">' +
+    'NET WORTH · LOG SCALE · ' + Math.round((t1 - t0) / 60) + ' MIN</text></svg>';
+}
+
 function openGoals() {
   const gs = goalState();
   let html = '<h1>Objectives</h1><p>Complete all three to become the undisputed owner of New York City.</p><div class="wins">';
@@ -2871,6 +2988,7 @@ function openGoals() {
       (g.p >= 1 ? "var(--green)" : "var(--gold)") + '"></i></div>' +
       '<div class="kv"><span>Progress</span><b>' + g.v + '</b></div></div>';
   }
+  html += '<h3>Trajectory</h3>' + worthChart(520, 132);
   const got = MILESTONES.filter(m => G.miles && G.miles[m.id]);
   html += '</div><h3>Milestones — ' + got.length + ' / ' + MILESTONES.length + '</h3>' +
     '<div class="lob">' + MILESTONES.map(m => {
@@ -2883,7 +3001,10 @@ function openGoals() {
     '<div class="kv"><span>Gross income</span><b>' + rate(G.grossRate) + '</b></div>' +
     '<div class="kv"><span>Operating costs</span><b>-' + money(G.opexRate) + '/s</b></div>' +
     '<div class="kv"><span>Prestige</span><b>' + Math.floor(G.prestige) + '</b></div>' +
-    '<div class="kv"><span>Audit risk</span><b>' + pct(G.risk) + '</b></div>';
+    '<div class="kv"><span>Audit risk</span><b>' + pct(G.risk) + '</b></div>' +
+    '<div class="kv"><span>Contracts cleared</span><b>' + (G.stats.contracts || 0) + '</b></div>' +
+    '<div class="kv"><span>Blocks bought off rivals</span><b>' + (G.buyouts || 0) + '</b></div>' +
+    '<div class="kv"><span>Public listings</span><b>' + G.legacy.ipos + '</b></div>';
   openModal(html);
 }
 
@@ -2960,7 +3081,7 @@ function openModalHelp() {
     '<h3>Controls</h3>' +
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
-    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>M</kbd> mute · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>M</kbd> mute · <kbd>C</kbd> colour-safe · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
     '<button class="btn" id="a-tut" style="margin-top:10px">Replay The Tutorial' +
     '<span class="d">Eight guided steps through your first block.</span></button>' +
     '<h3>Going Public</h3>' +
@@ -3222,6 +3343,7 @@ document.addEventListener("keydown", e => {
   if (k === "r") openRivals();
   if (k === "b") openBoardroom();
   if (k === "m") toggleAudio();
+  if (k === "c") toggleColourMode();
   if (k === "h") openHelp();
   const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
   if (ovs[k]) setOverlay(ovs[k]);
@@ -3241,6 +3363,7 @@ function setSpeed(s) {
   });
 }
 $("sndbtn").onclick = toggleAudio;
+$("cbbtn").onclick = toggleColourMode;
 $("sp0").onclick = () => setSpeed(0); $("sp1").onclick = () => setSpeed(1);
 $("sp2").onclick = () => setSpeed(2); $("sp3").onclick = () => setSpeed(4);
 $("iclose").onclick = () => select(null);
@@ -3266,6 +3389,7 @@ $("btn-reset").onclick = () => {
 const SAVE_KEY = "nyc-metro-tycoon-v1";
 function save() {
   const d = {
+    v: 10,
     cash: G.cash, prestige: G.prestige, influence: G.influence, risk: G.risk,
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
     tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, lobbyUsed: G.lobbyUsed, miles: G.miles, audits: G.audits,
@@ -3279,31 +3403,67 @@ function save() {
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (err) { /* storage may be blocked */ }
 }
+/** Any number coming back from storage may be missing, null or corrupt — one NaN
+    entering the economy propagates through every derived value silently. */
+function num(v, fallback, lo, hi) {
+  const n = typeof v === "number" ? v : parseFloat(v);
+  if (!Number.isFinite(n)) return fallback;
+  return clamp(n, lo === undefined ? -Infinity : lo, hi === undefined ? Infinity : hi);
+}
+
 function load() {
   let d;
   try { d = JSON.parse(localStorage.getItem(SAVE_KEY) || "null"); } catch (err) { d = null; }
-  if (!d) return false;
+  if (!d || typeof d !== "object") return false;
   Object.assign(G, {
-    cash: d.cash, prestige: d.prestige, influence: d.influence, risk: d.risk,
-    taxRate: d.taxRate, zoneBonus: d.zoneBonus, transitLv: d.transitLv,
-    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {}, lobbyUsed: d.lobbyUsed || {}, miles: d.miles || {}, audits: d.audits || 0,
-    time: d.time || 0, totalEarned: d.totalEarned || 0
+    cash: num(d.cash, 250000),
+    prestige: num(d.prestige, 0, 0),
+    influence: num(d.influence, 0, 0),
+    risk: num(d.risk, 0, 0, 1),
+    taxRate: num(d.taxRate, 0.28, 0.06, 0.6),
+    zoneBonus: num(d.zoneBonus, 0, 0, 6),
+    transitLv: num(d.transitLv, 0, 0, 8),
+    tourismLv: num(d.tourismLv, 0, 0, 6),
+    gentri: num(d.gentri, 0, 0, 20),
+    perks: d.perks || {}, won: d.won || {}, policy: d.policy || {},
+    lobbyUsed: d.lobbyUsed || {}, miles: d.miles || {},
+    audits: num(d.audits, 0, 0),
+    time: num(d.time, 0, 0), totalEarned: num(d.totalEarned, 0, 0)
   });
   G.buyouts = d.buyouts || 0;
   G.stats = Object.assign({ pickups: 0, lobby: 0, contracts: 0 }, d.stats || {});
-  if (d.legacy) G.legacy = Object.assign({ shares: 0, earned: 0, ipos: 0, best: 0, up: {} }, d.legacy);
-  if (d.rivals) for (const rs of d.rivals) {
+  if (d.legacy && typeof d.legacy === "object") {
+    G.legacy = {
+      shares: num(d.legacy.shares, 0, 0), earned: num(d.legacy.earned, 0, 0),
+      ipos: num(d.legacy.ipos, 0, 0), best: num(d.legacy.best, 0, 0),
+      up: (d.legacy.up && typeof d.legacy.up === "object") ? d.legacy.up : {}
+    };
+    for (const k in G.legacy.up) {
+      if (!LEGACY_UP[k]) { delete G.legacy.up[k]; continue; }
+      G.legacy.up[k] = num(G.legacy.up[k], 0, 0, LEGACY_UP[k].max);
+    }
+  }
+  if (Array.isArray(d.rivals)) for (const rs of d.rivals) {
+    if (!rs || typeof rs !== "object") continue;
     const r = rivalById(rs.id);
-    if (r) { r.cash = rs.cash; r.eliminated = rs.eliminated; }
+    if (r) { r.cash = num(rs.cash, 0, 0); r.eliminated = !!rs.eliminated; }
   }
   for (const p of G.plots) { p.rival = null; p.owned = false; p.biz = null; p.level = 0; }
-  for (const s of d.plots) {
+  for (const s of (Array.isArray(d.plots) ? d.plots : [])) {
+    if (!s || typeof s !== "object") continue;
     const p = G.grid[s.y] && G.grid[s.y][s.x];
-    if (!p || p.park) continue;
-    p.biz = s.b; p.level = s.l; p.built = 1;
-    if (s.r) { p.rival = s.r; continue; }
-    p.owned = true; p.up = s.u || { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
-    p.sketchy = s.s; p.mega = s.m;
+    /* a bogus coordinate must not write game state onto a street or the river */
+    if (!p || p.park || p.street || p.water || p.landBase === undefined) continue;
+    if (s.b && !BIZ[s.b]) continue;                 // business type from a future build
+    p.biz = s.b || null;
+    p.level = num(s.l, 0, 0, 15);
+    p.built = 1;
+    if (s.r && RIVAL_DEFS.some(r => r.id === s.r)) { p.rival = s.r; continue; }
+    p.owned = true;
+    p.up = { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+    if (s.u && typeof s.u === "object")
+      for (const k in p.up) p.up[k] = num(s.u[k], 0, 0, UPG[k].max);
+    p.sketchy = !!s.s; p.mega = !!s.m;
   }
   /* offline automation earnings */
   const away = clamp((Date.now() - (d.ts || Date.now())) / 1000, 0, 8 * 3600);
@@ -3378,6 +3538,10 @@ cam.z = cam.tz = 1.22;
 setOverlay("none");
 setSpeed(1);
 try {
+  if (localStorage.getItem("nyc-cb") === "1") CB.on = true;
+} catch (err) { /* storage may be blocked */ }
+applyColourMode();
+try {
   if (localStorage.getItem("nyc-audio") === "0") {
     SFX.on = false;
     $("sndbtn").textContent = "🔇";
@@ -3398,7 +3562,7 @@ requestAnimationFrame(frame);
 window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
   centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp,
   ipoShares, goPublic, legacyRevMult, legacyBuyoutMult, select, acceptOffer, declineOffer,
-  tutStart, tutEnd };
+  tutStart, tutEnd, DISTRICTS, CB };
 window.SFX_TEST = SFX; window.SFX_PLAY = sfx; window.TUT_TEST = TUT;
 </script>
 </body>
