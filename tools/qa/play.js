@@ -12,13 +12,16 @@ function loadPlaywright() {
   process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
 (async () => {
   const b = await chromium.launch();
   const pg = await b.newPage({ viewport: { width: 1600, height: 900 } });
   const errs = [];
   pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
   pg.on('console', m => { if (m.type()==='error') errs.push('CONSOLE ' + m.text()); });
-  await pg.goto('file://' + process.argv[2]);
+  await pg.goto(fileUrl(process.argv[2]));
   await pg.waitForTimeout(1200);
   // give player money and select a cheap brooklyn plot via API-free UI path:
   await pg.evaluate(() => { window.NYC.G.cash = 5e7; });

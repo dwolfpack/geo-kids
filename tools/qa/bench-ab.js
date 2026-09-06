@@ -13,6 +13,9 @@ function loadPlaywright() {
 }
 const { chromium } = loadPlaywright();
 
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
+
 function bot() {
   const N = window.NYC, G = N.G;
   const caps = { wall: 9, times: 8, brooklyn: 7, uptown: 7 };
@@ -66,7 +69,7 @@ const med = a => { const s = a.slice().sort((x,y)=>x-y); return s[Math.floor(s.l
     for (let i = 0; i < N; i++) {
       const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
       const pg = await ctx.newPage();
-      await pg.goto('file://' + file);
+      await pg.goto(fileUrl(file));
       await pg.waitForTimeout(500);
       const r = await pg.evaluate(bot);
       worths.push(r.worth);
@@ -75,7 +78,7 @@ const med = a => { const s = a.slice().sort((x,y)=>x-y); return s[Math.floor(s.l
     for (let i = 0; i < 0; i++) {
       const ctx = await b.newContext({ viewport: { width: 1600, height: 900 } });
       const pg = await ctx.newPage();
-      await pg.goto('file://' + file);
+      await pg.goto(fileUrl(file));
       await pg.waitForTimeout(900);
       await pg.evaluate(fpsProbe);
       await pg.waitForTimeout(9000);

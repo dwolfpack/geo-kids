@@ -12,6 +12,9 @@ function loadPlaywright() {
   process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1600, height: 900 } });
@@ -19,7 +22,7 @@ const { chromium } = loadPlaywright();
   const errs = [];
   pg.on('pageerror', e => errs.push(e.message));
   pg.on('dialog', d => d.accept());
-  await pg.goto('file://' + process.argv[2]);
+  await pg.goto(fileUrl(process.argv[2]));
   await pg.waitForTimeout(900);
 
   const out = await pg.evaluate(() => {

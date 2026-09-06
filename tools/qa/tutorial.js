@@ -12,6 +12,9 @@ function loadPlaywright() {
   process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
 (async () => {
   const b = await chromium.launch();
   const ctx = await b.newContext({ viewport: { width: 1600, height: 900 } });
@@ -20,7 +23,7 @@ const { chromium } = loadPlaywright();
   pg.on('pageerror', e => errs.push('PAGEERROR ' + e.message));
   pg.on('console', m => { if (m.type()==='error') errs.push('CONSOLE ' + m.text()); });
   pg.on('dialog', d => d.accept());
-  await pg.goto('file://' + process.argv[2]);      // fresh context = genuine first-time player
+  await pg.goto(fileUrl(process.argv[2]));      // fresh context = genuine first-time player
   await pg.waitForTimeout(1600);
 
   // --- TUTORIAL: does it appear for a new player and gate on real actions? ---

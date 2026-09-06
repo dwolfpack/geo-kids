@@ -12,13 +12,16 @@ function loadPlaywright() {
   process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
 (async () => {
   const b = await chromium.launch();
   const pg = await b.newPage({ viewport: { width: 1600, height: 900 } });
   const errs = [];
   pg.on('console', m => { if (m.type() === 'error' || m.type()==='warning') errs.push(m.type()+': '+m.text()); });
   pg.on('pageerror', e => errs.push('PAGEERROR: ' + e.message));
-  await pg.goto('file://' + process.argv[2]);
+  await pg.goto(fileUrl(process.argv[2]));
   await pg.waitForTimeout(2500);
   const info = await pg.evaluate(() => {
     const N = window.NYC; if (!N) return { fatal: 'no NYC hook' };

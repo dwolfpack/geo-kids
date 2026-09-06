@@ -12,6 +12,9 @@ function loadPlaywright() {
   process.exit(2);
 }
 const { chromium } = loadPlaywright();
+
+/* Accept relative or absolute paths for the target HTML. */
+const fileUrl = p => 'file://' + path.resolve(p);
 const CASES = {
   'empty string':        '',
   'not json':            '{{{',
@@ -38,7 +41,7 @@ const CASES = {
     const pg = await ctx.newPage();
     const errs = [];
     pg.on('pageerror', e => errs.push(e.message));
-    await pg.goto('file://' + process.argv[2]);
+    await pg.goto(fileUrl(process.argv[2]));
     await pg.waitForTimeout(1200);
     const st = await pg.evaluate(() => {
       const N = window.NYC, G = N.G;
