@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NYC Metro Tycoon — Panel Specimens</title>
+<!--
+  ===========================================================================
+  NYC METRO TYCOON — INFORMATION PANEL SPECIMENS
+  Standalone. No dependencies, no build step, no external fonts, file:// safe.
+  NOTHING here is wired to the game; this is a visual + markup reference for
+  integration back into nyc-tycoon.html.
+
+  ---------------------------------------------------------------------------
+  INTEGRATION NOTE — which game function renders each card, and what it replaces
+  ---------------------------------------------------------------------------
+  CARD 1  SELECTED BLOCK ("TIMES SQUARE")
+      Rendered by: renderInspector()  (nyc-tycoon.html ~line 2250), writing into
+      #ibody, with #ihead .tag / h2 / .sub above it.
+      Replaces:  .kv rows and the leading .btn of the "developed plot" branch.
+      New classes: .card .ceyebrow .ctitle .csub .kvlist .kv (restyled) .kv .note
+                   .btn--primary (the full-width "UPGRADE & DEVELOP" CTA).
+      .kv keeps its exact DOM shape (<div class="kv"><span>..</span><b>..</b>),
+      so existing string-built rows work unchanged; the optional breakdown is a
+      new <small> inside the <b>.
+
+  CARD 2  MAJOR SUBWAY STATION
+      Rendered by: renderInspector() as well — the transit/landmark branch of the
+      same inspector (it is the same right-hand panel, different selection).
+      Replaces:  a run of .kv rows plus the .up micro-upgrade rows used for
+      transit actions.
+      New classes: .cmp .cmp-col .cmp-arrow (current -> projected two-column),
+                   .costben (the Subway Expansion cost/benefit block),
+                   .iconbtns + .ibtn (2x2 icon button grid, replaces .up rows
+                   where the action has no pip meter).
+
+  CARD 3  DISTRICT POLICY CHOOSER ("GARMENT DISTRICT")
+      Rendered by: openDistrict(id)  (~line 2907), inside .mbox.
+      Replaces:  .lob / .lobc grid of policy cards, and the loose .kv list.
+      New classes: .split (policy column + financials column),
+                   .pol (selectable policy row; replaces .lobc for policies —
+                   .lobc stays for openLobby()'s City Hall grid),
+                   .pol.on / .pol.dis, .pol-eff (the two est.-effect figures),
+                   .fin .fin-row .fin-total (FINANCIALS column).
+
+  CARD 4  LANDMARK CONSTRUCTION ("NEW AMSTERDAM CENTER")
+      Rendered by: openBoardroom()  (~line 640) for the legacy/landmark modal,
+      and renderInspector() for the in-progress block it points at.
+      Replaces:  .wc win-condition cards and the .bar/.bar i progress element;
+      the three actions replace stacked .btn blocks, the list replaces .ccard.
+      New classes: .prog .prog-track .prog-fill .prog-pct, .btnrow,
+                   .lmlist .lmlist-row (SPECIAL LANDMARKS).
+
+  Also replaced globally: .btn gains explicit :hover / :active / :disabled
+  treatments and a mandatory .btn-why line on every disabled button (see
+  "BUTTON STATES" strip at the bottom of the page).
+
+  ---------------------------------------------------------------------------
+  TOKENS
+  ---------------------------------------------------------------------------
+  Reused verbatim from nyc-tycoon.html :root —
+    --bg --panel --panel2 --line --line2 --txt --dim
+    --gold --green --red --cyan --violet --orange
+    --wall --times --brook --uptown
+  New tokens introduced here (same naming style, all defined in :root below) —
+    --panel3   card interior fill, one step above --panel2 (rows, wells)
+    --line3    hairline for inner rules, dimmer than --line
+    --edge     1px top inner highlight that lifts a card off the map
+    --dim2     brighter dim, for small text that must still clear WCAG AA
+    --focus    focus-ring colour (keyboard), derived from --cyan
+    --shade    the standard drop shadow for a floating card
+    --glass    backdrop blur amount for translucent panels
+  ===========================================================================
+-->
+<style>
+:root{
+  /* --- from nyc-tycoon.html, unchanged --- */
+  --bg:#080b12; --panel:rgba(12,17,26,0.92); --panel2:rgba(18,25,38,0.95);
+  --line:#1e2a3d; --line2:#2c3d57;
+  --txt:#dbe6f5; --dim:#7d90ab; --gold:#ffcf4a; --green:#3ce88f; --red:#ff5c6b;
+  --cyan:#48d8ff; --violet:#b07dff; --orange:#ff9d3c;
+  --wall:#48d8ff; --times:#ff4fa3; --brook:#ff9d3c; --uptown:#8ef0a8;
+  /* --- new --- */
+  --panel3:rgba(26,35,52,0.92);
+  --line3:#17202f;
+  --edge:rgba(160,200,255,0.10);
+  --dim2:#9fb2cc;
+  --focus:#48d8ff;
+  --shade:0 18px 48px rgba(0,0,0,.62);
+  --glass:blur(14px) saturate(1.15);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{min-height:100%}
+body{
+  background:var(--bg); color:var(--txt);
+  font-family:"Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+  padding:22px; overflow-x:hidden;
+}
+
+/* ============ PLACEHOLDER AERIAL MAP (stand-in for the canvas) ============ */
+#map{position:fixed;inset:0;z-index:-1;overflow:hidden;
+  background:
+    radial-gradient(1200px 700px at 22% 8%, rgba(255,190,120,.13), transparent 62%),
+    radial-gradient(900px 900px at 84% 92%, rgba(72,216,255,.10), transparent 60%),
+    linear-gradient(168deg,#0d1524 0%,#0a1019 46%,#070a11 100%);}
+#map .grid{position:absolute;inset:-20%;
+  background-image:
+    repeating-linear-gradient(74deg, rgba(150,180,220,.075) 0 1px, transparent 1px 46px),
+    repeating-linear-gradient(164deg, rgba(150,180,220,.055) 0 1px, transparent 1px 74px);
+  transform:rotate(-4deg);}
+#map .river{position:absolute;right:-8%;top:-14%;width:34%;height:135%;
+  background:linear-gradient(100deg, rgba(30,70,110,.55), rgba(16,40,66,.35));
+  transform:rotate(9deg);filter:blur(2px);}
+#map .park{position:absolute;left:16%;top:6%;width:9%;height:40%;
+  background:rgba(80,150,95,.20);transform:rotate(-4deg);border:1px solid rgba(120,200,140,.18)}
+#map .blk{position:absolute;border-radius:2px;
+  background:linear-gradient(150deg, rgba(190,210,235,.16), rgba(90,110,140,.05));
+  box-shadow:14px 22px 26px rgba(0,0,0,.55);}
+#map .zone{position:absolute;border-radius:3px;}
+#map .zone.a{background:rgba(72,150,255,.22);border:1px solid rgba(120,190,255,.7);
+  box-shadow:0 0 22px rgba(72,150,255,.35)}
+#map .zone.b{background:rgba(255,79,163,.20);border:1px solid rgba(255,140,200,.75);
+  box-shadow:0 0 22px rgba(255,79,163,.35)}
+#map .haze{position:absolute;inset:0;
+  background:linear-gradient(180deg, rgba(12,20,34,.30), rgba(6,9,15,.72));}
+
+/* ============================ PAGE FURNITURE ============================= */
+.pagehead{max-width:1232px;margin:0 auto 18px;display:flex;align-items:baseline;
+  gap:14px;flex-wrap:wrap}
+.pagehead h1{font-size:15px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+.pagehead p{font-size:11.5px;color:var(--dim2)}
+.wrap{max-width:1232px;margin:0 auto;display:grid;gap:16px;align-items:start;
+  grid-template-columns:340px 400px 460px;}
+#card-block{grid-column:1}
+#card-transit{grid-column:2}
+#card-landmark{grid-column:3}
+#card-district{grid-column:1 / -1}
+#states{grid-column:1 / -1}
+
+/* ================================= CARD ================================= */
+.card{position:relative;background:var(--panel);border:1px solid var(--line2);
+  border-radius:12px;padding:14px 15px 15px;box-shadow:var(--shade);
+  backdrop-filter:var(--glass);-webkit-backdrop-filter:var(--glass);}
+.card::before{content:"";position:absolute;inset:0 0 auto;height:1px;border-radius:12px 12px 0 0;
+  background:linear-gradient(90deg,transparent,var(--edge) 22%,var(--edge) 78%,transparent)}
+.ceyebrow{font-size:9px;letter-spacing:.20em;text-transform:uppercase;color:var(--dim2)}
+.ctitle{font-size:21px;font-weight:800;letter-spacing:.01em;line-height:1.1;margin-top:4px}
+.csub{font-size:11px;color:var(--dim2);margin-top:3px}
+.ctag{font-size:11px;color:var(--dim2);margin-top:2px}
+.sechead{font-size:9px;letter-spacing:.18em;color:var(--dim2);text-transform:uppercase;
+  margin:15px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--line)}
+.chip{display:inline-block;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
+  padding:2px 7px;border-radius:99px;border:1px solid var(--line2);color:var(--dim2);
+  vertical-align:middle}
+.chip.times{color:#ff8dc4;border-color:rgba(255,79,163,.55);background:rgba(255,79,163,.10)}
+.chip.warn{color:var(--orange);border-color:rgba(255,157,60,.5);background:rgba(255,157,60,.10)}
+
+/* =============================== KV ROWS ================================ */
+.kvlist{margin-top:12px;border-top:1px solid var(--line3)}
+.kv{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
+  font-size:12px;padding:7px 0;border-bottom:1px solid var(--line3)}
+.kv>span:first-child{color:var(--dim2);white-space:nowrap;padding-top:1px}
+.kv b{font-weight:700;text-align:right;font-variant-numeric:tabular-nums;line-height:1.25}
+.kv b .note{display:block;font-size:9.5px;font-weight:400;color:var(--dim2);margin-top:2px;
+  letter-spacing:.02em}
+.pos{color:var(--green)} .neg{color:var(--red)} .money{color:var(--gold)}
+.cy{color:var(--cyan)} .vi{color:var(--violet)} .or{color:var(--orange)}
+
+/* =============================== BUTTONS ================================ */
+.btn{display:block;width:100%;text-align:left;padding:10px 12px;margin-bottom:8px;
+  border-radius:7px;border:1px solid var(--line2);background:#101a29;color:var(--txt);
+  font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;
+  font-variant-numeric:tabular-nums;transition:background .12s,border-color .12s,transform .08s}
+.btn .c{float:right;color:var(--gold);font-weight:700}
+.btn .d{display:block;clear:both;font-size:10px;font-weight:400;color:var(--dim2);margin-top:4px}
+.btn:hover:not(:disabled),.btn.is-hover{background:#16263c;border-color:var(--cyan);transform:translateY(-1px)}
+.btn:active:not(:disabled),.btn.is-active{background:#0b1421;border-color:var(--cyan);
+  transform:translateY(1px);box-shadow:inset 0 2px 7px rgba(0,0,0,.6)}
+.btn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.btn:disabled,.btn.is-disabled{cursor:not-allowed;background:#0b1119;border-color:var(--line);
+  color:var(--dim2);transform:none;box-shadow:none}
+.btn:disabled .c,.btn.is-disabled .c{color:var(--dim2)}
+/* A disabled button must always say WHY — the game re-enables live on affordability. */
+.btn-why{display:block;clear:both;font-size:10px;font-weight:600;color:var(--orange);
+  margin-top:5px;letter-spacing:.01em}
+.btn-why::before{content:"⚠ ";font-weight:400}
+
+.btn--primary{text-align:center;font-size:13px;font-weight:800;letter-spacing:.10em;
+  text-transform:uppercase;padding:13px 12px;margin-top:14px;margin-bottom:0;
+  background:linear-gradient(90deg,#0d3b2a,#12684a);border-color:#1f8a5f;color:#eafff4}
+.btn--primary:hover:not(:disabled),.btn--primary.is-hover{
+  background:linear-gradient(90deg,#12553c,#17845d);border-color:var(--green)}
+.btn--primary:active:not(:disabled),.btn--primary.is-active{
+  background:linear-gradient(90deg,#0a2d20,#0e4c37);border-color:var(--green)}
+.btn--primary:disabled,.btn--primary.is-disabled{background:#111a20;border-color:#263a44;color:var(--dim2)}
+.btn--primary .sub{display:block;font-size:10px;font-weight:600;letter-spacing:.04em;
+  text-transform:none;color:rgba(234,255,244,.72);margin-top:4px}
+.btn--primary:disabled .sub{color:var(--dim2)}
+.btn.danger{background:#2a0f14;border-color:#5c2029}
+.btn.danger:hover:not(:disabled){border-color:var(--red);background:#3a151c}
+
+/* ===================== CARD 2 — CURRENT vs PROJECTED ==================== */
+.cmp{display:grid;grid-template-columns:1fr 20px 1fr;gap:6px;align-items:stretch;margin-top:12px}
+.cmp-col{background:var(--panel3);border:1px solid var(--line);border-radius:8px;padding:9px 10px}
+.cmp-col.proj{border-color:rgba(72,216,255,.42);background:rgba(20,44,62,.55)}
+.cmp-col h4{font-size:8.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);
+  margin-bottom:7px}
+.cmp-col.proj h4{color:var(--cyan)}
+.cmp-row{display:flex;justify-content:space-between;gap:8px;font-size:11px;padding:3px 0}
+.cmp-row span{color:var(--dim2)}
+.cmp-row b{font-weight:700}
+.cmp-arrow{display:grid;place-items:center;color:var(--cyan);font-size:14px;opacity:.85}
+.costben{margin-top:11px;background:var(--panel3);border:1px solid var(--line2);
+  border-left:2px solid var(--cyan);border-radius:8px;padding:9px 11px}
+.costben .t{font-size:11px;font-weight:700;margin-bottom:5px}
+.costben .l{display:flex;justify-content:space-between;font-size:11px;padding:2.5px 0}
+.costben .l span{color:var(--dim2)}
+.iconbtns{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:11px}
+.ibtn{display:flex;flex-direction:column;align-items:center;gap:5px;padding:10px 6px;
+  border-radius:8px;border:1px solid var(--line2);background:#101a29;color:var(--txt);
+  font-family:inherit;font-size:9.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  text-align:center;cursor:pointer;transition:background .12s,border-color .12s,transform .08s}
+.ibtn .g{font-size:19px;line-height:1}
+.ibtn .p{font-size:10px;font-weight:700;color:var(--gold);letter-spacing:0;text-transform:none}
+.ibtn:hover:not(:disabled),.ibtn.is-hover{background:#16263c;border-color:var(--cyan);transform:translateY(-1px)}
+.ibtn:active:not(:disabled),.ibtn.is-active{background:#0b1421;transform:translateY(1px);
+  box-shadow:inset 0 2px 7px rgba(0,0,0,.6)}
+.ibtn:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.ibtn:disabled,.ibtn.is-disabled{cursor:not-allowed;background:#0b1119;border-color:var(--line);
+  color:var(--dim2);transform:none}
+.ibtn:disabled .p,.ibtn.is-disabled .p{color:var(--dim2)}
+.ibtn .why{font-size:9px;font-weight:600;color:var(--orange);letter-spacing:0;text-transform:none;
+  line-height:1.25}
+
+/* ================= CARD 3 — POLICY CHOOSER + FINANCIALS ================= */
+.split{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(230px,.85fr);gap:16px;margin-top:12px}
+.pols{display:grid;gap:7px}
+.pol{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;
+  width:100%;text-align:left;padding:9px 11px;border-radius:8px;border:1px solid var(--line);
+  background:var(--panel3);color:var(--txt);font-family:inherit;cursor:pointer;
+  transition:background .12s,border-color .12s,transform .08s}
+.pol .ic{width:34px;height:34px;border-radius:7px;display:grid;place-items:center;font-size:16px;
+  background:rgba(72,216,255,.10);border:1px solid var(--line2)}
+.pol .t{display:block;font-size:12.5px;font-weight:700}
+.pol .s{display:block;font-size:10px;color:var(--dim2);margin-top:2px;line-height:1.35}
+.pol-eff{display:flex;gap:14px;text-align:right}
+.pol-eff div{font-size:9px;color:var(--dim2);letter-spacing:.06em;text-transform:uppercase;
+  white-space:nowrap}
+.pol-eff b{display:block;font-size:13px;font-weight:800;margin-top:2px;letter-spacing:0;
+  text-transform:none}
+.pol:hover:not(.dis),.pol.is-hover{border-color:var(--line2);background:#182337;transform:translateX(2px)}
+.pol:active:not(.dis),.pol.is-active{transform:translateX(2px) scale(.995);background:#101a29}
+.pol:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.pol.on{border-color:var(--times);background:rgba(255,79,163,.10);box-shadow:0 0 0 1px rgba(255,79,163,.28)}
+.pol.on .ic{background:rgba(255,79,163,.16);border-color:rgba(255,79,163,.5)}
+.pol.on .t::after{content:" ✔";color:var(--times)}
+.pol.dis{cursor:not-allowed;background:#0b1119;border-color:var(--line);color:var(--dim2)}
+.pol.dis .ic{opacity:.5}
+.pol.dis .why{display:block;font-size:9.5px;font-weight:600;color:var(--orange);margin-top:3px}
+.fin{background:var(--panel3);border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+.fin h4{font-size:9px;letter-spacing:.20em;text-transform:uppercase;color:var(--dim2);
+  padding-bottom:7px;border-bottom:1px solid var(--line);margin-bottom:4px}
+.fin-row{display:flex;justify-content:space-between;gap:10px;font-size:11.5px;padding:5px 0}
+.fin-row span{color:var(--dim2)}
+.fin-row b{font-weight:700}
+.fin-total{display:flex;justify-content:space-between;gap:10px;margin-top:7px;padding-top:8px;
+  border-top:1px solid var(--line2);font-size:12.5px}
+.fin-total span{color:var(--txt);font-weight:700;letter-spacing:.08em;text-transform:uppercase;font-size:10px;
+  align-self:center}
+.fin-total b{font-size:16px;font-weight:800}
+
+/* ================== CARD 4 — LANDMARK CONSTRUCTION ===================== */
+.prog{margin-top:13px}
+.prog-head{display:flex;justify-content:space-between;align-items:baseline;font-size:11px}
+.prog-head>span:first-child{color:var(--dim2)}
+.prog-pct{font-size:15px;font-weight:800;color:var(--orange)}
+.prog-track{height:8px;border-radius:5px;background:#131c2a;border:1px solid var(--line);
+  margin-top:6px;overflow:hidden}
+.prog-fill{display:block;height:100%;border-radius:4px;
+  background:linear-gradient(90deg,var(--orange),var(--gold))}
+.prog-note{font-size:10px;color:var(--dim2);margin-top:5px}
+.btnrow{margin-top:14px}
+.lmlist{margin-top:6px;background:var(--panel3);border:1px solid var(--line);border-radius:9px;
+  padding:5px 11px 8px}
+.lmlist h4{font-size:9px;letter-spacing:.20em;text-transform:uppercase;color:var(--dim2);
+  padding:6px 0 6px;border-bottom:1px solid var(--line)}
+.lmlist-row{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  font-size:11px;padding:6px 0;border-bottom:1px solid var(--line3)}
+.lmlist-row:last-child{border-bottom:0}
+.lmlist-row .n{display:flex;align-items:center;gap:7px}
+.lmlist-row .st{font-size:9.5px;letter-spacing:.10em;text-transform:uppercase;color:var(--dim2)}
+.lmlist-row .st.done{color:var(--green)} .lmlist-row .st.live{color:var(--orange)}
+
+/* ============================ STATES STRIP ============================== */
+#states .row4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+#states .lbl{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim2);
+  margin-bottom:6px}
+
+/* =============================== MOTION ================================= */
+@media (prefers-reduced-motion: reduce){
+  *{transition:none!important;animation:none!important}
+  .btn:hover:not(:disabled),.btn.is-hover,.btn:active:not(:disabled),.btn.is-active,
+  .ibtn:hover:not(:disabled),.ibtn.is-hover,.ibtn:active:not(:disabled),.ibtn.is-active,
+  .pol:hover:not(.dis),.pol.is-hover,.pol:active:not(.dis),.pol.is-active{transform:none!important}
+}
+
+/* ============================== RESPONSIVE ============================== */
+@media (max-width:1240px){
+  .wrap{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  #card-block{grid-column:1}#card-transit{grid-column:2}
+  #card-landmark{grid-column:1 / -1}#card-district{grid-column:1 / -1}
+  #states .row4{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:820px){
+  body{padding:0 0 18px}
+  .pagehead{padding:16px 14px 0}
+  .wrap{grid-template-columns:minmax(0,1fr);gap:0}
+  .wrap>*{grid-column:1!important}
+  /* Phone: every card is a full-width bottom sheet. */
+  .card{border-radius:16px 16px 0 0;border-left:0;border-right:0;border-bottom:0;
+    padding:8px 15px 20px;margin-top:14px;box-shadow:0 -14px 40px rgba(0,0,0,.6)}
+  .card::after{content:"";position:absolute;left:50%;top:7px;width:38px;height:4px;
+    margin-left:-19px;border-radius:2px;background:var(--line2)}
+  .card>.ceyebrow{margin-top:12px}
+  .ctitle{font-size:19px}
+  .split{grid-template-columns:minmax(0,1fr);gap:12px}
+  .cmp{grid-template-columns:1fr;gap:7px}
+  .cmp-arrow{transform:rotate(90deg);height:16px}
+  .pol{grid-template-columns:30px minmax(0,1fr);row-gap:7px}
+  .pol .ic{width:30px;height:30px}
+  .pol-eff{grid-column:1 / -1;justify-content:flex-start;text-align:left;gap:20px}
+  #states .row4{grid-template-columns:minmax(0,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div id="map" aria-hidden="true">
+  <div class="grid"></div>
+  <div class="river"></div>
+  <div class="park"></div>
+  <div class="blk" style="left:31%;top:18%;width:5.5%;height:9%"></div>
+  <div class="blk" style="left:39%;top:26%;width:7%;height:6%"></div>
+  <div class="blk" style="left:26%;top:47%;width:6%;height:12%"></div>
+  <div class="blk" style="left:47%;top:12%;width:4.5%;height:15%"></div>
+  <div class="blk" style="left:53%;top:44%;width:8%;height:7%"></div>
+  <div class="blk" style="left:12%;top:62%;width:9%;height:8%"></div>
+  <div class="blk" style="left:62%;top:66%;width:6%;height:10%"></div>
+  <div class="zone a" style="left:36%;top:36%;width:11%;height:9%"></div>
+  <div class="zone b" style="left:50%;top:24%;width:8%;height:11%"></div>
+  <div class="zone a" style="left:18%;top:74%;width:13%;height:7%"></div>
+  <div class="haze"></div>
+</div>
+
+<div class="pagehead">
+  <h1>Panel Specimens</h1>
+  <p>Four information cards over a placeholder aerial. Numbers use the game's <code>money()</code> format.</p>
+</div>
+
+<div class="wrap">
+
+  <!-- ============ CARD 1 — SELECTED BLOCK (renderInspector) ============ -->
+  <section class="card" id="card-block" aria-labelledby="c1t">
+    <div class="ceyebrow">Selected Block</div>
+    <h2 class="ctitle" id="c1t">TIMES SQUARE</h2>
+    <div class="csub">Theatre District · Tier 4 / 9 <span class="chip times">Specialty</span></div>
+
+    <div class="kvlist">
+      <div class="kv"><span>Zone Type</span><b>Commercial · C6&#8209;4</b></div>
+      <div class="kv"><span>Land Value</span><b class="money" data-money="4820000"></b></div>
+      <div class="kv"><span>Current Revenue</span>
+        <b class="pos"><span data-money="1240000"></span>/s<span class="note">Retail + Ads</span></b></div>
+      <div class="kv"><span>Potential Revenue</span>
+        <b class="cy"><span data-money="3060000"></span>/s<span class="note">At tier 5 · +147%</span></b></div>
+      <div class="kv"><span>Operating Cost</span>
+        <b class="neg">-<span data-money="286000"></span>/s</b></div>
+      <div class="kv"><span>Synergy</span><b>×1.34<span class="note">4 adjacent retail blocks</span></b></div>
+    </div>
+
+    <button class="btn btn--primary">Upgrade &amp; Develop
+      <span class="sub">Tier 5 · Grand Marquee — <span data-money="2400000"></span></span></button>
+  </section>
+
+  <!-- ========== CARD 2 — MAJOR SUBWAY STATION (renderInspector) ========= -->
+  <section class="card" id="card-transit" aria-labelledby="c2t">
+    <div class="ceyebrow">Transit Node</div>
+    <h2 class="ctitle" id="c2t">MAJOR SUBWAY STATION</h2>
+    <div class="csub">42nd St &ndash; Times Sq · lines 1 2 3 7 N Q R W S</div>
+
+    <div class="cmp">
+      <div class="cmp-col">
+        <h4>Current</h4>
+        <div class="cmp-row"><span>Pass/hr</span><b>11,200</b></div>
+        <div class="cmp-row"><span>Congestion</span><b class="neg">High</b></div>
+        <div class="cmp-row"><span>Revenue</span><b class="money"><span data-money="155000"></span>/mo</b></div>
+      </div>
+      <div class="cmp-arrow" aria-hidden="true">&#10230;</div>
+      <div class="cmp-col proj">
+        <h4>Projected</h4>
+        <div class="cmp-row"><span>Pass/hr</span><b class="pos">13,204</b></div>
+        <div class="cmp-row"><span>Congestion</span><b class="or">Moderate</b></div>
+        <div class="cmp-row"><span>Revenue</span><b class="money"><span data-money="198000"></span>/mo</b></div>
+      </div>
+    </div>
+
+    <div class="costben">
+      <div class="t">Subway Expansion</div>
+      <div class="l"><span>Est. cost</span><b class="money" data-money="8600000"></b></div>
+      <div class="l"><span>Benefit</span><b class="pos">+18% foot traffic, district&#8209;wide</b></div>
+      <div class="l"><span>Payback</span><b>16 months</b></div>
+    </div>
+
+    <div class="sechead">Local Improvements</div>
+    <div class="iconbtns">
+      <button class="ibtn"><span class="g" aria-hidden="true">🚌</span>Add Bus Route
+        <span class="p" data-money="640000"></span></button>
+      <button class="ibtn"><span class="g" aria-hidden="true">🚶</span>Expand Sidewalk
+        <span class="p" data-money="215000"></span></button>
+      <button class="ibtn" disabled><span class="g" aria-hidden="true">🅿️</span>Build Parking Garage
+        <span class="p" data-money="12700000"></span>
+        <span class="why">Needs <span data-money="12700000"></span> — you hold <span data-money="9180000"></span></span></button>
+      <button class="ibtn"><span class="g" aria-hidden="true">🚕</span>Taxi Fleet
+        <span class="p" data-money="1240000"></span></button>
+    </div>
+  </section>
+
+  <!-- ======= CARD 4 — LANDMARK CONSTRUCTION (openBoardroom / insp) ====== -->
+  <section class="card" id="card-landmark" aria-labelledby="c4t">
+    <div class="ceyebrow">Landmark Construction</div>
+    <h2 class="ctitle" id="c4t">NEW AMSTERDAM CENTER</h2>
+    <div class="ctag">(Landmark Mixed Use)</div>
+
+    <div class="prog">
+      <div class="prog-head"><span>Progress</span><span class="prog-pct">15% Complete</span></div>
+      <div class="prog-track"><i class="prog-fill" style="width:15%"></i></div>
+      <div class="prog-note">Topping out in 34 months at the current pace.</div>
+    </div>
+
+    <div class="kvlist">
+      <div class="kv"><span>Est. Cost</span><b class="money" data-money="1240000000"></b></div>
+      <div class="kv"><span>Spent To Date</span><b><span data-money="186000000"></span><span class="note">15% of budget</span></b></div>
+      <div class="kv"><span>Revenue Boost</span><b class="pos">+<span data-money="12700000"></span>/s<span class="note">Once occupancy clears 60%</span></b></div>
+      <div class="kv"><span>Prestige</span><b class="vi">+0.480/s</b></div>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn" disabled>Accelerate Construction <span class="c" data-money="340000000"></span>
+        <span class="d">Doubles the build rate for six months.</span>
+        <span class="btn-why">Needs <span data-money="340000000"></span> — you hold <span data-money="9180000"></span></span></button>
+      <button class="btn">Advertise Tenancies <span class="c" data-money="24000000"></span>
+        <span class="d">Pre-lets 20% of the floorplate; revenue starts at topping out.</span></button>
+      <button class="btn">Host Fundraiser <span class="c">2.0 influence</span>
+        <span class="d">A gala for the board. Trades influence for construction credit.</span></button>
+    </div>
+
+    <div class="lmlist">
+      <h4>Special Landmarks</h4>
+      <div class="lmlist-row"><span class="n"><span aria-hidden="true">🗽</span> Liberty Overlook</span>
+        <span class="st done">Complete</span></div>
+      <div class="lmlist-row"><span class="n"><span aria-hidden="true">🏗️</span> New Amsterdam Center</span>
+        <span class="st live">Building · 15%</span></div>
+      <div class="lmlist-row"><span class="n"><span aria-hidden="true">🏛️</span> Beaux&#8209;Arts Terminal</span>
+        <span class="st">Locked · needs 40 blocks</span></div>
+      <div class="lmlist-row"><span class="n"><span aria-hidden="true">🏙️</span> Empire State Megatower</span>
+        <span class="st">Locked · <span data-money="8000000000"></span></span></div>
+    </div>
+  </section>
+
+  <!-- ========= CARD 3 — DISTRICT POLICY CHOOSER (openDistrict) ========== -->
+  <section class="card" id="card-district" aria-labelledby="c3t">
+    <div class="ceyebrow">District Management</div>
+    <h2 class="ctitle" id="c3t">GARMENT DISTRICT: <span style="color:var(--dim2);font-weight:600">Select A Policy</span></h2>
+    <div class="csub">18 blocks · 11 owned · one policy active at a time</div>
+
+    <div class="split">
+      <div class="pols">
+        <button class="pol on">
+          <span class="ic" aria-hidden="true">🛍️</span>
+          <span><span class="t">Promote High End Retail</span>
+            <span class="s">Rezones the avenue frontage for flagship stores.</span></span>
+          <span class="pol-eff">
+            <div>Est. Revenue Increase<b class="pos">8%</b></div>
+            <div>Est. Job Growth<b class="cy">5%</b></div>
+          </span>
+        </button>
+        <button class="pol">
+          <span class="ic" aria-hidden="true">🧪</span>
+          <span><span class="t">Establish Tech Incubator</span>
+            <span class="s">Subsidised floorplate for early-stage tenants.</span></span>
+          <span class="pol-eff">
+            <div>Est. Revenue Increase<b class="pos">5%</b></div>
+            <div>Est. Job Growth<b class="cy">14%</b></div>
+          </span>
+        </button>
+        <button class="pol">
+          <span class="ic" aria-hidden="true">🎭</span>
+          <span><span class="t">Encourage Art &amp; Culture</span>
+            <span class="s">Grants for galleries and theatres. Slow, compounding.</span></span>
+          <span class="pol-eff">
+            <div>Est. Revenue Increase<b class="pos">3%</b></div>
+            <div>Est. Job Growth<b class="cy">7%</b></div>
+          </span>
+        </button>
+        <button class="pol dis" disabled>
+          <span class="ic" aria-hidden="true">🏭</span>
+          <span><span class="t">Deregulate Manufacturing</span>
+            <span class="s">Lifts the height cap by one tier; raises audit risk.</span>
+            <span class="why">Needs 4.0 influence — you have 2.6</span></span>
+          <span class="pol-eff">
+            <div>Est. Revenue Increase<b>11%</b></div>
+            <div>Est. Job Growth<b>2%</b></div>
+          </span>
+        </button>
+      </div>
+
+      <div class="fin">
+        <h4>Financials</h4>
+        <div class="fin-row"><span>Retail &amp; frontage</span><b class="pos" data-money="2860000"></b></div>
+        <div class="fin-row"><span>Office leases</span><b class="pos" data-money="1940000"></b></div>
+        <div class="fin-row"><span>Ad hoardings</span><b class="pos" data-money="412000"></b></div>
+        <div class="fin-row"><span>Policy subsidy</span><b class="neg">-<span data-money="180000"></span></b></div>
+        <div class="fin-row"><span>Maintenance</span><b class="neg">-<span data-money="624000"></span></b></div>
+        <div class="fin-row"><span>Corporate tax (14%)</span><b class="neg">-<span data-money="686000"></span></b></div>
+        <div class="fin-total"><span>Net / sec</span><b class="pos">+<span data-money="3722000"></span></b></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================ STATES ============================== -->
+  <section class="card" id="states" aria-labelledby="stt">
+    <div class="ceyebrow">Reference</div>
+    <h2 class="ctitle" id="stt" style="font-size:16px">BUTTON STATES</h2>
+    <div class="csub">Rendered with forced state classes so all four are visible at once.
+      Live buttons use the real <code>:hover</code> / <code>:active</code> / <code>:disabled</code> rules.</div>
+    <div class="row4">
+      <div><div class="lbl">Default</div>
+        <button class="btn">Acquire Deed <span class="c" data-money="4820000"></span>
+          <span class="d">Take ownership of this block.</span></button></div>
+      <div><div class="lbl">Hover</div>
+        <button class="btn is-hover">Acquire Deed <span class="c" data-money="4820000"></span>
+          <span class="d">Take ownership of this block.</span></button></div>
+      <div><div class="lbl">Pressed</div>
+        <button class="btn is-active">Acquire Deed <span class="c" data-money="4820000"></span>
+          <span class="d">Take ownership of this block.</span></button></div>
+      <div><div class="lbl">Disabled — with reason</div>
+        <button class="btn is-disabled" disabled>Acquire Deed <span class="c" data-money="4820000"></span>
+          <span class="d">Take ownership of this block.</span>
+          <span class="btn-why">Needs <span data-money="4820000"></span> — you hold <span data-money="9180000" data-money-alt="1860000"></span></span></button></div>
+    </div>
+    <div class="row4">
+      <div><div class="lbl">Primary — default</div>
+        <button class="btn btn--primary" style="margin-top:0">Upgrade &amp; Develop
+          <span class="sub">Tier 5 — <span data-money="2400000"></span></span></button></div>
+      <div><div class="lbl">Primary — hover</div>
+        <button class="btn btn--primary is-hover" style="margin-top:0">Upgrade &amp; Develop
+          <span class="sub">Tier 5 — <span data-money="2400000"></span></span></button></div>
+      <div><div class="lbl">Primary — pressed</div>
+        <button class="btn btn--primary is-active" style="margin-top:0">Upgrade &amp; Develop
+          <span class="sub">Tier 5 — <span data-money="2400000"></span></span></button></div>
+      <div><div class="lbl">Primary — disabled</div>
+        <button class="btn btn--primary is-disabled" style="margin-top:0" disabled>Upgrade &amp; Develop
+          <span class="sub">Height cap reached at tier 9</span>
+          <span class="btn-why">Lobby City Hall for a Rezoning Permit</span></button></div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* The game's own compact currency formatter, copied verbatim from
+   nyc-tycoon.html money() so the specimen cannot drift from the game. */
+function money(n){
+  const s=n<0?"-":""; n=Math.abs(n);
+  if(n>=1e12) return s+"$"+(n/1e12).toFixed(2)+"T";
+  if(n>=1e9)  return s+"$"+(n/1e9).toFixed(2)+"B";
+  if(n>=1e6)  return s+"$"+(n/1e6).toFixed(2)+"M";
+  if(n>=1e3)  return s+"$"+(n/1e3).toFixed(1)+"K";
+  return s+"$"+n.toFixed(0);
+}
+document.querySelectorAll("[data-money]").forEach(function(el){
+  el.textContent = money(+el.dataset.money);
+});
+</script>
+</body>
+</html>

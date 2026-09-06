@@ -1,0 +1,345 @@
+<!--
+  NYC METRO TYCOON — UI chrome specimen (top bar + left sidebar)
+  Standalone. Inline CSS only, no fonts, no deps. Behind the chrome is a
+  throwaway CSS "map" so the translucency/blur reads honestly.
+
+  ============================ INTEGRATION NOTE ============================
+  Everything here is a drop-in for a numbered block of nyc-tycoon.html.
+  Nothing in this file touches game logic; the class/id names are the ones
+  already in the game so the JS keeps working unchanged.
+
+  1. TOKENS  — replaces the `:root{...}` block (nyc-tycoon.html:8-14).
+     The 13 existing tokens keep their EXACT current values. Added tokens are
+     appended below them; see "NEW TOKENS" list further down.
+
+  2. TOP BAR — replaces the CSS block commented `/* ---------- TOP HUD ---------- */`
+     (nyc-tycoon.html:23-40): selectors #hud, .stat, .stat .k, .stat .v,
+     .v.money/.pos/.neg/.pres/.inf, #logo, #logo b, #logo span, #speedbox,
+     .sbtn, .sbtn.on, .sbtn:hover.
+     Markup: replaces `<div id="hud"> ... </div>` (nyc-tycoon.html:215-234).
+     Structural changes to the markup, all additive:
+       - each `.stat` gains no wrapper, but the group of stats is wrapped in
+         `<div id="statrail">` (scroll container on phone);
+       - `.stat` may carry class `hi` to promote City Funds to the lead slot;
+       - `#logo` markup is unchanged (`<b>NYC METRO</b><span>TYCOON</span>`).
+     If you want the minimum diff: keep the existing #hud markup as-is and take
+     only the CSS — everything degrades correctly except the phone scroll rail.
+
+  3. SIDEBAR — replaces the CSS block commented `/* ---------- LEFT SIDEBAR ---------- */`
+     (nyc-tycoon.html:42-69) for selectors #sidetog, #side, #side.collapsed,
+     .grp, .row, .row:hover, .row.on, .dot, .row.on .dot, .row .kbd.
+     The .dlist/.dcard/.ccard/.bar rules in that same block are UNCHANGED by
+     this specimen except .dcard, which is restyled here (same class contract:
+     `.n` title line, `.s` sub line) — keep the game's JS untouched.
+     Markup: `<div id="side"> ... </div>` (nyc-tycoon.html:237-257) keeps its
+     exact structure; only two optional additions:
+       - `.grp` may wrap its text in nothing (unchanged) — the rule/rhythm is
+         pure CSS;
+       - each `.row` may gain `<span class="kbd">` (it mostly already has one).
+
+  4. RESPONSIVE — merges into the existing @media blocks
+     (nyc-tycoon.html:196-207). The 720px rules for #sidetog/#side/#hud/.stat
+     are superseded by the ones at the bottom of this file; the #insp/#toasts/
+     #hint/#coach rules in those blocks are untouched — keep them.
+
+  5. REDUCED MOTION — extends the block at nyc-tycoon.html:127-132. Add the
+     selectors from the @media (prefers-reduced-motion) block at the end of
+     this file to that existing block rather than duplicating it.
+
+  NEW TOKENS (same naming style; all derived from the existing palette):
+     --panel3   panel material for the top bar (darker, more opaque than --panel)
+     --hair     1px hairline over imagery (white @ 6%) — used for inner highlight
+     --txt2     secondary text, one step above --dim, AA on --panel (7.4:1)
+     --sel      selection/active wash, cyan @ 12%
+     --r1 --r2  radii (4px / 7px)
+     --ease     shared transition curve
+  Contrast measured against the WORST case for each panel — the panel colour
+  composited over a bright sunlit roof (#5b7a9d) rather than over dark ground,
+  since the panels are translucent. Sidebar / top bar ratios:
+     --txt 12.4 / 11.9   --txt2 7.9 / 7.6   --dim 4.8 / 4.6 (labels + kbd only)
+     --gold 10.6 / 10.2  --green 9.8 / 9.4  --cyan 9.3 / 9.0
+     --orange 7.5 / 7.3  --violet 5.4 / 5.2 --red 5.2 / 5.0  #fff 15.6 / 15.1
+  All >= 4.5:1, i.e. AA for normal text at every size used here. --dim is the
+  floor at 4.80/4.63, which is why the sidebar bottoms out at 0.80 alpha and
+  the top bar at 0.74 — going more transparent than that fails the small caps.
+  =========================================================================
+-->
+<title>NYC Metro Tycoon — HUD Specimen</title>
+<style>
+:root{
+  /* --- existing game tokens, values copied verbatim from nyc-tycoon.html --- */
+  --bg:#080b12; --panel:rgba(12,17,26,0.92); --panel2:rgba(18,25,38,0.95);
+  --line:#1e2a3d; --line2:#2c3d57;
+  --txt:#dbe6f5; --dim:#7d90ab; --gold:#ffcf4a; --green:#3ce88f; --red:#ff5c6b;
+  --cyan:#48d8ff; --violet:#b07dff; --orange:#ff9d3c;
+  --wall:#48d8ff; --times:#ff4fa3; --brook:#ff9d3c; --uptown:#8ef0a8;
+  /* --- new tokens (see integration note) --- */
+  --panel3:rgba(7,10,17,0.82);
+  --hair:rgba(255,255,255,.06);
+  --txt2:#a9bad2;
+  --sel:rgba(72,216,255,.12);
+  --r1:4px; --r2:7px;
+  --ease:cubic-bezier(.4,0,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:"Segoe UI",Inter,system-ui,-apple-system,sans-serif;
+  -webkit-font-smoothing:antialiased;user-select:none}
+#app{position:fixed;inset:0}
+
+/* ============ PLACEHOLDER MAP (specimen only — not for integration) ====== */
+#map{position:absolute;inset:0;overflow:hidden;
+  background:
+    radial-gradient(90% 70% at 22% 8%, rgba(120,160,205,.30), transparent 60%),
+    radial-gradient(120% 90% at 68% 20%, #2b4a6c 0%, #14243f 46%, #080e1a 100%),
+    var(--bg)}
+#map .blk{position:absolute;border-radius:1px;
+  background:linear-gradient(155deg,#5b7a9d 0%,#42607f 38%,#1a2a41 39%,#101c2e 100%);
+  box-shadow:16px 26px 34px rgba(0,0,0,.6)}
+#map .rd{position:absolute;background:rgba(175,205,240,.14)}
+#map .zone{position:absolute;border-radius:3px;mix-blend-mode:screen}
+#map .glow{position:absolute;border-radius:50%;filter:blur(60px);opacity:.5}
+
+/* ================================ TOP BAR ================================ */
+#hud{position:absolute;top:0;left:0;right:0;height:62px;z-index:20;
+  display:flex;align-items:stretch;padding:0 4px 0 0;
+  background:linear-gradient(180deg,rgba(7,10,17,.94),rgba(7,10,17,.74));
+  backdrop-filter:blur(14px) saturate(1.25);
+  -webkit-backdrop-filter:blur(14px) saturate(1.25);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 0 var(--hair) inset, 0 12px 28px -18px #000}
+
+#statrail{display:flex;align-items:stretch;min-width:0;overflow:hidden}
+
+.stat{position:relative;display:flex;flex-direction:column;justify-content:center;
+  gap:3px;padding:0 17px;flex:0 0 auto;min-width:98px}
+/* thin vertical rule that fades at both ends — reads finer than a border */
+.stat + .stat::before{content:"";position:absolute;left:0;top:15px;bottom:15px;width:1px;
+  background:linear-gradient(180deg,transparent,var(--line2) 22%,var(--line2) 78%,transparent)}
+.stat .k{font-size:9px;font-weight:600;line-height:1;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.stat .v{font-size:17px;font-weight:700;line-height:1.05;letter-spacing:-.01em;
+  font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--txt)}
+.stat.hi{min-width:130px}
+.stat.hi .v{font-size:21px;letter-spacing:-.02em}
+.v.money{color:var(--gold)} .v.pos{color:var(--green)} .v.neg{color:var(--red)}
+.v.pres{color:var(--violet)} .v.inf{color:var(--cyan)}
+
+#speedbox{display:flex;align-items:center;gap:3px;align-self:center;margin-left:auto;flex:0 0 auto;
+  padding:4px;border:1px solid var(--line);border-radius:calc(var(--r1) + 4px);
+  background:rgba(0,0,0,.28);box-shadow:0 1px 0 var(--hair) inset}
+#speedbox .sep{width:1px;align-self:stretch;margin:3px 4px;background:var(--line)}
+.sbtn{width:31px;height:27px;border:1px solid var(--line2);background:rgba(13,20,32,.8);
+  color:var(--txt2);border-radius:var(--r1);font-size:11px;font-weight:700;cursor:pointer;
+  font-family:inherit;font-variant-numeric:tabular-nums;transition:.14s var(--ease)}
+.sbtn:hover{border-color:var(--cyan);color:var(--txt);background:rgba(20,34,52,.9)}
+.sbtn.on{background:var(--cyan);color:#04121a;border-color:var(--cyan);
+  box-shadow:0 0 12px -2px rgba(72,216,255,.55)}
+
+#logo{flex:0 0 auto;align-self:center;text-align:right;padding:2px 18px 2px 20px;margin-left:14px;
+  border-left:1px solid var(--line)}
+#logo b{display:block;font-size:18px;font-weight:800;line-height:.94;letter-spacing:-.005em;color:#fff}
+#logo span{display:block;font-size:8.5px;font-weight:300;line-height:1;margin-top:5px;
+  letter-spacing:.5em;text-indent:.5em;color:var(--txt2)}
+
+/* =============================== SIDEBAR ================================= */
+#sidetog{position:absolute;left:10px;top:72px;z-index:22;width:34px;height:32px;display:none;
+  border:1px solid var(--line2);background:var(--panel2);color:var(--txt);
+  border-radius:var(--r1);cursor:pointer;font-size:14px;
+  box-shadow:0 6px 18px rgba(0,0,0,.5)}
+
+#side{position:absolute;left:0;top:62px;bottom:0;width:212px;z-index:15;
+  padding:6px 0 60px;overflow-y:auto;overscroll-behavior:contain;
+  background:linear-gradient(180deg,rgba(10,15,24,.80),rgba(8,12,20,.88));
+  backdrop-filter:blur(14px) saturate(1.2);
+  -webkit-backdrop-filter:blur(14px) saturate(1.2);
+  border-right:1px solid var(--line);
+  box-shadow:1px 0 0 var(--hair) inset;
+  -webkit-mask-image:linear-gradient(180deg,#000 calc(100% - 34px),transparent);
+  mask-image:linear-gradient(180deg,#000 calc(100% - 34px),transparent);
+  transition:transform .22s var(--ease)}
+#side.collapsed{transform:translateX(-100%)}
+#side::-webkit-scrollbar{width:6px}
+#side::-webkit-scrollbar-thumb{background:var(--line2);border-radius:3px}
+
+.grp{display:flex;align-items:center;gap:9px;
+  margin:15px 0 5px;padding:0 16px;
+  font-size:9px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--dim)}
+.grp::after{content:"";flex:1;height:1px;
+  background:linear-gradient(90deg,var(--line),transparent)}
+.grp:first-child{margin-top:6px}
+
+.row{position:relative;display:flex;align-items:center;gap:10px;
+  padding:8.5px 12px 8.5px 16px;font-size:12.5px;line-height:1.2;color:var(--txt2);
+  cursor:pointer;transition:background .14s var(--ease),color .14s var(--ease)}
+.row::before{content:"";position:absolute;left:0;top:4px;bottom:4px;width:2px;
+  border-radius:0 2px 2px 0;background:transparent;transition:background .14s var(--ease)}
+.row:hover{background:rgba(255,255,255,.055);color:var(--txt)}
+.row:hover::before{background:rgba(72,216,255,.45)}
+.row.on{background:linear-gradient(90deg,var(--sel),rgba(72,216,255,0));
+  color:#fff;font-weight:600}
+.row.on::before{background:var(--cyan);box-shadow:0 0 10px -1px var(--cyan)}
+.row:focus-visible{outline:1px solid var(--cyan);outline-offset:-2px}
+
+.dot{width:8px;height:8px;border-radius:2px;background:var(--line2);flex:0 0 auto;
+  box-shadow:0 0 0 1px rgba(0,0,0,.5)}
+.row.on .dot{box-shadow:0 0 0 1px rgba(0,0,0,.5),0 0 9px currentColor}
+.row .kbd{margin-left:auto;font-size:9px;font-weight:600;color:var(--dim);
+  border:1px solid var(--line);background:rgba(255,255,255,.03);
+  padding:1px 5px;border-radius:3px;line-height:1.3}
+.row:hover .kbd,.row.on .kbd{border-color:var(--line2);color:var(--txt2)}
+
+/* district / contract cards inside the sidebar */
+.dlist{padding:2px 12px 4px}
+.dcard{position:relative;border:1px solid var(--line);border-radius:var(--r2);
+  padding:8px 10px;margin-bottom:6px;cursor:pointer;background:rgba(11,17,27,.7);
+  transition:border-color .14s var(--ease),background .14s var(--ease),transform .14s var(--ease)}
+.dcard:hover{border-color:var(--line2);background:rgba(17,26,41,.8);transform:translateX(2px)}
+.dcard .n{font-size:11.5px;font-weight:700;color:var(--txt);display:flex;align-items:center;gap:7px}
+.dcard .s{font-size:10px;color:var(--dim);margin-top:4px;font-variant-numeric:tabular-nums}
+.bar{height:3px;background:#182231;border-radius:2px;margin-top:6px;overflow:hidden}
+.bar i{display:block;height:100%;border-radius:2px}
+
+/* ============================== RESPONSIVE =============================== */
+@media (max-width:1360px){
+  .stat{min-width:90px;padding:0 14px}
+  .stat .v{font-size:16px}
+  .stat.hi{min-width:118px}.stat.hi .v{font-size:19px}
+}
+@media (max-width:1100px){
+  #side{width:196px}
+}
+@media (max-width:720px){
+  /* hamburger moves INTO the bar so it never sits on top of a nav row */
+  #sidetog{display:block;position:absolute;left:8px;top:11px;width:34px;height:30px;
+    background:rgba(255,255,255,.05);border-color:var(--line);z-index:24}
+  #hud{height:52px;padding:0}
+  #statrail{padding-left:50px;overflow-x:auto;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;
+    -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent);
+    mask-image:linear-gradient(90deg,#000 calc(100% - 26px),transparent)}
+  #statrail::-webkit-scrollbar{display:none}
+  .stat{min-width:auto;padding:0 13px;gap:2px}
+  .stat + .stat::before{top:11px;bottom:11px}
+  .stat .k{font-size:8.5px;letter-spacing:.14em}
+  .stat .v{font-size:15px}
+  .stat.hi{min-width:auto;padding-left:0}.stat.hi .v{font-size:16px}
+  #speedbox{padding:3px;gap:2px;margin-right:6px}
+  #speedbox .sep{display:none}
+  .sbtn{width:26px;height:24px;font-size:10px}
+  #logo{display:none}
+  #side{top:52px;width:min(78vw,262px);padding-top:2px;
+    background:linear-gradient(180deg,rgba(10,15,24,.95),rgba(9,13,21,.96));
+    box-shadow:0 0 52px rgba(0,0,0,.75),1px 0 0 var(--hair) inset}
+  .row{padding-top:11px;padding-bottom:11px;font-size:13.5px}
+  .grp{margin-top:17px}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,#side,.row,.dcard,.sbtn{transition:none!important;animation:none!important}
+  .dcard:hover{transform:none!important}
+}
+</style>
+
+<div id="app">
+  <!-- placeholder map: specimen only -->
+  <div id="map"></div>
+
+  <div id="hud">
+    <div id="statrail">
+      <div class="stat hi"><div class="k">City Funds</div><div class="v money" id="s-cash">$4,182,600</div></div>
+      <div class="stat"><div class="k">Population</div><div class="v" id="s-pop">1,284,905</div></div>
+      <div class="stat"><div class="k">Year</div><div class="v" id="s-year">2027</div></div>
+      <div class="stat"><div class="k">Month</div><div class="v" id="s-month">MAR</div></div>
+      <div class="stat"><div class="k">Net / sec</div><div class="v pos" id="s-net">+$1,940</div></div>
+      <div class="stat"><div class="k">Prestige</div><div class="v pres" id="s-pres">148</div></div>
+      <div class="stat"><div class="k">Influence</div><div class="v inf" id="s-inf">62</div></div>
+      <div class="stat"><div class="k">Portfolio</div><div class="v" id="s-own">37 / 214</div></div>
+    </div>
+    <div id="speedbox">
+      <button class="sbtn on" title="Sound">&#128266;</button>
+      <button class="sbtn" title="Colour-safe palette">&#9681;</button>
+      <span class="sep"></span>
+      <button class="sbtn" title="Pause">II</button>
+      <button class="sbtn on">1x</button>
+      <button class="sbtn">2x</button>
+      <button class="sbtn">4x</button>
+    </div>
+    <div id="logo"><b>NYC METRO</b><span>TYCOON</span></div>
+  </div>
+
+  <button id="sidetog" title="Toggle panel">&#9776;</button>
+
+  <div id="side">
+    <div class="grp">Overlays</div>
+    <div class="row on"><i class="dot" style="background:#48d8ff;color:#48d8ff"></i>Zoning<span class="kbd">1</span></div>
+    <div class="row"><i class="dot" style="background:#ff9d3c;color:#ff9d3c"></i>Traffic<span class="kbd">2</span></div>
+    <div class="row"><i class="dot" style="background:#b07dff;color:#b07dff"></i>Utilities<span class="kbd">3</span></div>
+    <div class="row"><i class="dot" style="background:#3ce88f;color:#3ce88f"></i>Profit<span class="kbd">4</span></div>
+
+    <div class="grp">Build</div>
+    <div class="row"><i class="dot" style="background:#48d8ff"></i>Residential<span class="kbd">Q</span></div>
+    <div class="row"><i class="dot" style="background:#ff4fa3"></i>Commercial<span class="kbd">W</span></div>
+    <div class="row"><i class="dot" style="background:#ffcf4a"></i>Office<span class="kbd">E</span></div>
+    <div class="row"><i class="dot" style="background:#8ef0a8"></i>Infrastructure<span class="kbd">R</span></div>
+    <div class="row"><i class="dot" style="background:#ff9d3c"></i>Landmarks<span class="kbd">T</span></div>
+
+    <div class="grp">Districts</div>
+    <div class="dlist">
+      <div class="dcard">
+        <div class="n"><i class="dot" style="background:#ff4fa3"></i>Times Square</div>
+        <div class="s">14 / 22 blocks &middot; $186k/mo</div>
+        <div class="bar"><i style="width:64%;background:#ff4fa3"></i></div>
+      </div>
+      <div class="dcard">
+        <div class="n"><i class="dot" style="background:#48d8ff"></i>Wall Street</div>
+        <div class="s">9 / 18 blocks &middot; $241k/mo</div>
+        <div class="bar"><i style="width:50%;background:#48d8ff"></i></div>
+      </div>
+    </div>
+
+    <div class="grp">Management</div>
+    <div class="row"><i class="dot" style="background:#ffcf4a"></i>Taxes<span class="kbd">X</span></div>
+    <div class="row"><i class="dot" style="background:#3ce88f"></i>Services<span class="kbd">S</span></div>
+    <div class="row"><i class="dot" style="background:#b07dff"></i>Policies<span class="kbd">L</span></div>
+    <div class="row"><i class="dot" style="background:#ffcf4a"></i>Board Room<span class="kbd">B</span></div>
+    <div class="row"><i class="dot" style="background:#ff5c6b"></i>Competition<span class="kbd">R</span></div>
+    <div class="row"><i class="dot" style="background:#3ce88f"></i>Portfolio<span class="kbd">P</span></div>
+    <div class="row"><i class="dot" style="background:#ffcf4a"></i>Objectives<span class="kbd">G</span></div>
+    <div class="row"><i class="dot" style="background:#48d8ff"></i>How To Play<span class="kbd">H</span></div>
+  </div>
+</div>
+
+<script>
+/* specimen-only: paint the throwaway map so blur/translucency is visible */
+(function(){
+  var m=document.getElementById('map'),h='';
+  function r(a,b){return a+Math.random()*(b-a)}
+  h+='<div class="glow" style="left:55%;top:-6%;width:520px;height:420px;background:#3f6ea0"></div>';
+  h+='<div class="glow" style="left:8%;top:55%;width:460px;height:380px;background:#1d3350"></div>';
+  for(var y=0;y<9;y++) h+='<div class="rd" style="left:0;right:0;top:'+(y*11+6)+'%;height:'+r(4,9)+'px"></div>';
+  for(var x=0;x<13;x++) h+='<div class="rd" style="top:0;bottom:0;left:'+(x*7.7+3)+'%;width:'+r(3,7)+'px"></div>';
+  for(var i=0;i<130;i++){
+    var w=r(28,74),ht=r(24,86);
+    h+='<div class="blk" style="left:'+r(1,96)+'%;top:'+r(2,94)+'%;width:'+w+'px;height:'+ht+'px;opacity:'+r(.5,1)+'"></div>';
+  }
+  var zc=['rgba(72,216,255,.42)','rgba(255,79,163,.40)','rgba(72,216,255,.30)'];
+  for(var z=0;z<7;z++){
+    h+='<div class="zone" style="left:'+r(20,80)+'%;top:'+r(15,78)+'%;width:'+r(70,170)+'px;height:'+r(50,120)+'px;background:'+zc[z%3]+';box-shadow:0 0 0 1px rgba(255,255,255,.5) inset"></div>';
+  }
+  m.innerHTML=h;
+  if(window.matchMedia('(max-width:720px)').matches)
+    document.getElementById('side').classList.add('collapsed');
+  document.getElementById('sidetog').onclick=function(){
+    document.getElementById('side').classList.toggle('collapsed');
+  };
+  document.querySelectorAll('#side .row').forEach(function(el){
+    el.onclick=function(){
+      var g=el.parentNode;
+      // only toggle within the overlay group for the demo
+      document.querySelectorAll('#side .row.on').forEach(function(o){o.classList.remove('on')});
+      el.classList.add('on');
+    };
+  });
+})();
+</script>
