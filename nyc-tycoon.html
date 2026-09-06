@@ -1543,8 +1543,10 @@ function diamond(sx, sy, w, h) {
   ctx.closePath();
 }
 
-/** Lighten (amt>0) or darken (amt<0) a colour. Accepts "#rrggbb" or "rgb(r,g,b)". */
-function shade(col, amt) {
+/** Lighten (amt>0) or darken (amt<0) a colour, with an optional warm (>0) or
+    cool (<0) bias so sunlit and shaded surfaces sit on the same grade.
+    Accepts "#rrggbb" or "rgb(r,g,b)". */
+function shade(col, amt, warm) {
   let r, g, b;
   if (col.charCodeAt(0) === 35) {           // '#'
     const n = parseInt(col.slice(1), 16);
@@ -1553,10 +1555,274 @@ function shade(col, amt) {
     const m = col.match(/-?\d+/g);
     r = +m[0]; g = +m[1]; b = +m[2];
   }
-  r = clamp(Math.round(r + amt * 255), 0, 255);
-  g = clamp(Math.round(g + amt * 255), 0, 255);
-  b = clamp(Math.round(b + amt * 255), 0, 255);
+  const wv = warm ? warm * 20 : 0;
+  r = clamp(Math.round(r + amt * 255 + wv), 0, 255);
+  g = clamp(Math.round(g + amt * 255 + wv * 0.3), 0, 255);
+  b = clamp(Math.round(b + amt * 255 - wv * 0.8), 0, 255);
   return "rgb(" + r + "," + g + "," + b + ")";
+}
+
+/* =====================  LIGHTING MODEL  =====================
+   One sun for the whole city, high in the screen's upper left. Shadows fall
+   down and to the right, the +y-facing (screen-left) wall takes a grazing
+   light, the +x-facing (screen-right) wall is the deep shaded side. Every
+   new piece of geometry below uses these same constants so the light reads
+   as one source instead of per-object decoration. */
+const SUN = { x: 0.80, y: 0.60 };   // unit shadow direction, screen space
+const SUN_WARM = 0.55;              // warm bias on lit surfaces
+const SUN_COOL = -0.45;             // cool bias in shade
+
+/** Screen height and footprint fraction of whatever stands on a plot, or null
+    for an empty lot. Both the renderer and the shadow pass read this, so a
+    shadow can never drift away from the mass that casts it. */
+function plotMass(p) {
+  if (p.park) return null;
+  if ((p.owned || p.rival) && p.biz && p.level > 0) {
+    const grow = 0.22 + 0.78 * p.built;
+    return { h: (13 + Math.pow(p.level, 1.34) * 9.5) * cam.z * grow * (p.mega ? 1.55 : 1),
+             f: clamp(0.9 - p.level * 0.008, 0.66, 0.9) };
+  }
+  if (!p.owned) {
+    const h = p.civH * 30 * cam.z;
+    return h < 3 ? null : { h, f: 0.74 };
+  }
+  return null;
+}
+
+/** Silhouette of a diamond footprint swept along (ox,oy) — the Minkowski sum
+    of the tile and the sun vector — appended as one clockwise subpath so that
+    overlapping shadows never double-darken under a nonzero fill. */
+function shadowHull(cx, cy, w, d, ox, oy) {
+  const a = w / 2, b = d / 2;
+  if (ox * b > oy * a) {              // shallow sweep: north and south are extreme
+    ctx.moveTo(cx, cy - b);
+    ctx.lineTo(cx + ox, cy - b + oy);
+    ctx.lineTo(cx + a + ox, cy + oy);
+    ctx.lineTo(cx + ox, cy + b + oy);
+    ctx.lineTo(cx, cy + b);
+    ctx.lineTo(cx - a, cy);
+  } else {                            // steep sweep: east and west are extreme
+    ctx.moveTo(cx + a, cy);
+    ctx.lineTo(cx + a + ox, cy + oy);
+    ctx.lineTo(cx + ox, cy + b + oy);
+    ctx.lineTo(cx - a + ox, cy + oy);
+    ctx.lineTo(cx - a, cy);
+    ctx.lineTo(cx, cy - b);
+  }
+  ctx.closePath();
+}
+
+/** Every mass in the city throws its shadow onto the ground plane in one
+    two-layer pass, before anything with height is painted over it. */
+function drawShadows(tw, th) {
+  const layers = [[1, 1.16, 0.2], [0.55, 1, 0.22]];
+  for (let l = 0; l < 2; l++) {
+    const lenK = layers[l][0], fK = layers[l][1];
+    ctx.beginPath();
+    for (const p of G.plots) {
+      const m = plotMass(p);
+      if (!m) continue;
+      const s = worldToScreen(p.x + 0.5, p.y + 0.5);
+      if (s.x < -300 || s.x > W + 340 || s.y < -200 || s.y > H + 300) continue;
+      const len = Math.min(m.h * 0.8, 128 * cam.z) * lenK;
+      shadowHull(s.x, s.y, tw * m.f * fK, th * m.f * fK, SUN.x * len, SUN.y * len);
+    }
+    ctx.fillStyle = "rgba(4,8,16," + layers[l][2] + ")";
+    ctx.fill();
+  }
+}
+
+/** Ambient occlusion: how deep in a street canyon a cell sits. */
+function cellAO(x, y) {
+  let sum = 0;
+  for (let i = 0; i < 4; i++) {
+    const nx = x + (i === 0 ? -1 : i === 1 ? 1 : 0);
+    const ny = y + (i === 2 ? -1 : i === 3 ? 1 : 0);
+    if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
+    const c = G.grid[ny][nx];
+    if (!c || c.water || c.street || c.park) continue;
+    sum += (c.owned || c.rival) && c.biz && c.level
+      ? Math.min(c.level, 14) * 0.085
+      : Math.min(c.civH || 0, 2.6) * 0.17;
+  }
+  return clamp(sum * 0.44, 0, 0.7);
+}
+
+/** Draw an isometric box: footprint w x d centred at (cx,cy), height h. */
+function isoBox(cx, cy, w, d, h, top, left, right) {
+  const ty = cy - h;
+  ctx.fillStyle = left;
+  ctx.beginPath();
+  ctx.moveTo(cx - w / 2, cy); ctx.lineTo(cx, cy + d / 2);
+  ctx.lineTo(cx, cy + d / 2 - h); ctx.lineTo(cx - w / 2, ty);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = right;
+  ctx.beginPath();
+  ctx.moveTo(cx + w / 2, cy); ctx.lineTo(cx, cy + d / 2);
+  ctx.lineTo(cx, cy + d / 2 - h); ctx.lineTo(cx + w / 2, ty);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = top;
+  diamond(cx, ty, w, d); ctx.fill();
+}
+
+/* =====================  ROOFTOPS  =====================
+   An aerial view of Manhattan is mostly roofs, so the detail budget goes
+   here: parapets, tar / gravel / membrane decks, HVAC plant, stair
+   bulkheads, skylights, water towers and the odd helipad. */
+
+/* [deck, deck shadow side] — deliberately neutral; roof material carries no
+   game meaning, so the colour-safe palette leaves it alone. */
+const ROOF_MATS = [
+  ["#4b4842", "#38352f"],   // tar and asphalt
+  ["#6e6f66", "#54554e"],   // grey gravel ballast
+  ["#a3a59b", "#82847b"],   // white membrane, weathered
+  ["#5c5e68", "#45464f"]    // slate / metal deck
+];
+
+/** Screen point at (du,dv), given as fractions of a roof footprint. */
+function roofX(cx, w, du, dv) { return cx + (du - dv) * w * 0.5; }
+function roofY(ty, d, du, dv) { return ty + (du + dv) * d * 0.5; }
+
+/** NYC's signature: a wooden cask on a steel frame, drawn as a billboard.
+    `s` is one storey-ish; the whole thing stands about 2.3s tall. */
+function waterTower(px, py, s) {
+  ctx.strokeStyle = "rgba(24,20,15,0.85)";
+  ctx.lineWidth = Math.max(0.6, s * 0.1);
+  ctx.beginPath();
+  ctx.moveTo(px - s * 0.34, py); ctx.lineTo(px - s * 0.24, py - s * 0.95);
+  ctx.moveTo(px + s * 0.34, py); ctx.lineTo(px + s * 0.24, py - s * 0.95);
+  ctx.moveTo(px - s * 0.30, py - s * 0.35); ctx.lineTo(px + s * 0.30, py - s * 0.35);
+  ctx.stroke();
+  ctx.fillStyle = "#6a5138";                       // cask, lit side
+  ctx.beginPath();
+  ctx.moveTo(px - s * 0.32, py - s * 0.92); ctx.lineTo(px + s * 0.32, py - s * 0.92);
+  ctx.lineTo(px + s * 0.26, py - s * 1.85); ctx.lineTo(px - s * 0.26, py - s * 1.85);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(20,14,8,0.35)";            // shaded right third
+  ctx.beginPath();
+  ctx.moveTo(px + s * 0.09, py - s * 0.92); ctx.lineTo(px + s * 0.32, py - s * 0.92);
+  ctx.lineTo(px + s * 0.26, py - s * 1.85); ctx.lineTo(px + s * 0.08, py - s * 1.85);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "#3d3022";                       // conical cap
+  ctx.beginPath();
+  ctx.moveTo(px - s * 0.36, py - s * 1.83); ctx.lineTo(px + s * 0.36, py - s * 1.83);
+  ctx.lineTo(px, py - s * 2.3); ctx.closePath(); ctx.fill();
+}
+
+/** Parapet ring plus deck. Every roof gets this, however small. */
+function drawDeck(cx, ty, w, d, mat, rimCol) {
+  ctx.fillStyle = rimCol;
+  diamond(cx, ty, w, d); ctx.fill();
+  ctx.fillStyle = mat[0];
+  diamond(cx, ty, w * 0.93, d * 0.93); ctx.fill();
+  if (w > 14) {
+    /* the up-sun parapet walls throw a lip of shade onto the deck */
+    ctx.strokeStyle = "rgba(0,0,0,0.30)";
+    ctx.lineWidth = Math.max(1, w * 0.022);
+    ctx.beginPath();
+    ctx.moveTo(cx - w * 0.44, ty); ctx.lineTo(cx, ty - d * 0.44);
+    ctx.lineTo(cx + w * 0.44, ty);
+    ctx.stroke();
+  }
+  ctx.strokeStyle = "rgba(255,242,220,0.13)";
+  ctx.lineWidth = 1;
+  diamond(cx, ty, w, d); ctx.stroke();
+}
+
+/** Full rooftop dressing for the crown of a structure. Sizes are fractions of
+    the footprint width so plant stays in scale at every zoom level. */
+function drawRoofClutter(p, cx, ty, w, d, floors, tall) {
+  if (w < 20 || cam.z < 0.55) return;
+  const r = n => hash2(p.x * 131 + n * 7, p.y * 89 + n * 23);
+  const items = [];
+  const add = (du, dv, fn) => items.push({ o: du + dv, fn });
+  const px = (du, dv) => cx + (du - dv) * w * 0.5;
+  const py = (du, dv) => ty + (du + dv) * d * 0.5;
+
+  /* stair / lift bulkhead */
+  if (r(1) > 0.25) {
+    const du = -0.24 + r(2) * 0.18, dv = -0.24 + r(3) * 0.18;
+    const bw = w * (0.15 + r(4) * 0.07), bh = w * (0.1 + r(5) * 0.06);
+    add(du, dv, () => isoBox(px(du, dv), py(du, dv), bw, bw * 0.5, bh,
+      "#8b8c86", "#63645f", "#414340"));
+  }
+  /* HVAC plant — the thing that actually covers a Manhattan roof */
+  const hv = 2 + Math.floor(r(6) * 4);
+  for (let i = 0; i < hv; i++) {
+    const du = -0.3 + r(10 + i) * 0.6, dv = -0.16 + r(20 + i) * 0.46;
+    const bw = w * (0.055 + r(30 + i) * 0.045), bh = w * (0.035 + r(40 + i) * 0.035);
+    add(du, dv, () => {
+      const x = px(du, dv), y = py(du, dv);
+      isoBox(x, y, bw, bw * 0.5, bh, "#a6acae", "#767c7e", "#4e5355");
+      if (cam.z > 1.2) {                              // fan grille on the housing
+        ctx.strokeStyle = "rgba(20,24,26,0.55)"; ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(x - bw * 0.22, y - bh); ctx.lineTo(x + bw * 0.22, y - bh);
+        ctx.stroke();
+      }
+    });
+  }
+  /* ventilation stacks: thin, and they break up the box silhouettes */
+  if (w > 30) for (let i = 0; i < 2; i++) {
+    if (r(60 + i) < 0.45) continue;
+    const du = -0.28 + r(62 + i) * 0.56, dv = -0.02 + r(64 + i) * 0.3;
+    add(du, dv, () => {
+      const x = px(du, dv), y = py(du, dv), hh = w * (0.05 + r(66 + i) * 0.05);
+      ctx.fillStyle = "#8d9294";
+      ctx.fillRect(x - w * 0.012, y - hh, w * 0.024, hh);
+      ctx.fillStyle = "#b6bcbe";
+      ctx.beginPath(); ctx.ellipse(x, y - hh, w * 0.018, w * 0.009, 0, 0, TAU); ctx.fill();
+    });
+  }
+  /* skylights / roof hatches */
+  if (r(7) > 0.45 && w > 30) {
+    for (let i = 0; i < 2; i++) {
+      const du = 0.02 + i * 0.13, dv = -0.26 + r(50 + i) * 0.16;
+      add(du, dv, () => {
+        ctx.fillStyle = "rgba(196,214,228,0.5)";
+        diamond(px(du, dv), py(du, dv) - w * 0.012, w * 0.075, d * 0.075);
+        ctx.fill();
+      });
+    }
+  }
+  /* rooftop garden */
+  if (r(8) > 0.7 && w > 30) {
+    const du = -0.06 + r(9) * 0.22, dv = 0.16;
+    add(du, dv, () => {
+      const x = px(du, dv), y = py(du, dv);
+      ctx.fillStyle = "#3f5e35";
+      diamond(x, y, w * 0.22, d * 0.22); ctx.fill();
+      ctx.fillStyle = "#557f45";
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(x + (i - 1) * w * 0.06, y - w * 0.012, w * 0.021, 0, TAU); ctx.fill();
+      }
+    });
+  }
+  /* water tower */
+  if (r(11) > 0.42 && w > 26) {
+    const du = 0.16 + r(13) * 0.12, dv = 0.02 + r(12) * 0.14;
+    add(du, dv, () => waterTower(px(du, dv), py(du, dv), w * 0.115));
+  }
+  /* helipad on the genuinely tall stock */
+  if (tall && floors >= 11 && w > 34) {
+    add(-0.02, 0.02, () => {
+      const x = px(-0.02, 0.02), y = py(-0.02, 0.02);
+      ctx.save();
+      ctx.translate(x, y); ctx.scale(1, 0.5);
+      ctx.strokeStyle = "rgba(236,242,250,0.5)"; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, w * 0.17, 0, TAU); ctx.stroke();
+      ctx.font = "700 " + (w * 0.18) + "px system-ui";
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillStyle = "rgba(236,242,250,0.45)";
+      ctx.fillText("H", 0, 0);
+      ctx.restore();
+      ctx.textBaseline = "alphabetic";
+    });
+  }
+  items.sort((a, b) => a.o - b.o);
+  for (const it of items) it.fn();
+  ctx.textAlign = "center";
 }
 
 function overlayColor(p) {
@@ -1603,6 +1869,9 @@ function draw(dt) {
     else if (c.street) drawStreet(c, s, tw, th);
     else drawGround(c, s, tw, th);
   }
+
+  /* pass 1.5: one sun, one shadow layer, painted onto the finished ground */
+  drawShadows(tw, th);
 
   /* pass 2: everything with height, painted back-to-front by depth (x+y) */
   const items = [];
@@ -1734,6 +2003,11 @@ function drawWater(c, s, tw, th) {
 function drawStreet(c, s, tw, th) {
   ctx.fillStyle = "#131a24";
   diamond(s.x, s.y, tw, th); ctx.fill();
+  const ao = cellAO(c.x, c.y);
+  if (ao > 0.02) {
+    ctx.fillStyle = "rgba(0,0,0," + ao.toFixed(3) + ")";
+    diamond(s.x, s.y, tw, th); ctx.fill();
+  }
   ctx.strokeStyle = "rgba(255,255,255,0.045)"; ctx.lineWidth = 1;
   ctx.stroke();
   if (cam.z > 0.75) {
@@ -1818,28 +2092,27 @@ function drawPlot(p, s, tw, th) {
 
 /** Pre-existing (unowned) city fabric — desaturated concrete blocks with a few lit windows. */
 function drawCivBuilding(p, s, tw, th) {
-  const h = p.civH * 30 * cam.z;
-  if (h < 3) return;
-  ctx.fillStyle = "rgba(0,0,0,0.34)";
-  diamond(s.x + tw * 0.06, s.y + th * 0.08, tw * 0.8, th * 0.74); ctx.fill();
-  const w = tw * 0.74, d = th * 0.74, top = s.y - h;
+  const M = plotMass(p);
+  if (!M) return;
+  const h = M.h;
+  const w = tw * M.f, d = th * M.f, top = s.y - h;
   const t = p.civTone, cv = DISTRICTS[p.d].civ;
   const base = "rgb(" + Math.round(cv[0] * (0.72 + t * 0.5)) + "," +
                         Math.round(cv[1] * (0.72 + t * 0.5)) + "," +
                         Math.round(cv[2] * (0.72 + t * 0.5)) + ")";
-  ctx.fillStyle = shade(base, 0.05);
+  ctx.fillStyle = shade(base, 0.07, SUN_WARM);
   ctx.beginPath();
   ctx.moveTo(s.x - w / 2, s.y); ctx.lineTo(s.x, s.y + d / 2);
   ctx.lineTo(s.x, s.y + d / 2 - h); ctx.lineTo(s.x - w / 2, s.y - h);
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle = shade(base, -0.09);
+  ctx.fillStyle = shade(base, -0.12, SUN_COOL);
   ctx.beginPath();
   ctx.moveTo(s.x + w / 2, s.y); ctx.lineTo(s.x, s.y + d / 2);
   ctx.lineTo(s.x, s.y + d / 2 - h); ctx.lineTo(s.x + w / 2, s.y - h);
   ctx.closePath(); ctx.fill();
-  ctx.fillStyle = shade(base, 0.14);
-  diamond(s.x, top, w, d); ctx.fill();
-  ctx.strokeStyle = "rgba(255,255,255,0.10)"; ctx.lineWidth = 1; ctx.stroke();
+  const mat = ROOF_MATS[Math.floor(hash2(p.x * 17 + 3, p.y * 31 + 7) * 4) & 3];
+  drawDeck(s.x, top, w, d, mat, shade(mat[0], 0.07, SUN_WARM * 0.4));
+  drawRoofClutter(p, s.x, top, w, d, Math.round(p.civH * 4), true);
   if (cam.z > 0.7 && h > 18) {
     const rows = clamp(Math.floor(h / (8 * cam.z)), 1, 10);
     for (let r = 0; r < rows; r++) for (let c = 0; c < 3; c++) {
@@ -1856,11 +2129,6 @@ function drawCivBuilding(p, s, tw, th) {
       const yy = s.y - (h * r / 4);
       ctx.beginPath(); ctx.moveTo(s.x - w / 2, yy); ctx.lineTo(s.x, yy + d / 2); ctx.stroke();
     }
-  }
-  /* rooftop water tower — pure NYC */
-  if (p.civH > 0.9 && cam.z > 0.7) {
-    ctx.fillStyle = "#3a3128";
-    ctx.fillRect(s.x + w * 0.14, top - 7 * cam.z, 4.5 * cam.z, 6 * cam.z);
   }
   if (p.landmark && cam.z > 0.65) {
     ctx.strokeStyle = "rgba(255,207,74,0.5)"; ctx.lineWidth = 1;
@@ -1893,38 +2161,35 @@ function drawBuilding(p, s, tw, th) {
     const body = mix(rc, 0.62);
     pal = [shade(body, 0.02), shade(body, -0.13), shade(body, 0.1), "rgba(226,233,245,0.55)"];
   }
-  const grow = 0.22 + 0.78 * p.built;
+  const M = plotMass(p);
   const floors = p.level;
-  const totalH = (13 + Math.pow(floors, 1.34) * 9.5) * cam.z * grow * (p.mega ? 1.55 : 1);
-
-  /* soft ground shadow anchors the tower to the block */
-  ctx.fillStyle = "rgba(0,0,0,0.40)";
-  diamond(s.x + tw * 0.07, s.y + th * 0.09, tw * 0.86, th * 0.8); ctx.fill();
+  const totalH = M.h;
 
   /* segments: taller towers step inward (classic NYC setbacks) */
   const segs = p.mega ? 5 : floors >= 10 ? 3 : floors >= 6 ? 2 : 1;
-  let baseY = s.y, inset = clamp(0.9 - floors * 0.008, 0.66, 0.9);
+  let baseY = s.y, inset = M.f;
   for (let i = 0; i < segs; i++) {
     const segH = totalH * (segs === 5 ? [0.4, 0.24, 0.17, 0.12, 0.07][i]
       : segs === 1 ? 1 : (i === 0 ? 0.5 : i === 1 ? 0.32 : 0.18));
     const w = tw * inset, d = th * inset;
     const top = baseY - segH;
     /* left (lit) face */
-    ctx.fillStyle = shade(pal[0], -0.02 + p.seed * 0.04);
+    ctx.fillStyle = shade(pal[0], 0.02 + p.seed * 0.04, SUN_WARM);
     ctx.beginPath();
     ctx.moveTo(s.x - w / 2, baseY); ctx.lineTo(s.x, baseY + d / 2);
     ctx.lineTo(s.x, baseY + d / 2 - segH); ctx.lineTo(s.x - w / 2, top);
     ctx.closePath(); ctx.fill();
     /* right (shaded) face */
-    ctx.fillStyle = pal[1];
+    ctx.fillStyle = shade(pal[1], -0.05, SUN_COOL);
     ctx.beginPath();
     ctx.moveTo(s.x + w / 2, baseY); ctx.lineTo(s.x, baseY + d / 2);
     ctx.lineTo(s.x, baseY + d / 2 - segH); ctx.lineTo(s.x + w / 2, top);
     ctx.closePath(); ctx.fill();
-    /* roof slab + rim light */
-    ctx.fillStyle = pal[2];
-    diamond(s.x, top, w, d); ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.22)"; ctx.lineWidth = 1; ctx.stroke();
+    /* roof deck: parapet ring, material, and clutter on the crown */
+    const mat = ROOF_MATS[Math.floor(hash2(p.x * 17 + i, p.y * 31 + 7) * 4) & 3];
+    drawDeck(s.x, top, w, d, mat, shade(mat[0], 0.07, SUN_WARM * 0.4));
+    if (i === segs - 1) drawRoofClutter(p, s.x, top, w, d, floors, true);
+    else if (cam.z > 0.8) drawRoofClutter(p, s.x, top, w, d, floors, false);
 
     /* windows */
     if (cam.z > 0.68 && segH > 16) {
