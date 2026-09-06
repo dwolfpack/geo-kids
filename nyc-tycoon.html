@@ -191,6 +191,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="stat"><div class="k">Influence</div><div class="v inf" id="s-inf">0</div></div>
     <div class="stat"><div class="k">Portfolio</div><div class="v" id="s-own">0 / 0</div></div>
     <div class="stat"><div class="k">Audit Risk</div><div class="v" id="s-risk">0%</div></div>
+    <div class="stat"><div class="k">Legacy</div><div class="v" id="s-legacy" style="color:#ffcf4a">★0</div></div>
     <div class="stat"><div class="k">Date</div><div class="v" id="s-date">JAN 2025</div></div>
     <div id="speedbox">
       <button class="sbtn" id="sp0" title="Pause">II</button>
@@ -213,6 +214,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="dlist" id="dlist"></div>
     <div class="grp">Management</div>
     <div class="row" id="btn-lobby"><i class="dot" style="background:#b07dff"></i>City Hall<span class="kbd">L</span></div>
+    <div class="row" id="btn-board"><i class="dot" style="background:#ffcf4a"></i>Board Room<span class="kbd">B</span></div>
     <div class="row" id="btn-rivals"><i class="dot" style="background:#ff5c6b"></i>Competition<span class="kbd">R</span></div>
     <div class="row" id="btn-port"><i class="dot" style="background:#3ce88f"></i>Portfolio<span class="kbd">P</span></div>
     <div class="row" id="btn-goals"><i class="dot" style="background:#ffcf4a"></i>Objectives<span class="kbd">G</span></div>
@@ -444,8 +446,179 @@ const G = {
   activeEvents: [], nextEvent: 45, tickerItems: [],
   cars: [], peds: [], fx: [],
   won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, statsTimer: 0, rivals: [], buyouts: 0,
-  totalEarned: 0, started: Date.now()
+  totalEarned: 0, started: Date.now(),
+  /* meta-progression: survives every IPO reset */
+  legacy: { shares: 0, earned: 0, ipos: 0, best: 0, up: {} }
 };
+
+/* ===================== THE IPO / PRESTIGE LOOP =====================
+   Taking the empire public liquidates the run and converts it into Legacy
+   Shares — a permanent currency spent on cross-run advantages. */
+const IPO_FLOOR = 1e9;                      // first listing needs $1B net worth
+
+const LEGACY_UP = {
+  seed: { n: "Seed Capital", icon: "💵", max: 6, cost: l => 3 + l * 4,
+    d: l => "Start each empire with " + money(250000 + l * 400000) + " in the bank.",
+    eff: "+$400K starting cash per level" },
+  instinct: { n: "Market Instinct", icon: "📊", max: 10, cost: l => 5 + l * 6,
+    d: l => "All revenue multiplied by ×" + (1 + l * 0.09).toFixed(2) + " permanently.",
+    eff: "+9% global revenue per level" },
+  standing: { n: "Standing Ovation", icon: "🏛", max: 6, cost: l => 6 + l * 7,
+    d: l => "Prestige accrues ×" + (1 + l * 0.16).toFixed(2) + " faster.",
+    eff: "+16% prestige generation per level" },
+  machine: { n: "Political Machine", icon: "🗳", max: 6, cost: l => 7 + l * 8,
+    d: l => "Begin with " + (l * 12) + " influence and a " + pct(0.28 - l * 0.02) + " tax rate.",
+    eff: "+12 starting influence, -2 points of tax per level" },
+  headstart:{ n: "Head Start", icon: "🏗", max: 5, cost: l => 10 + l * 12,
+    d: l => "Open each empire already holding " + l + " developed block" + (l === 1 ? "" : "s") + ".",
+    eff: "+1 pre-owned tier-2 block per level" },
+  charter: { n: "Automation Charter", icon: "⚙", max: 5, cost: l => 6 + l * 6,
+    d: l => "Offline earnings multiplied by ×" + (1 + l * 0.3).toFixed(2) + ".",
+    eff: "+30% offline income per level" },
+  reputation:{ n: "Reputation", icon: "📰", max: 5, cost: l => 8 + l * 9,
+    d: l => "Rivals expand " + pct(l * 0.13) + " slower against you.",
+    eff: "-13% rival aggression per level" },
+  pockets: { n: "Deep Pockets", icon: "💼", max: 5, cost: l => 8 + l * 9,
+    d: l => "Rival buyouts cost " + pct(l * 0.09) + " less.",
+    eff: "-9% buyout premium per level" }
+};
+
+const lv = k => (G.legacy.up && G.legacy.up[k]) || 0;
+const legacyRevMult = () => 1 + lv("instinct") * 0.09;
+const legacyPresMult = () => 1 + lv("standing") * 0.16;
+const legacyOfflineMult = () => 1 + lv("charter") * 0.3;
+const legacyBuyoutMult = () => Math.max(0.4, 1 - lv("pockets") * 0.09);
+const legacyRivalMult = () => Math.max(0.3, 1 - lv("reputation") * 0.13);
+function legacyUpCost(k) { return LEGACY_UP[k].cost(lv(k)); }
+
+/** Shares this run would pay out right now. Sub-linear, so no single run runs away. */
+function ipoShares() {
+  const w = netWorth();
+  if (w < IPO_FLOOR) return 0;
+  const base = Math.pow(w / IPO_FLOOR, 0.52) * 9;
+  const bonus = 1 + G.prestige / 6000 + ownedPlots().length * 0.012 +
+                G.rivals.filter(r => r.eliminated).length * 0.15;
+  return Math.max(1, Math.floor(base * bonus));
+}
+
+/** Requirements text for the IPO button when the empire is not yet listable. */
+function ipoBlockedReason() {
+  const w = netWorth();
+  if (w < IPO_FLOOR) return "Needs $1.00B net worth — you are at " + money(w) + ".";
+  return null;
+}
+
+/** Wipes the run, keeps the legacy, and reopens on a fresh board. */
+function goPublic() {
+  const gained = ipoShares();
+  if (gained <= 0) return;
+  const w = netWorth();
+  G.legacy.shares += gained;
+  G.legacy.earned += gained;
+  G.legacy.ipos++;
+  G.legacy.best = Math.max(G.legacy.best || 0, w);
+  resetRun();
+  toast("gold", "LISTED ON THE NYSE", "The empire floated at " + money(w) + " for " +
+    gained + " legacy shares. Empire " + (G.legacy.ipos + 1) + " begins.");
+  pushTicker("good", "<b>IPO COMPLETE</b> — " + money(w) + " floated, " + gained + " legacy shares issued");
+  flashScreen("#ffcf4a");
+  save();
+  openBoardroom();
+}
+
+/** Rebuilds the board and re-applies every permanent legacy advantage. */
+function resetRun() {
+  for (const p of G.plots) {
+    p.owned = false; p.rival = null; p.biz = null; p.level = 0; p.built = 0;
+    p.sketchy = false; p.mega = false; p.revenue = 0; p.glow = 0;
+    p.up = { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+  }
+  G.cash = 250000 + lv("seed") * 400000;
+  G.prestige = 0;
+  G.influence = lv("machine") * 12;
+  G.risk = 0; G.taxRate = Math.max(0.06, 0.28 - lv("machine") * 0.02);
+  G.zoneBonus = 0; G.transitLv = 0; G.tourismLv = 0; G.gentri = 0;
+  G.perks = {}; G.policy = {}; G.won = {};
+  G.activeEvents = []; G.nextEvent = 60; G.taxPool = 0; G.taxTimer = 0;
+  G.auditTimer = 0; G.time = 0; G.month = 0; G.totalEarned = 0;
+  G.buyouts = 0; G.pickups = []; G.fx = []; G.selected = null;
+  G.rivals = RIVAL_DEFS.map(d => ({ ...d, aggression: d.aggression * legacyRivalMult(),
+    cash: d.seed, income: 0, timer: 0, turns: 0, eliminated: false }));
+  for (const r of G.rivals) {
+    const pool = districtPlots(r.bias).filter(p => !p.owned && !p.rival);
+    if (!pool.length) continue;
+    const p = pool[Math.floor(hash2(r.seed + G.legacy.ipos * 17, 7) * pool.length)];
+    p.rival = r.id; p.biz = r.biz; p.level = 2; p.built = 1;
+  }
+  /* Head Start: hand back a few cheap developed blocks */
+  const hs = lv("headstart");
+  if (hs > 0) {
+    const pool = G.plots.filter(p => !p.park && !p.rival)
+      .sort((a, b) => a.landBase - b.landBase).slice(0, hs);
+    for (const p of pool) { p.owned = true; p.biz = DISTRICTS[p.d].bias; p.level = 2; p.built = 1; }
+  }
+  select(null);
+  updateDistrictList();
+  focusDistrict("times", true);
+  spawnTraffic(true);
+}
+
+function openBoardroom() {
+  const L = G.legacy;
+  let html = '<h1>The Board Room</h1>' +
+    '<p>Legacy shares are what survives a public listing. Spend them on advantages ' +
+    'that apply to every empire you build from here on.</p>' +
+    '<div class="kv"><span>Legacy shares</span><b style="color:var(--gold)">' + L.shares + ' available</b></div>' +
+    '<div class="kv"><span>Listings completed</span><b>' + L.ipos + '</b></div>' +
+    '<div class="kv"><span>Best flotation</span><b>' + money(L.best || 0) + '</b></div>' +
+    '<div class="kv"><span>Career shares issued</span><b>' + L.earned + '</b></div>' +
+    '<h3>Permanent Upgrades</h3><div class="lob">';
+  for (const k in LEGACY_UP) {
+    const u = LEGACY_UP[k], l = lv(k), maxed = l >= u.max, cost = legacyUpCost(k);
+    const ok = !maxed && L.shares >= cost;
+    html += '<div class="lobc' + (ok ? "" : " dis") + '" data-u="' + k + '">' +
+      '<b>' + u.icon + ' ' + u.n + ' <span style="color:var(--dim)">' + l + '/' + u.max + '</span></b>' +
+      '<small>' + (l === 0 ? u.eff + "." : u.d(l)) +
+        (maxed ? "" : '<br><span style="color:var(--cyan)">Next: ' + u.d(l + 1) + '</span>') +
+        '</small>' +
+      '<div class="pips" style="margin-top:6px">' +
+      Array.from({ length: u.max }, (_, i) =>
+        '<i class="pip' + (i < l ? " f" : "") + '"></i>').join("") + '</div>' +
+      '<div class="cost">' + (maxed ? "MAXED" : cost + " shares") + '</div></div>';
+  }
+  html += '</div>';
+
+  const blocked = ipoBlockedReason(), shares = ipoShares();
+  html += '<h3>Take The Empire Public</h3>' +
+    '<p>Floating liquidates every block you hold and resets the board — the city, ' +
+    'your rivals, City Hall and the tax code all start over. Your legacy does not.</p>' +
+    '<button class="btn buy" id="a-ipo"' + (blocked ? " disabled" : "") + '>' +
+    (blocked ? "Cannot List Yet" : "File For IPO") +
+    ' <span class="c">' + (blocked ? "" : "+" + shares + " shares") + '</span>' +
+    '<span class="d">' + (blocked || ("Current empire " + money(netWorth()) +
+      " floats for " + shares + " legacy shares.")) + '</span></button>';
+  openModal(html);
+  $("mbox").querySelectorAll("[data-u]").forEach(c => c.onclick = () => {
+    const k = c.dataset.u, cost = legacyUpCost(k);
+    if (lv(k) >= LEGACY_UP[k].max || G.legacy.shares < cost) return;
+    G.legacy.shares -= cost;
+    G.legacy.up[k] = lv(k) + 1;
+    if (k === "machine") G.taxRate = Math.max(0.06, G.taxRate - 0.02);
+    if (k === "reputation") for (const r of G.rivals) {
+      const def = RIVAL_DEFS.find(d => d.id === r.id);
+      if (def) r.aggression = def.aggression * legacyRivalMult();
+    }
+    toast("good", LEGACY_UP[k].n, "Now level " + lv(k) + ". " + LEGACY_UP[k].eff + ".");
+    save(); openBoardroom();
+  });
+  const ipo = $("a-ipo");
+  if (ipo) ipo.onclick = () => {
+    if (!confirm("File for IPO?\n\nYou float " + money(netWorth()) + " for " + ipoShares() +
+      " legacy shares. Every block, upgrade and lobbying win from this empire is liquidated."))
+      return;
+    closeModal(); goPublic();
+  };
+}
 
 function districtAt(x, y) {
   if (x > RIVER_X) return "brooklyn";
@@ -626,6 +799,7 @@ function plotRevenue(p) {
   r *= policyMult(p, "rev");
   if (hasMonopoly(p.d)) r *= 1.35;           // district monopoly premium
   r *= 1 + G.prestige * 0.004;               // empire-wide prestige multiplier
+  r *= legacyRevMult();                      // permanent cross-run advantage
   return r;
 }
 
@@ -646,6 +820,7 @@ function prestigeRate(p) {
   for (const e of G.activeEvents) if (e.def.mod.prestige) v *= e.def.mod.prestige;
   if (G.perks.landmark) v *= 1.5;
   v *= policyMult(p, "prestige");
+  v *= legacyPresMult();
   return v;
 }
 
@@ -1568,6 +1743,9 @@ function advisorLine() {
     " influence. City Hall (L) will cut your " + pct(G.taxRate) + " tax rate.";
   const capped = own.filter(p => p.biz && p.level >= levelCap(p)).length;
   if (capped > 2) return capped + " towers have hit the height cap — buy a Rezoning Permit at City Hall (L).";
+  if (netWorth() >= IPO_FLOOR && ownedPlots().length > 4)
+    return "You can take the empire public (B) for " + ipoShares() +
+      " legacy shares — permanent bonuses on every future run.";
   const rivalHeld = G.plots.filter(p => p.rival).length;
   const takeable = G.rivals.filter(canTakeover);
   if (takeable.length) return "You outweigh " + takeable[0].name +
@@ -1593,6 +1771,9 @@ function updateHUD() {
   const r = $("s-risk");
   r.textContent = pct(G.risk);
   r.className = "v " + (G.risk > 0.45 ? "neg" : G.risk > 0.18 ? "money" : "pos");
+  const lg = $("s-legacy");
+  lg.textContent = "★" + G.legacy.shares + (G.legacy.ipos ? " · G" + (G.legacy.ipos + 1) : "");
+  lg.title = "Legacy shares · empire generation";
   $("s-date").textContent = MONTHS[G.month % 12] + " " + (2025 + Math.floor(G.month / 12));
   const hint = $("hint");
   if (hint) {
@@ -1920,7 +2101,7 @@ function rivalWorth(r) {
 function buyoutPrice(p) {
   const r = rivalById(p.rival);
   const premium = 2.2 + (r ? r.aggression * 0.6 : 0.6);
-  return landPrice(p) * premium + rivalRevenue(p) * 55;
+  return (landPrice(p) * premium + rivalRevenue(p) * 55) * legacyBuyoutMult();
 }
 
 /** One rival turn: collect income, then buy or build with what they have. */
@@ -2244,7 +2425,14 @@ function openHelp() {
     '<h3>Controls</h3>' +
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
-    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<h3>Going Public</h3>' +
+    '<p>Once an empire is worth <b>$1B</b> you can file for an IPO from the Board Room ' +
+    '(<kbd>B</kbd>). Floating liquidates the run — the city, the rivals and City Hall all ' +
+    'reset — and converts it into <b>legacy shares</b>. Spend those on permanent upgrades ' +
+    'that apply to every empire you build afterwards: starting capital, a global revenue ' +
+    'multiplier, faster prestige, a friendlier tax code, pre-owned blocks and slower rivals. ' +
+    'Later runs climb far faster than the first.</p>' +
     '<h3>Win Conditions</h3>' +
     '<p>Reach <b>$100B net worth</b>, own <b>every block in all four districts</b>, and build the ' +
     '<b>Empire State Megatower</b> on a maxed-out Wall Street tower.</p>');
@@ -2274,6 +2462,12 @@ const MILESTONES = [
     d: "An entire rival portfolio absorbed in one transaction." },
   { id: "board", t: () => G.rivals.length > 0 && G.rivals.every(r => r.eliminated),
     n: "Cleared The Board", d: "No developer left in New York but you." },
+  { id: "ipo1", t: () => G.legacy.ipos >= 1, n: "Rang The Bell",
+    d: "First public listing. The empire is now a ticker symbol." },
+  { id: "ipo3", t: () => G.legacy.ipos >= 3, n: "Serial Founder",
+    d: "Three empires built and floated." },
+  { id: "shares", t: () => G.legacy.earned >= 100, n: "Controlling Interest",
+    d: "100 legacy shares issued across your career." },
   { id: "audit", t: () => G.audits >= 1 && G.cash > 0, n: "Survived The Audit",
     d: "Fined and still solvent. The cost of doing business." }
 ];
@@ -2369,6 +2563,7 @@ document.addEventListener("keydown", e => {
   if (k === "g") openGoals();
   if (k === "p") openPortfolio();
   if (k === "r") openRivals();
+  if (k === "b") openBoardroom();
   if (k === "h") openHelp();
   const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
   if (ovs[k]) setOverlay(ovs[k]);
@@ -2396,10 +2591,13 @@ $("btn-lobby").onclick = openLobby;
 $("btn-goals").onclick = openGoals;
 $("btn-port").onclick = openPortfolio;
 $("btn-rivals").onclick = openRivals;
+$("btn-board").onclick = openBoardroom;
 $("btn-help").onclick = openHelp;
 $("btn-save").onclick = () => { save(); toast("good", "Empire Saved", "Progress written to local storage."); };
 $("btn-reset").onclick = () => {
-  if (!confirm("Demolish your saved empire and start over?")) return;
+  if (!confirm("Demolish your saved empire?\n\nThis erases EVERYTHING, including your " +
+    G.legacy.shares + " legacy shares and all permanent board-room upgrades. " +
+    "To keep your legacy, file for an IPO instead (B).")) return;
   localStorage.removeItem(SAVE_KEY); location.reload();
 };
 
@@ -2411,7 +2609,7 @@ function save() {
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
     tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, miles: G.miles, audits: G.audits,
     time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
-    buyouts: G.buyouts,
+    buyouts: G.buyouts, legacy: G.legacy,
     rivals: G.rivals.map(r => ({ id: r.id, cash: r.cash, eliminated: r.eliminated })),
     plots: G.plots.map(p => (p.owned || p.rival)
       ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega,
@@ -2431,6 +2629,7 @@ function load() {
     time: d.time || 0, totalEarned: d.totalEarned || 0
   });
   G.buyouts = d.buyouts || 0;
+  if (d.legacy) G.legacy = Object.assign({ shares: 0, earned: 0, ipos: 0, best: 0, up: {} }, d.legacy);
   if (d.rivals) for (const rs of d.rivals) {
     const r = rivalById(rs.id);
     if (r) { r.cash = rs.cash; r.eliminated = rs.eliminated; }
@@ -2449,6 +2648,7 @@ function load() {
   if (away > 30) {
     let off = 0;
     for (const p of ownedPlots()) if (p.biz) off += plotRevenue(p) * (p.up.automation * 0.09);
+    off *= legacyOfflineMult();
     const total = off * away;
     if (total > 1) {
       G.cash += total;
@@ -2510,6 +2710,7 @@ setOverlay("none");
 setSpeed(1);
 updateHUD(); updateDistrictList(); renderTicker();
 if (!loaded) {
+  G.cash = 250000 + lv("seed") * 400000;
   setTimeout(() => toast("info", "Welcome to New York", "You have " + money(G.cash) +
     " and no property. Buy a cheap Brooklyn block and start compounding. Press H for help."), 700);
 } else {
@@ -2520,7 +2721,8 @@ requestAnimationFrame(frame);
 
 /* test hook for headless QA */
 window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
-  centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp };
+  centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp,
+  ipoShares, goPublic, legacyRevMult, legacyBuyoutMult };
 </script>
 </body>
 </html>
