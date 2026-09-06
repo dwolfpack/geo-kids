@@ -153,6 +153,11 @@ canvas.dragging{cursor:grabbing}
 .modal{position:absolute;inset:0;background:rgba(3,6,11,.82);z-index:50;display:none;
   align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .modal.open{display:flex}
+.modal.district{background:rgba(3,6,11,.34);backdrop-filter:none;
+  justify-content:flex-end;padding-right:26px}
+.modal.district .mbox{width:min(560px,46vw)}
+@media (max-width:900px){.modal.district{justify-content:center;padding-right:0;
+  background:rgba(3,6,11,.82)}.modal.district .mbox{width:min(760px,92vw)}}
 .mbox{width:min(760px,92vw);max-height:86vh;overflow-y:auto;background:var(--panel2);
   border:1px solid var(--line2);border-radius:12px;padding:26px 30px;box-shadow:0 30px 90px rgba(0,0,0,.8)}
 .mbox h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:.01em}
@@ -1553,6 +1558,12 @@ function rgbOf(col) {
   return [+m[0], +m[1], +m[2]];
 }
 
+/** "#rrggbb" (or an rgb string) plus an alpha, as an rgba string. */
+function rgba(col, a) {
+  const c = rgbOf(col);
+  return "rgba(" + c[0] + "," + c[1] + "," + c[2] + "," + a + ")";
+}
+
 /* The renderer asks for the same handful of shaded colours a thousand times a
    frame, so the results are cached rather than re-parsed. */
 const shadeCache = new Map();
@@ -1863,24 +1874,232 @@ function drawHaze() {
   ctx.fillRect(0, 0, W, Math.min(H, far + span * 0.8));
 }
 
-function overlayColor(p) {
-  if (G.overlay === "none" || p.park) return null;
-  if (G.overlay === "zoning") return DISTRICTS[p.d].color;
-  if (G.overlay === "traffic") {
-    const t = p.owned && p.biz ? clamp(p.level * BIZ[p.biz].traffic / 9, 0, 1) : 0.04;
-    return "rgba(255," + Math.round(120 + t * 110) + ",60," + (0.12 + t * 0.6) + ")";
+/* =====================  OVERLAYS  =====================
+   Overlays are survey markings painted onto the city: a saturated
+   translucent fill, a bright edge wherever the painted area ends, and a soft
+   bloom outside that edge so the shape holds over dark asphalt. Everything
+   goes through cbc()/CB.on so the colour-safe palette re-tints all of it. */
+
+/** Congestion / intensity ramp, free-flowing (0) to gridlocked (1).
+    Green-amber-red normally; the blue/amber/orange axis in colour-safe mode. */
+function rampCol(t) {
+  const lo = cbc("#3ce88f"), mid = CB.on ? "#ffd98a" : "#ffd23f", hi = cbc("#ff5c6b");
+  t = clamp(t, 0, 1);
+  return t < 0.5 ? mixCol(lo, mid, t * 2) : mixCol(mid, hi, (t - 0.5) * 2);
+}
+
+/** Fill colour, opacity and grouping key for one cell under the current
+    overlay. The group decides where a painted edge is drawn: an edge appears
+    wherever two neighbours disagree, which is what turns a per-tile wash into
+    the block-shaped zones of the concept art. */
+function overlayInfo(p) {
+  if (!p || G.overlay === "none" || p.park || p.water || p.street) return null;
+  const O = G.overlay;
+  if (O === "zoning") {
+    const c = DISTRICTS[p.d].color;
+    return { c, a: 0.26, g: "z" + p.d };
   }
-  if (G.overlay === "profit") {
+  if (O === "traffic") {
+    const t = p.owned && p.biz ? clamp(p.level * BIZ[p.biz].traffic / 9, 0, 1) : 0.03;
+    const b = t < 0.12 ? 0 : t < 0.4 ? 1 : t < 0.7 ? 2 : 3;
+    return { c: rampCol(t), a: 0.12 + t * 0.4, g: "t" + b };
+  }
+  if (O === "profit") {
     const r = clamp(p.revenue / Math.max(1, maxRev), 0, 1);
-    return CB.on
-      ? "rgba(" + Math.round(60 + (1 - r) * 40) + "," + Math.round(140 + r * 60) + ",255," + (0.1 + r * 0.65) + ")"
-      : "rgba(" + Math.round(60 + (1 - r) * 120) + ",232," + Math.round(120 + r * 60) + "," + (0.1 + r * 0.65) + ")";
+    const b = r < 0.1 ? 0 : r < 0.35 ? 1 : r < 0.7 ? 2 : 3;
+    return { c: mixCol(cbc("#48d8ff"), cbc("#3ce88f"), r), a: 0.1 + r * 0.5, g: "p" + b };
   }
-  if (G.overlay === "risk") {
-    const r = p.sketchy ? 0.75 : (p.biz && BIZ[p.biz].risk > 0 ? 0.28 : 0.05);
-    return CB.on ? "rgba(255,140,60," + r + ")" : "rgba(255,70,90," + r + ")";
+  if (O === "risk") {
+    const r = p.sketchy ? 0.85 : (p.biz && BIZ[p.biz].risk > 0 ? 0.4 : 0.08);
+    const b = p.sketchy ? 2 : (p.biz && BIZ[p.biz].risk > 0 ? 1 : 0);
+    return { c: cbc("#ff5c6b"), a: 0.08 + r * 0.42, g: "r" + b };
   }
   return null;
+}
+
+/** Kept for the roof tint: just the fill colour and alpha of a cell. */
+function overlayColor(p) {
+  const o = overlayInfo(p);
+  return o ? o.c : null;
+}
+
+/* Screen offsets of the four diamond corners, and which pair fences off each
+   neighbour: -x uses N-W, +x uses E-S, -y uses N-E, +y uses W-S. */
+const EDGE_OF = [[0, 3], [1, 2], [0, 1], [3, 2]];
+const NB_DX = [-1, 1, 0, 0], NB_DY = [0, 0, -1, 1];
+
+/** Painted overlay pass: fills first, then every boundary edge stroked twice
+    (a wide soft bloom, then a crisp bright line). */
+function drawOverlays(tw, th) {
+  if (G.overlay === "none") return;
+  const cx = [0, tw / 2, 0, -tw / 2], cy = [-th / 2, 0, th / 2, 0];
+  for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
+    const c = G.grid[y][x];
+    const o = overlayInfo(c);
+    if (!o) continue;
+    const s = worldToScreen(x + 0.5, y + 0.5);
+    if (s.x < -160 || s.x > W + 160 || s.y < -140 || s.y > H + 160) continue;
+    ctx.globalAlpha = o.a;
+    ctx.fillStyle = o.c;
+    diamond(s.x, s.y, tw * 0.94, th * 0.94); ctx.fill();
+    ctx.globalAlpha = 1;
+    /* fence off the painted area wherever the neighbour disagrees */
+    let any = false;
+    ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const nx = x + NB_DX[i], ny = y + NB_DY[i];
+      const n = nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H ? null : G.grid[ny][nx];
+      const no = overlayInfo(n);
+      if (no && no.g === o.g) continue;
+      const e = EDGE_OF[i];
+      ctx.moveTo(s.x + cx[e[0]], s.y + cy[e[0]]);
+      ctx.lineTo(s.x + cx[e[1]], s.y + cy[e[1]]);
+      any = true;
+    }
+    if (!any) continue;
+    ctx.strokeStyle = o.c;
+    ctx.globalAlpha = 0.2;
+    ctx.lineWidth = 6 * clamp(cam.z, 0.6, 1.6);
+    ctx.stroke();
+    ctx.globalAlpha = 0.95;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+}
+
+/* District whose panel is open, outlined on the map while it is. Deliberately
+   not part of G: it is view state, and nothing about it belongs in a save. */
+let hlDistrict = null;
+
+/** Cells belonging to a district, streets included, so the outline follows the
+    neighbourhood rather than each individual block. */
+function inDistrict(x, y, id) {
+  if (x < 0 || y < 0 || x >= GRID_W || y >= GRID_H || x === RIVER_X) return false;
+  return districtAt(x, y) === id;
+}
+
+/** Trace every edge where a region meets something that is not the region. */
+function regionEdges(tw, th, inside) {
+  const ex = [0, tw / 2, 0, -tw / 2], ey = [-th / 2, 0, th / 2, 0];
+  ctx.beginPath();
+  for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
+    if (!inside(x, y)) continue;
+    const s = worldToScreen(x + 0.5, y + 0.5);
+    if (s.x < -200 || s.x > W + 200 || s.y < -180 || s.y > H + 200) continue;
+    for (let i = 0; i < 4; i++) {
+      if (inside(x + NB_DX[i], y + NB_DY[i])) continue;
+      const e = EDGE_OF[i];
+      ctx.moveTo(s.x + ex[e[0]], s.y + ey[e[0]]);
+      ctx.lineTo(s.x + ex[e[1]], s.y + ey[e[1]]);
+    }
+  }
+}
+
+/** Selection beam and district boundary. Painted after everything with height
+    so they read over the rooftops, the way the concept art does it. */
+function drawSelectionFx(tw, th) {
+  if (hlDistrict && DISTRICTS[hlDistrict]) {
+    regionEdges(tw, th, (x, y) => inDistrict(x, y, hlDistrict));
+    const pulse = REDUCE_MOTION ? 0.5 : 0.42 + Math.sin(blink * 2.2) * 0.16;
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "rgba(228,240,255," + (pulse * 0.35).toFixed(3) + ")";
+    ctx.lineWidth = 11 * clamp(cam.z, 0.6, 1.5); ctx.stroke();
+    ctx.strokeStyle = "rgba(240,248,255," + (0.55 + pulse * 0.45).toFixed(3) + ")";
+    ctx.lineWidth = 1.8; ctx.stroke();
+  }
+  const p = G.selected;
+  if (!p) return;
+  const s = worldToScreen(p.x + 0.5, p.y + 0.5);
+  if (s.x < -200 || s.x > W + 200 || s.y < -200 || s.y > H + 200) return;
+  const gold = cbc("#ffcf4a");
+  /* a soft column of light so the block is findable in a dense skyline */
+  const h = 240 * cam.z;
+  const g = ctx.createLinearGradient(0, s.y, 0, s.y - h);
+  g.addColorStop(0, rgba(gold, 0.26));
+  g.addColorStop(0.45, rgba(gold, 0.1));
+  g.addColorStop(1, rgba(gold, 0));
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(s.x - tw * 0.46, s.y); ctx.lineTo(s.x + tw * 0.46, s.y);
+  ctx.lineTo(s.x + tw * 0.26, s.y - h); ctx.lineTo(s.x - tw * 0.26, s.y - h);
+  ctx.closePath(); ctx.fill();
+  /* glowing footprint */
+  const pulse = REDUCE_MOTION ? 0.5 : 0.5 + Math.sin(blink * 3.4) * 0.32;
+  ctx.strokeStyle = rgba(gold, 0.16 + pulse * 0.2);
+  ctx.lineWidth = 9; diamond(s.x, s.y, tw * 0.98, th * 0.98); ctx.stroke();
+  ctx.strokeStyle = rgba(gold, 0.95);
+  ctx.lineWidth = 2; diamond(s.x, s.y, tw * 0.98, th * 0.98); ctx.stroke();
+}
+
+/** Congestion pressure on one street tile, taken from the blocks it serves.
+    Levels run to 15 and the busiest vertical carries a 1.7x multiplier, so
+    the divisor puts a fully built commercial corner at the top of the ramp. */
+function streetLoad(x, y) {
+  let sum = 0, n = 0;
+  for (let i = 0; i < 4; i++) {
+    const nx = x + NB_DX[i], ny = y + NB_DY[i];
+    if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
+    const c = G.grid[ny][nx];
+    if (!c || c.water || c.street) continue;
+    n++;
+    if (c.park) { sum += 0.6; continue; }
+    sum += (c.owned || c.rival) && c.biz && c.level
+      ? c.level * BIZ[c.biz].traffic * (1 + (c.up ? c.up.marketing : 0) * 0.22)
+      : (c.civH || 0) * 2.2;
+  }
+  return n ? clamp(sum / n / 13 * globalTraffic(), 0, 1) : 0;
+}
+
+/** Panel 2 of the concept art: the avenues carry the load as flowing ribbons
+    rather than as individual vehicles. The cabs stay — they read well close
+    in — but the grid-scale answer to "where is it jammed" is this. */
+function drawTrafficRibbons(tw, th) {
+  if (G.overlay !== "traffic") return;
+  const lw = Math.max(2, th * 0.3);
+  ctx.lineCap = "round";
+  for (let y = 0; y < GRID_H; y++) for (let x = 0; x < GRID_W; x++) {
+    const c = G.grid[y][x];
+    if (!c || !c.street) continue;
+    const s = worldToScreen(x + 0.5, y + 0.5);
+    if (s.x < -180 || s.x > W + 180 || s.y < -160 || s.y > H + 180) continue;
+    const t = streetLoad(x, y);
+    const col = rampCol(t);
+    for (let axis = 0; axis < 2; axis++) {
+      if (axis === 0 ? y % 4 !== 3 : x % 3 !== 2) continue;
+      const a = axis === 0 ? worldToScreen(x, y + 0.5) : worldToScreen(x + 0.5, y);
+      const b = axis === 0 ? worldToScreen(x + 1, y + 0.5) : worldToScreen(x + 0.5, y + 1);
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y);
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = 0.16; ctx.lineWidth = lw * 2.2; ctx.stroke();
+      ctx.globalAlpha = 0.45 + t * 0.4; ctx.lineWidth = lw; ctx.stroke();
+      if (cam.z > 0.7) {                       /* lane dashes drift with the flow */
+        ctx.globalAlpha = 0.55;
+        ctx.strokeStyle = "rgba(255,255,255,0.6)";
+        ctx.lineWidth = Math.max(1, lw * 0.2);
+        ctx.setLineDash([lw * 0.55, lw * 1.9]);
+        ctx.lineDashOffset = REDUCE_MOTION ? 0 : -(blink * (14 + (1 - t) * 46));
+        ctx.stroke();
+        ctx.setLineDash([]); ctx.lineDashOffset = 0;
+      }
+    }
+  }
+  ctx.globalAlpha = 1; ctx.lineCap = "butt";
+}
+
+/** Overlays have to survive a dense skyline, so the paint carries onto the
+    roof deck of whatever stands on the block. */
+function roofOverlayTint(p, cx2, ty, w, d) {
+  const o = overlayInfo(p);
+  if (!o) return;
+  ctx.globalAlpha = o.a * 0.9;
+  ctx.fillStyle = o.c;
+  diamond(cx2, ty, w, d); ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = o.c;
+  ctx.globalAlpha = 0.75; ctx.lineWidth = 1.2;
+  diamond(cx2, ty, w, d); ctx.stroke();
+  ctx.globalAlpha = 1;
 }
 
 let maxRev = 1, blink = 0;
@@ -1910,6 +2129,8 @@ function draw(dt) {
 
   /* pass 1.5: one sun, one shadow layer, painted onto the finished ground */
   drawShadows(tw, th);
+  drawOverlays(tw, th);
+  drawTrafficRibbons(tw, th);
 
   /* pass 2: everything with height, painted back-to-front by depth (x+y) */
   const items = [];
@@ -1932,6 +2153,7 @@ function draw(dt) {
     } else if (it.k === 1) drawCar(it.c, tw, th);
     else drawPed(it.c, it.gx, it.gy);
   }
+  drawSelectionFx(tw, th);
   drawHaze();
   drawPickups();
   drawFx();
@@ -1977,12 +2199,13 @@ function drawHarbor() {
 /** Big translucent district names floating over the grid. */
 const LEGENDS = {
   zoning: { t: "ZONING", rows: () => Object.values(DISTRICTS).map(d => [d.color, d.name]) },
-  traffic: { t: "FOOT TRAFFIC", rows: () => [["rgba(255,120,60,0.25)", "Low / undeveloped"],
-    ["rgba(255,175,60,0.6)", "Moderate"], ["rgba(255,230,60,0.9)", "Heavy footfall"]] },
-  profit: { t: "PROFIT PER BLOCK", rows: () => [["rgba(180,232,120,0.3)", "Weak earner"],
-    ["rgba(120,232,150,0.6)", "Solid"], ["rgba(60,232,180,0.9)", "Top earner in the city"]] },
+  traffic: { t: "STREET CONGESTION", rows: () => [[rampCol(0.05), "Free flowing"],
+    [rampCol(0.5), "Slow"], [rampCol(1), "Gridlocked"]] },
+  profit: { t: "PROFIT PER BLOCK", rows: () => [[mixCol(cbc("#48d8ff"), cbc("#3ce88f"), 0), "Weak earner"],
+    [mixCol(cbc("#48d8ff"), cbc("#3ce88f"), 0.5), "Solid"],
+    [mixCol(cbc("#48d8ff"), cbc("#3ce88f"), 1), "Top earner in the city"]] },
   risk: { t: "AUDIT EXPOSURE", rows: () => [["rgba(255,70,90,0.1)", "Clean books"],
-    ["rgba(255,70,90,0.35)", "Regulated vertical"], ["rgba(255,70,90,0.8)", "Back-room operation"]] }
+    ["rgba(255,70,90,0.35)", "Regulated vertical"], [cbc("#ff5c6b"), "Back-room operation"]] }
 };
 
 /** Explains whatever overlay wash is currently painted on the ground. */
@@ -2086,12 +2309,6 @@ function drawGround(p, s, tw, th) {
   }
   ctx.strokeStyle = p.owned ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)";
   ctx.lineWidth = 1; ctx.stroke();
-  const oc = overlayColor(p);
-  if (oc) {
-    ctx.globalAlpha = G.overlay === "zoning" ? 0.22 : 1;
-    ctx.fillStyle = oc; diamond(s.x, s.y, tw, th); ctx.fill();
-    ctx.globalAlpha = 1;
-  }
 }
 
 /** Height pass: structures, selection rings and lot markers. */
@@ -2118,14 +2335,10 @@ function drawPlot(p, s, tw, th) {
     diamond(s.x, s.y, tw * .78, th * .78); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  if (sel || hov) {
-    ctx.strokeStyle = sel ? "#ffcf4a" : "rgba(255,255,255,0.5)";
-    ctx.lineWidth = sel ? 2.4 : 1.6;
+  if (hov && !sel) {
+    ctx.strokeStyle = "rgba(255,255,255,0.5)";
+    ctx.lineWidth = 1.6;
     diamond(s.x, s.y, tw * .98, th * .98); ctx.stroke();
-    if (sel) {
-      ctx.strokeStyle = "rgba(255,207,74," + (0.25 + Math.sin(blink * 4) * 0.2) + ")";
-      ctx.lineWidth = 6; diamond(s.x, s.y, tw * .98, th * .98); ctx.stroke();
-    }
   }
 }
 
@@ -2152,6 +2365,7 @@ function drawCivBuilding(p, s, tw, th) {
   const mat = ROOF_MATS[Math.floor(hash2(p.x * 17 + 3, p.y * 31 + 7) * 4) & 3];
   drawDeck(s.x, top, w, d, mat, shade(mat[0], 0.07, SUN_WARM * 0.4));
   drawRoofClutter(p, s.x, top, w, d, Math.round(p.civH * 4), true);
+  roofOverlayTint(p, s.x, top, w, d);
   if (cam.z > 0.7 && h > 18) {
     const rows = clamp(Math.floor(h / (8 * cam.z)), 1, 10);
     for (let r = 0; r < rows; r++) for (let c = 0; c < 3; c++) {
@@ -2227,7 +2441,10 @@ function drawBuilding(p, s, tw, th) {
     /* roof deck: parapet ring, material, and clutter on the crown */
     const mat = ROOF_MATS[Math.floor(hash2(p.x * 17 + i, p.y * 31 + 7) * 4) & 3];
     drawDeck(s.x, top, w, d, mat, mixCol(shade(mat[0], 0.07, SUN_WARM * 0.4), pal[2], 0.34));
-    if (i === segs - 1) drawRoofClutter(p, s.x, top, w, d, floors, true);
+    if (i === segs - 1) {
+      drawRoofClutter(p, s.x, top, w, d, floors, true);
+      roofOverlayTint(p, s.x, top, w, d);
+    }
 
     /* windows */
     if (cam.z > 0.68 && segH > 16) {
@@ -2342,15 +2559,8 @@ function drawBuilding(p, s, tw, th) {
     ctx.beginPath(); ctx.arc(s.x + tw * 0.26, top - 3 * cam.z, 1.8 * cam.z, 0, TAU); ctx.fill();
     ctx.shadowBlur = 0;
   }
-  /* crane while a tier is under construction */
-  if (p.built < 1) {
-    ctx.strokeStyle = "#ffcf4a"; ctx.lineWidth = 1.6 * cam.z;
-    ctx.beginPath();
-    ctx.moveTo(s.x + tw * 0.28, s.y); ctx.lineTo(s.x + tw * 0.28, top - 16 * cam.z);
-    ctx.lineTo(s.x - tw * 0.1, top - 16 * cam.z); ctx.stroke();
-    ctx.fillStyle = "rgba(255,207,74,0.85)";
-    ctx.fillRect(s.x - tw * 0.12, top - 16 * cam.z, 3 * cam.z, 5 * cam.z);
-  }
+  /* tower crane and scaffolding while a tier is under construction */
+  if (p.built < 1) drawConstruction(p, s, tw, th, top);
   if (p.glow > 0) {
     ctx.strokeStyle = "rgba(60,232,143," + p.glow * 0.85 + ")";
     ctx.lineWidth = 2.4; diamond(s.x, s.y, tw * .92, th * .92); ctx.stroke();
@@ -2361,6 +2571,114 @@ function drawBuilding(p, s, tw, th) {
     ctx.fillText(B.icon, s.x, top - (floors >= 8 ? (18 + floors * 1.6) : 8) * cam.z);
     ctx.globalAlpha = 1;
   }
+}
+
+/* =====================  CONSTRUCTION  =====================
+   Panel 4 of the concept art: a real tower crane over a half-finished tower.
+   Mast, slewing unit, counter-jib with its counterweight, jib, trolley, hoist
+   rope and a hanging load, plus scaffolding netting on the unfinished storeys
+   and a progress ring above the site. */
+function drawConstruction(p, s, tw, th, top) {
+  const z = cam.z, yellow = mixCol(cbc("#ffb03c"), "#8a8478", 0.18);
+  const bx = s.x + tw * 0.3, by = s.y + th * 0.08;   // crane stands off the near corner
+  /* the mast clears the storey being poured, no more */
+  const mastTop = Math.min(top - clamp((s.y - top) * 0.16, 15 * z, 34 * z), by - 40 * z);
+  const mw = 2.6 * z;                                 // mast half-width
+
+  /* scaffolding netting over the storeys still going up */
+  const raw = (top - s.y);
+  const scaff = Math.min(-raw * 0.42, 70 * z);
+  if (scaff > 6) {
+    const w2 = tw * 0.9 * 0.5;
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(s.x - w2, top); ctx.lineTo(s.x, top + th * 0.45);
+    ctx.lineTo(s.x, top + th * 0.45 + scaff); ctx.lineTo(s.x - w2, top + scaff);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(126,138,120,0.3)"; ctx.fill();
+    ctx.clip();
+    ctx.strokeStyle = "rgba(212,220,200,0.28)"; ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 0; i <= 6; i++) {
+      const yy = top + (scaff * i / 6);
+      ctx.moveTo(s.x - w2, yy); ctx.lineTo(s.x, yy + th * 0.45);
+    }
+    for (let i = 0; i <= 4; i++) {
+      const xx = s.x - w2 + (w2 * i / 4);
+      ctx.moveTo(xx, top + th * 0.45 * (i / 4)); ctx.lineTo(xx, top + th * 0.45 * (i / 4) + scaff);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* mast: two legs with X bracing */
+  ctx.strokeStyle = yellow; ctx.lineWidth = Math.max(1, 1.1 * z);
+  ctx.beginPath();
+  ctx.moveTo(bx - mw, by); ctx.lineTo(bx - mw, mastTop);
+  ctx.moveTo(bx + mw, by); ctx.lineTo(bx + mw, mastTop);
+  const bays = clamp(Math.floor((by - mastTop) / (9 * z)), 3, 14);
+  for (let i = 0; i < bays; i++) {
+    const y0 = by - (by - mastTop) * (i / bays), y1 = by - (by - mastTop) * ((i + 1) / bays);
+    ctx.moveTo(bx - mw, y0); ctx.lineTo(bx + mw, y1);
+    ctx.moveTo(bx + mw, y0); ctx.lineTo(bx - mw, y1);
+    ctx.moveTo(bx - mw, y1); ctx.lineTo(bx + mw, y1);
+  }
+  ctx.stroke();
+
+  /* slewing unit, counter-jib and jib */
+  const slew = mastTop - 3 * z;
+  const jib = 26 * z, cjib = 12 * z;
+  ctx.fillStyle = yellow;
+  ctx.fillRect(bx - mw * 1.5, slew - 5 * z, mw * 3, 5.5 * z);
+  ctx.strokeStyle = yellow; ctx.lineWidth = Math.max(1, 1.2 * z);
+  ctx.beginPath();
+  ctx.moveTo(bx - cjib, slew - 6 * z); ctx.lineTo(bx + jib, slew - 6 * z);
+  ctx.moveTo(bx - cjib, slew - 9.5 * z); ctx.lineTo(bx + jib * 0.55, slew - 9.5 * z);
+  ctx.moveTo(bx - cjib, slew - 9.5 * z); ctx.lineTo(bx - cjib, slew - 6 * z);
+  ctx.stroke();
+  ctx.lineWidth = Math.max(0.8, 0.7 * z);             /* jib lattice + tie bars */
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const x0 = bx + jib * (i / 5), x1 = bx + jib * ((i + 1) / 5);
+    ctx.moveTo(x0, slew - 6 * z); ctx.lineTo(x1, slew - 9.5 * z);
+  }
+  ctx.moveTo(bx, slew - 16 * z); ctx.lineTo(bx + jib, slew - 6 * z);
+  ctx.moveTo(bx, slew - 16 * z); ctx.lineTo(bx - cjib, slew - 6 * z);
+  ctx.moveTo(bx, slew - 9.5 * z); ctx.lineTo(bx, slew - 16 * z);
+  ctx.stroke();
+  ctx.fillStyle = "#4b4f56";                          /* counterweight */
+  ctx.fillRect(bx - cjib - 1.5 * z, slew - 9 * z, 6.5 * z, 7 * z);
+
+  /* trolley, hoist rope and the load swinging under it */
+  const sway = REDUCE_MOTION ? 0.55 : 0.5 + Math.sin(blink * 0.7 + p.seed * 6) * 0.32;
+  const tx = bx + jib * (0.3 + sway * 0.6);
+  const drop = (12 + (1 - p.built) * 34) * z;
+  ctx.strokeStyle = "rgba(226,232,240,0.75)"; ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(tx, slew - 6 * z); ctx.lineTo(tx, slew - 6 * z + drop); ctx.stroke();
+  ctx.fillStyle = "#6f7681";
+  ctx.fillRect(tx - 2.4 * z, slew - 8 * z, 4.8 * z, 2.4 * z);
+  ctx.fillStyle = shade(cbc("#ff9d3c"), -0.1);        /* the hanging load */
+  ctx.fillRect(tx - 4 * z, slew - 6 * z + drop, 8 * z, 4 * z);
+  ctx.fillStyle = "rgba(0,0,0,0.3)";
+  ctx.fillRect(tx - 4 * z, slew - 6 * z + drop + 2.6 * z, 8 * z, 1.4 * z);
+
+  /* progress ring over the site */
+  if (z > 0.7) {
+    const ry = slew - 30 * z, rr = 6.5 * z;      // clear of the jib tie bars
+    ctx.strokeStyle = "rgba(10,16,26,0.8)"; ctx.lineWidth = 2.6 * z;
+    ctx.beginPath(); ctx.arc(bx, ry, rr, 0, TAU); ctx.stroke();
+    ctx.strokeStyle = cbc("#ffcf4a"); ctx.lineWidth = 2 * z;
+    ctx.beginPath();
+    ctx.arc(bx, ry, rr, -Math.PI / 2, -Math.PI / 2 + TAU * clamp(p.built, 0, 1));
+    ctx.stroke();
+    if (z > 1.35) {
+      ctx.fillStyle = "rgba(240,246,255,0.9)";
+      ctx.font = "700 " + (6 * z) + "px system-ui"; ctx.textAlign = "center";
+      ctx.fillText(Math.round(p.built * 100) + "%", bx, ry + 2.2 * z);
+    }
+  }
+  ctx.textAlign = "center";
 }
 
 let mouse = { x: 0, y: 0 };
@@ -2509,27 +2827,52 @@ function updateHUD() {
 
 function updateDistrictList() {
   const el = $("dlist");
-  el.innerHTML = Object.values(DISTRICTS).map(d => {
-    const ps = districtPlots(d.id);
+  const ids = Object.keys(DISTRICTS);
+  /* Build the cards once, then patch only the live numbers. Replacing the
+     list wholesale four times a second detached whatever card the player was
+     reaching for, which dropped clicks and stranded the hover highlight on a
+     node that no longer existed. */
+  if (el.childElementCount !== ids.length) {
+    el.innerHTML = ids.map(id =>
+      '<div class="dcard" data-d="' + id + '">' +
+        '<div class="n"><i class="dot"></i><span class="dn"></span></div>' +
+        '<div class="s"></div>' +
+        '<div class="bar"><i></i></div>' +
+      '</div>').join("");
+    el.querySelectorAll(".dcard").forEach(c => {
+      const id = c.dataset.d;
+      c.onclick = () => { focusDistrict(id, false, true); openDistrict(id); };
+      /* hovering the card traces the district on the map */
+      c.onmouseenter = () => { if (!$("modal").classList.contains("open")) hlDistrict = id; };
+      c.onmouseleave = () => { if (hlDistrict === id) hlDistrict = null; };
+    });
+  }
+  ids.forEach((id, i) => {
+    const d = DISTRICTS[id], card = el.children[i];
+    const ps = districtPlots(id);
     const own = ps.filter(p => p.owned).length;
     const rev = ps.reduce((a, p) => a + p.revenue, 0);
     const mono = own === ps.length;
-    return '<div class="dcard" data-d="' + d.id + '"' + (mono ? ' style="border-color:' + d.color + '"' : '') + '>' +
-      '<div class="n"><i class="dot" style="background:' + d.color + '"></i>' + d.name + '</div>' +
-      '<div class="s">' + own + '/' + ps.length + ' blocks · ' + rate(rev) +
-        (mono ? ' · <b style="color:' + d.color + '">MONOPOLY</b>' : '') + '</div>' +
-      '<div class="bar"><i style="width:' + (own / ps.length * 100) + '%;background:' + d.color + '"></i></div>' +
-      '</div>';
-  }).join("");
-  el.querySelectorAll(".dcard").forEach(c => c.onclick = () => { focusDistrict(c.dataset.d); openDistrict(c.dataset.d); });
+    card.style.borderColor = mono ? d.color : "";
+    card.querySelector(".dot").style.background = d.color;
+    card.querySelector(".dn").textContent = d.name;
+    card.querySelector(".s").innerHTML = own + "/" + ps.length + " blocks · " + rate(rev) +
+      (mono ? ' · <b style="color:' + d.color + '">MONOPOLY</b>' : "");
+    const bar = card.querySelector(".bar i");
+    bar.style.width = (own / ps.length * 100) + "%";
+    bar.style.background = d.color;
+  });
 }
 
-function focusDistrict(id, quiet) {
+function focusDistrict(id, quiet, panelBias) {
   const ps = districtPlots(id);
   const cx = ps.reduce((a, p) => a + p.x, 0) / ps.length;
   const cy = ps.reduce((a, p) => a + p.y, 0) / ps.length;
   const t = iso(cx + .5, cy + .5);
   cam.x = t.x; cam.y = t.y; cam.tz = Math.max(cam.tz, 1.15);
+  /* the district panel opens on the right, so slide the district out from
+     under it rather than centring it behind the card */
+  if (panelBias && W > 900) cam.x += Math.min(300, W * 0.19) / cam.tz;
   if (!quiet) toast("info", DISTRICTS[id].name, DISTRICTS[id].blurb);
 }
 
@@ -2803,7 +3146,11 @@ function openModal(html) {
   $("m-close").onclick = closeModal;
   bindHelpButtons();
 }
-function closeModal() { $("modal").classList.remove("open"); }
+function closeModal() {
+  hlDistrict = null;
+  $("modal").classList.remove("open");
+  $("modal").classList.remove("district");
+}
 $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
 
 /** Repeat lobbying escalates: City Hall charges more each time you come back. */
@@ -3208,6 +3555,8 @@ function policyMult(p, kind) {
 }
 
 function openDistrict(id) {
+  hlDistrict = id;
+  $("modal").classList.add("district");
   const d = DISTRICTS[id], ps = districtPlots(id);
   const own = ps.filter(p => p.owned).length;
   const rev = ps.reduce((a, p) => a + p.revenue, 0);
