@@ -61,6 +61,10 @@ canvas.dragging{cursor:grabbing}
 .dcard:hover{border-color:var(--line2);transform:translateX(2px)}
 .dcard .n{font-size:11px;font-weight:700;display:flex;align-items:center;gap:6px}
 .dcard .s{font-size:9.5px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
+.ccard{border:1px solid var(--line);border-left:2px solid var(--gold);border-radius:5px;
+  padding:6px 8px;margin-bottom:5px;background:#0b111b}
+.ccard .n{font-size:10.5px;font-weight:600;line-height:1.3}
+.ccard .s{font-size:9px;color:var(--dim);margin-top:3px;font-variant-numeric:tabular-nums}
 .bar{height:3px;background:#182231;border-radius:2px;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;border-radius:2px;transition:width .4s}
 
@@ -162,6 +166,22 @@ canvas.dragging{cursor:grabbing}
 kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1px 5px;font-size:11px}
 
 /* ---------- HELPERS ---------- */
+#spot{position:fixed;z-index:38;border:2px solid var(--gold);border-radius:8px;
+  box-shadow:0 0 0 9999px rgba(3,6,11,.62), 0 0 22px rgba(255,207,74,.55);
+  pointer-events:none;transition:all .22s cubic-bezier(.4,0,.2,1)}
+#coach{position:fixed;left:50%;transform:translateX(-50%);bottom:52px;z-index:40;width:min(520px,92vw);
+  background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:15px 18px;
+  box-shadow:0 18px 60px rgba(0,0,0,.75)}
+#coach-step{font-size:9px;letter-spacing:.2em;color:var(--gold);text-transform:uppercase}
+#coach-text{font-size:13px;line-height:1.6;margin:7px 0 12px}
+#coach-text b{color:var(--gold)}
+#coach-actions{display:flex;gap:8px;justify-content:flex-end}
+#coach-actions button{padding:7px 15px;border-radius:6px;font-size:12px;font-weight:600;
+  cursor:pointer;font-family:inherit;border:1px solid var(--line2);background:#101a29;color:var(--dim)}
+#coach-skip:hover{color:var(--red);border-color:var(--red)}
+#coach-next{background:var(--gold);color:#12160f;border-color:var(--gold)}
+#coach-next:hover{filter:brightness(1.12)}
+#coach-next:disabled{opacity:.45;cursor:not-allowed}
 #hint{position:absolute;left:206px;bottom:44px;font-size:11.5px;color:var(--txt);z-index:16;max-width:46vw;
   background:rgba(8,12,19,.8);padding:6px 11px;border-radius:6px;border:1px solid var(--line)}
 .flash{animation:fl .5s}
@@ -205,6 +225,8 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
 
   <button id="sidetog" title="Toggle panel">☰</button>
   <div id="side">
+    <div class="grp">Contracts</div>
+    <div class="dlist" id="clist"></div>
     <div class="grp">Overlays</div>
     <div class="row on" data-ov="none"><i class="dot" style="background:#5f7793"></i>None<span class="kbd">1</span></div>
     <div class="row" data-ov="zoning"><i class="dot" style="background:#48d8ff;color:#48d8ff"></i>Zoning<span class="kbd">2</span></div>
@@ -237,6 +259,16 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
   <div id="ticker"><div id="tlabel">NYSE WIRE</div><div id="tscroll"></div></div>
   <div id="toasts"></div>
   <div id="hint">Drag to pan · Scroll to zoom · Click a block to inspect</div>
+
+  <div id="spot" hidden></div>
+  <div id="coach" hidden>
+    <div id="coach-step">STEP 1 / 8</div>
+    <div id="coach-text">…</div>
+    <div id="coach-actions">
+      <button id="coach-skip">Skip tutorial</button>
+      <button id="coach-next">Next →</button>
+    </div>
+  </div>
 
   <div class="modal" id="modal"><div class="mbox" id="mbox"></div></div>
 </div>
@@ -448,6 +480,7 @@ const G = {
   cars: [], peds: [], fx: [],
   won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, rivals: [], buyouts: 0, lobbyUsed: {},
   audits: 0, sold: 0, miles: {}, offer: null, offerTimer: 0, pickups: [], policy: {},
+  contracts: [], stats: { pickups: 0, lobby: 0, contracts: 0 },
   totalEarned: 0, started: Date.now(),
   /* meta-progression: survives every IPO reset */
   legacy: { shares: 0, earned: 0, ipos: 0, best: 0, up: {} }
@@ -545,7 +578,8 @@ function resetRun() {
   G.activeEvents = []; G.nextEvent = 60; G.taxPool = 0; G.taxTimer = 0;
   G.auditTimer = 0; G.time = 0; G.month = 0; G.totalEarned = 0;
   G.buyouts = 0; G.pickups = []; G.fx = []; G.selected = null;
-  G.offer = null; G.offerTimer = 0;
+  G.offer = null; G.offerTimer = 0; G.contracts = [];
+  G.stats = { pickups: 0, lobby: 0, contracts: G.stats ? G.stats.contracts : 0 };
   G.rivals = RIVAL_DEFS.map(d => ({ ...d, aggression: d.aggression * legacyRivalMult(),
     cash: d.seed, income: 0, timer: 0, turns: 0, spite: 0, eliminated: false }));
   for (const r of G.rivals) {
@@ -918,6 +952,7 @@ function simulate(dt) {
       pushTicker("info", e.def.name + " has ended.");
     }
   }
+  updateContracts(dt);
   checkMilestones();
   checkWin();
 }
@@ -948,6 +983,167 @@ function triggerAudit() {
     ". Audit risk reduced but your books are now on file.");
   pushTicker("bad", agency + " fines your holdings " + money(fine));
   for (const p of ownedPlots()) if (p.sketchy && Math.random() < 0.3) p.sketchy = false;
+}
+
+/* ===================== CONTRACTS =====================
+   Three short-term objectives at a time. They give the early game direction
+   and the mid game texture; rewards scale with the empire so they stay
+   worth doing without ever out-earning ordinary play. */
+const CONTRACT_TEMPLATES = [
+  { id: "start", w: 4, req: () => ownedPlots().length < 4, make: () => {
+      const need = ownedPlots().length + rint(1, 2);
+      return { text: "Acquire " + (need - ownedPlots().length) + " more block" +
+        (need - ownedPlots().length === 1 ? "" : "s"),
+        now: () => ownedPlots().length, goal: need };
+    } },
+  { id: "develop", w: 3, req: () => ownedPlots().some(p => !p.biz) || ownedPlots().length < 5,
+    make: () => {
+      const have = ownedPlots().filter(p => p.biz).length;
+      const need = have + 1;
+      return { text: "Open a business on a block you own",
+        now: () => ownedPlots().filter(p => p.biz).length, goal: need };
+    } },
+  { id: "own", w: 3, req: () => true, make: () => {
+      const d = pick(Object.keys(DISTRICTS));
+      const have = districtPlots(d).filter(p => p.owned).length;
+      const need = Math.min(districtPlots(d).length, have + rint(2, 4));
+      return { text: "Own " + need + " blocks in " + DISTRICTS[d].name,
+        now: () => districtPlots(d).filter(p => p.owned).length, goal: need };
+    } },
+  { id: "tier", w: 3, req: () => ownedPlots().some(p => p.biz), make: () => {
+      const best = Math.max(0, ...ownedPlots().map(p => p.level));
+      const need = clamp(best + rint(1, 2), 2, 15);
+      return { text: "Raise any building to tier " + need,
+        now: () => Math.max(0, ...ownedPlots().map(p => p.level)), goal: need };
+    } },
+  { id: "rev", w: 3, req: () => G.grossRate > 0, make: () => {
+      const need = Math.max(500, G.grossRate * rnd(1.6, 2.4));
+      return { text: "Reach " + rate(need) + " gross revenue",
+        now: () => G.grossRate, goal: need, fmt: rate };
+    } },
+  { id: "prestige", w: 2, req: () => ownedPlots().some(p => p.biz), make: () => {
+      const need = Math.max(25, Math.ceil(G.prestige + 20 + G.prestige * 0.8));
+      return { text: "Accumulate " + Math.round(need) + " prestige",
+        now: () => G.prestige, goal: need };
+    } },
+  { id: "pickup", w: 2, req: () => ownedPlots().filter(p => p.biz).length >= 2, make: () => {
+      const need = (G.stats.pickups || 0) + rint(2, 4);
+      return { text: "Collect " + (need - (G.stats.pickups || 0)) + " bearer-bond cases",
+        now: () => G.stats.pickups || 0, goal: need };
+    } },
+  { id: "micro", w: 2, req: () => ownedPlots().some(p => p.biz), make: () => {
+      const have = ownedPlots().reduce((a, p) => a + p.up.marketing + p.up.synergy +
+        p.up.automation + p.up.luxury, 0);
+      const need = have + rint(2, 4);
+      return { text: "Purchase " + (need - have) + " micro-upgrades",
+        now: () => ownedPlots().reduce((a, p) => a + p.up.marketing + p.up.synergy +
+          p.up.automation + p.up.luxury, 0), goal: need };
+    } },
+  { id: "buyout", w: 2,
+    req: () => ownedPlots().length >= 6 && G.plots.some(p => p.rival) &&
+               G.cash > buyoutPrice(G.plots.find(p => p.rival)) * 0.4,
+    make: () => {
+      const need = (G.buyouts || 0) + 1;
+      return { text: "Take a block off a rival", now: () => G.buyouts || 0, goal: need };
+    } },
+  { id: "lobby", w: 2, req: () => G.influence >= 4 || G.prestige > 8, make: () => {
+      const need = (G.stats.lobby || 0) + 1;
+      return { text: "Win a vote at City Hall", now: () => G.stats.lobby || 0, goal: need };
+    } },
+  { id: "mono", w: 1,
+    req: () => Object.keys(DISTRICTS).some(k => {
+      const ps = districtPlots(k);
+      return ps.filter(p => p.owned).length / ps.length >= 0.6;
+    }),
+    make: () => {
+      const d = Object.keys(DISTRICTS).map(k => ({ k, ps: districtPlots(k) }))
+        .sort((a, b) => (b.ps.filter(p => p.owned).length / b.ps.length) -
+                        (a.ps.filter(p => p.owned).length / a.ps.length))[0];
+      return { text: "Corner " + DISTRICTS[d.k].name + " entirely",
+        now: () => d.ps.filter(p => p.owned).length, goal: d.ps.length };
+    } }
+];
+
+function rollContract() {
+  const bag = [];
+  for (const t of CONTRACT_TEMPLATES) {
+    if (t.req && !t.req()) continue;                  // not achievable yet
+    for (let i = 0; i < t.w; i++) bag.push(t);
+  }
+  if (!bag.length) return null;
+  const t = pick(bag);
+  /* one contract per template at a time: two "reach $X/s revenue" slots that differ
+     only in their number read as a bug, not as variety */
+  if ((G.contracts || []).some(x => x.kind === t.id)) return null;
+  const c = t.make();
+  c.kind = t.id;
+  if ((G.contracts || []).some(x => x.text === c.text)) return null;
+  c.id = t.id + "-" + Math.random().toString(36).slice(2, 7);
+  c.start = c.now();
+  if (c.now() >= c.goal) return null;                 // already satisfied — reroll next tick
+  /* reward: a bit over half a minute of current profit, with a floor early on.
+     Generous enough to matter early, too small to distort the growth curve. */
+  /* The floor matters far more than the multiplier: early capital is the binding
+     constraint, so a large flat minimum compounds for the rest of the run. */
+  c.cash = Math.max(5000, Math.max(0, G.lastNet) * 16);
+  /* influence is the compounding reward — it buys rezoning, which raises height caps,
+     and revenue scales at tier^2.85. Kept deliberately small. */
+  c.inf = rint(1, 2);
+  c.age = 0;
+  c.mark = c.start;
+  return c;
+}
+
+function refillContracts() {
+  G.contracts = G.contracts || [];
+  if (G.contracts.length >= 3) return;
+  G.refillWait = (G.refillWait || 0) - 1;
+  if (G.refillWait > 0) return;
+  G.refillWait = 20;                      // re-attempt at most every ~2 simulated seconds
+  let guard = 0;
+  while (G.contracts.length < 3 && guard++ < 12) {
+    const c = rollContract();
+    if (c) { G.contracts.push(c); G.refillWait = 0; }
+  }
+}
+
+function updateContracts(dt) {
+  refillContracts();
+  for (let i = G.contracts.length - 1; i >= 0; i--) {
+    const c = G.contracts[i];
+    const now = c.now();
+    /* a slot that has gone nowhere for five minutes is replaced rather than blocking */
+    c.age = (c.age || 0) + (dt || 0);
+    if (now > c.mark) { c.mark = now; c.age = 0; }
+    if (c.age > 300 && now < c.goal) {
+      G.contracts.splice(i, 1);
+      pushTicker("", "Contract withdrawn: " + c.text);
+      continue;
+    }
+    if (now < c.goal) continue;
+    G.cash += c.cash;
+    G.influence += c.inf;
+    G.stats.contracts = (G.stats.contracts || 0) + 1;
+    G.contracts.splice(i, 1);
+    sfx("cash");
+    toast("good", "Contract Complete", c.text + " — paid " + money(c.cash) +
+      " and " + c.inf + " influence.");
+    pushTicker("good", "Contract cleared: " + c.text + " (+" + money(c.cash) + ")");
+  }
+}
+
+function renderContracts() {
+  const el = document.getElementById("clist");
+  if (!el) return;
+  el.innerHTML = (G.contracts || []).map(c => {
+    const now = c.now(), prog = clamp((now - c.start) / Math.max(1e-9, c.goal - c.start), 0, 1);
+    const fmt = c.fmt || (v => Math.floor(v).toLocaleString());
+    return '<div class="ccard"><div class="n">' + c.text + '</div>' +
+      '<div class="s">' + fmt(now) + ' / ' + fmt(c.goal) + ' · ' +
+      '<b style="color:var(--gold)">' + money(c.cash) + '</b> + ' + c.inf + ' inf</div>' +
+      '<div class="bar"><i style="width:' + (prog * 100).toFixed(1) + '%;background:var(--gold)"></i></div>' +
+      '</div>';
+  }).join("") || '<div class="ccard"><div class="s">No active contracts.</div></div>';
 }
 
 /* ---------- 4. EVENTS, TICKER, TOASTS ---------- */
@@ -1244,6 +1440,7 @@ function tryCollect(sx, sy) {
     const h = 46 * cam.z + Math.sin(q.bob) * 5 * cam.z;
     if (Math.abs(sx - s.x) < 16 * cam.z && Math.abs(sy - (s.y - h)) < 16 * cam.z) {
       G.cash += q.value;
+      G.stats.pickups = (G.stats.pickups || 0) + 1;
       sfx("cash");
       floatText(q.p.x, q.p.y, "+" + money(q.value), "#ffcf4a");
       toast("gold", "Bearer Bonds Recovered", money(q.value) + " collected at " + q.p.name + ".");
@@ -2016,7 +2213,8 @@ function renderInspector() {
           '<span class="d">Below the standard buyout premium.</span></button>' +
           '<button class="btn" id="a-decline">Pass<span class="d">Let the offer lapse.</span></button>'
         : '') +
-      '<button class="btn buy" id="a-buyout"' + (G.cash < price ? " disabled" : "") + '>' +
+      '<button class="btn buy" id="a-buyout" data-cost="' + price + '"' +
+      (G.cash < price ? " disabled" : "") + '>' +
       'Buy Out This Block <span class="c">' + money(price) + '</span>' +
       '<span class="d">They will not sell at market. You pay the premium and inherit the ' +
       'building at its current tier.</span></button>' +
@@ -2033,7 +2231,8 @@ function renderInspector() {
   if (!p.owned) {
     $("i-sub").textContent = "Unowned parcel · " + D.short;
     html += '<div class="sechead">Acquisition</div>';
-    html += '<button class="btn buy" id="a-buy"' + (G.cash < price ? " disabled" : "") + '>' +
+    html += '<button class="btn buy" id="a-buy" data-cost="' + price + '"' +
+      (G.cash < price ? " disabled" : "") + '>' +
       'Acquire Deed <span class="c">' + money(price) + '</span>' +
       '<span class="d">Take ownership of this block. You may then found a business on it.</span></button>';
     body.innerHTML = html;
@@ -2075,7 +2274,8 @@ function renderInspector() {
   if (p.level < levelCap(p)) {
     const uc = upgradeCost(p);
     const nextName = B.tiers[Math.min(p.level, B.tiers.length - 1)];
-    html += '<button class="btn" id="a-up"' + (G.cash < uc ? " disabled" : "") + '>' +
+    html += '<button class="btn" id="a-up" data-cost="' + uc + '"' +
+      (G.cash < uc ? " disabled" : "") + '>' +
       'Build Up → ' + nextName + ' <span class="c">' + money(uc) + '</span>' +
       '<span class="d">Tier ' + (p.level + 1) + '. Revenue scales at the 2.6 power of tier.</span></button>';
   } else {
@@ -2091,7 +2291,8 @@ function renderInspector() {
       '<div class="pips">' + Array.from({ length: u.max }, (_, i) =>
         '<i class="pip' + (i < lv ? " f" : "") + '" style="' + (i < lv ? "background:" + u.color : "") + '"></i>').join("") +
       '</div></div>' +
-      '<button data-up="' + k + '"' + (maxed || G.cash < c ? " disabled" : "") + '>' +
+      '<button data-up="' + k + '"' + (maxed ? "" : ' data-cost="' + c + '"') +
+      (maxed || G.cash < c ? " disabled" : "") + '>' +
       (maxed ? "MAX" : money(c)) + '</button></div>';
   }
 
@@ -2106,7 +2307,8 @@ function renderInspector() {
   if (!G.won.mega && p.landmark === "Empire State Site" && p.level >= levelCap(p) && !p.mega) {
     const cost = 8e9;
     html += '<div class="sechead">Ultimate Project</div>' +
-      '<button class="btn buy" id="a-mega"' + (G.cash < cost ? " disabled" : "") + '>' +
+      '<button class="btn buy" id="a-mega" data-cost="' + cost + '"' +
+      (G.cash < cost ? " disabled" : "") + '>' +
       'Build Empire State Megatower <span class="c">' + money(cost) + '</span>' +
       '<span class="d">The tallest structure on earth: ×3.5 revenue, ×6 prestige, ' +
       'and the third win condition.</span></button>';
@@ -2216,6 +2418,7 @@ function openModal(html) {
   $("mbox").innerHTML = html + '<button class="btn close" id="m-close">Close</button>';
   $("modal").classList.add("open");
   $("m-close").onclick = closeModal;
+  bindHelpButtons();
 }
 function closeModal() { $("modal").classList.remove("open"); }
 $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
@@ -2254,6 +2457,7 @@ function openLobby() {
     if (!l.can() || G.influence < cost.inf || G.cash < cost.cash) { sfx("deny"); return; }
     G.influence -= cost.inf; G.cash -= cost.cash;
     G.lobbyUsed[l.id] = ((G.lobbyUsed && G.lobbyUsed[l.id]) || 0) + 1;
+    G.stats.lobby = (G.stats.lobby || 0) + 1;
     l.run(); sfx("good");
     toast("good", l.name, "Passed. The city adjusts.");
     pushTicker("good", "City Hall enacts <b>" + l.name + "</b>");
@@ -2734,6 +2938,10 @@ function openPortfolio() {
 }
 
 function openHelp() {
+  openModalHelp();
+}
+
+function openModalHelp() {
   openModal('<h1>How To Play</h1>' +
     '<p><b>1. Acquire.</b> Click any dark block and buy the deed. Brooklyn is cheap; Wall Street pays.</p>' +
     '<p><b>2. Develop.</b> Found a business — Food, Retail, Tech, Finance or Residential — then build up tiers. ' +
@@ -2753,6 +2961,8 @@ function openHelp() {
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
     '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>M</kbd> mute · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<button class="btn" id="a-tut" style="margin-top:10px">Replay The Tutorial' +
+    '<span class="d">Eight guided steps through your first block.</span></button>' +
     '<h3>Going Public</h3>' +
     '<p>Once an empire is worth <b>$1B</b> you can file for an IPO from the Board Room ' +
     '(<kbd>B</kbd>). Floating liquidates the run — the city, the rivals and City Hall all ' +
@@ -2815,6 +3025,12 @@ function checkMilestones() {
   }
 }
 
+/* wiring for the help modal's tutorial button, applied whenever it opens */
+function bindHelpButtons() {
+  const t = $("a-tut");
+  if (t) t.onclick = () => { closeModal(); tutStart(true); };
+}
+
 function checkWin() {
   const gs = goalState();
   if (!G.won.buyout && gs[0].p >= 1) { G.won.buyout = true; toast("gold", "CITY HALL BOUGHT", "$100B net worth reached."); }
@@ -2827,6 +3043,115 @@ function checkWin() {
       '<p>The Megatower blinks red above a skyline that answers to one balance sheet. ' +
       'You may keep playing — there is always more to own.</p>');
     flashScreen("#ffcf4a");
+  }
+}
+
+/* ===================== TUTORIAL =====================
+   Eight steps anchored to the real interface. Steps either wait for the player
+   to actually do the thing, or advance on Next. Skippable and replayable. */
+const TUT_KEY = "nyc-tutorial-done";
+const TUT = {
+  on: false, i: 0, plot: null,
+  steps: [
+    { text: "This is New York — <b>93 blocks across four districts</b>, and three rival " +
+        "developers already buying. You start with a quarter of a million dollars and nothing else.",
+      target: null },
+    { text: "Every block already has a building on it. The one lit up is a cheap parcel in " +
+        "<b>Brooklyn</b> — the best place to start. <b>Click it</b> to inspect it.",
+      target: () => TUT.plot, wait: () => G.selected === TUT.plot },
+    { text: "The panel on the right is the block. <b>Acquire the deed</b> to take ownership — " +
+        "cheap districts first, then compound your way to Wall Street.",
+      target: () => "#a-buy", wait: () => TUT.plot && TUT.plot.owned },
+    { text: "An empty lot earns nothing. <b>Found a business</b> — Tech pays well in Brooklyn, " +
+        "and each district has a specialty worth a bonus.",
+      target: () => ".biz", wait: () => TUT.plot && TUT.plot.biz },
+    { text: "Now the only rule that really matters: <b>revenue scales at the 2.85 power of tier</b>. " +
+        "Height beats width. <b>Build it up one tier</b>.",
+      target: () => "#a-up", wait: () => TUT.plot && TUT.plot.level >= 2 },
+    { text: "<b>Contracts</b> give you short-term goals and pay cash and influence for clearing " +
+        "them. There are always three.",
+      target: () => "#clist" },
+    { text: "Prestige earns <b>influence</b>, which buys favours at <b>City Hall</b> — tax cuts, " +
+        "rezoning for taller towers, subway lines. <b>Competition</b> tracks your rivals, and the " +
+        "<b>Board Room</b> is where a $1B empire goes public for permanent bonuses.",
+      target: () => "#btn-lobby" },
+    { text: "That is everything. The line at the bottom-left always tells you your best next move, " +
+        "and <b>H</b> reopens the full rules. Go and own New York.",
+      target: () => "#hint" }
+  ]
+};
+
+function tutStart(force) {
+  let done = false;
+  try { done = localStorage.getItem(TUT_KEY) === "1"; } catch (err) { /* ignore */ }
+  if (done && !force) return;
+  /* pick a cheap, unowned Brooklyn block near the middle of the district */
+  const pool = districtPlots("brooklyn").filter(p => !p.owned && !p.rival && !p.park);
+  TUT.plot = pool.sort((a, b) => landPrice(a) - landPrice(b))[0] || null;
+  if (TUT.plot) centerOn(TUT.plot, 1.35);
+  TUT.on = true; TUT.i = 0;
+  $("coach").hidden = false;
+  tutRender();
+}
+
+function tutEnd(save) {
+  TUT.on = false;
+  $("coach").hidden = true;
+  $("spot").hidden = true;
+  if (save !== false) { try { localStorage.setItem(TUT_KEY, "1"); } catch (err) { /* ignore */ } }
+}
+
+function tutNext() {
+  if (TUT.i >= TUT.steps.length - 1) { tutEnd(); toast("good", "Tutorial Complete", "Press H any time for the full rules."); return; }
+  TUT.i++;
+  tutRender();
+}
+
+function tutRender() {
+  const st = TUT.steps[TUT.i];
+  if (!st) return tutEnd();
+  $("coach-step").textContent = "STEP " + (TUT.i + 1) + " / " + TUT.steps.length;
+  $("coach-text").innerHTML = st.text;
+  const waiting = !!st.wait;
+  const nb = $("coach-next");
+  nb.disabled = waiting;
+  nb.textContent = TUT.i === TUT.steps.length - 1 ? "Finish" : waiting ? "…" : "Next →";
+}
+
+/** Positions the spotlight each frame; targets may be a selector or a map plot. */
+function tutUpdate() {
+  if (!TUT.on) return;
+  const st = TUT.steps[TUT.i];
+  const spot = $("spot");
+  if (!st || !st.target) { spot.hidden = true; }
+  else {
+    const t = st.target();
+    let r = null;
+    if (typeof t === "string") {
+      const el = document.querySelector(t);
+      if (el) r = el.getBoundingClientRect();
+    } else if (t) {
+      const s = worldToScreen(t.x + 0.5, t.y + 0.5);
+      const w = TILE_W * cam.z, h = TILE_H * cam.z;
+      r = { left: s.x - w / 2, top: s.y - h - 6, width: w, height: h * 2.2 };
+    }
+    if (r && r.width > 0) {
+      const box = [Math.round(r.left - 6), Math.round(r.top - 6),
+                   Math.round(r.width + 12), Math.round(r.height + 12)];
+      /* writing styles every frame thrashes layout under a full-screen box-shadow */
+      if (spot.hidden || TUT.box !== box.join(",")) {
+        TUT.box = box.join(",");
+        spot.hidden = false;
+        spot.style.left = box[0] + "px";
+        spot.style.top = box[1] + "px";
+        spot.style.width = box[2] + "px";
+        spot.style.height = box[3] + "px";
+      }
+    } else if (!spot.hidden) { spot.hidden = true; TUT.box = null; }
+  }
+  if (st && st.wait && st.wait()) {
+    sfx("good");
+    tutNext();
   }
 }
 
@@ -2927,6 +3252,8 @@ $("btn-port").onclick = openPortfolio;
 $("btn-rivals").onclick = openRivals;
 $("btn-board").onclick = openBoardroom;
 $("btn-help").onclick = openHelp;
+$("coach-next").onclick = tutNext;
+$("coach-skip").onclick = () => { tutEnd(); toast("info", "Tutorial Skipped", "Press H for the rules, or restart it from How To Play."); };
 $("btn-save").onclick = () => { save(); toast("good", "Empire Saved", "Progress written to local storage."); };
 $("btn-reset").onclick = () => {
   if (!confirm("Demolish your saved empire?\n\nThis erases EVERYTHING, including your " +
@@ -2943,7 +3270,7 @@ function save() {
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
     tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, lobbyUsed: G.lobbyUsed, miles: G.miles, audits: G.audits,
     time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
-    buyouts: G.buyouts, legacy: G.legacy,
+    buyouts: G.buyouts, legacy: G.legacy, stats: G.stats,
     rivals: G.rivals.map(r => ({ id: r.id, cash: r.cash, eliminated: r.eliminated })),
     plots: G.plots.map(p => (p.owned || p.rival)
       ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega,
@@ -2963,6 +3290,7 @@ function load() {
     time: d.time || 0, totalEarned: d.totalEarned || 0
   });
   G.buyouts = d.buyouts || 0;
+  G.stats = Object.assign({ pickups: 0, lobby: 0, contracts: 0 }, d.stats || {});
   if (d.legacy) G.legacy = Object.assign({ shares: 0, earned: 0, ipos: 0, best: 0, up: {} }, d.legacy);
   if (d.rivals) for (const rs of d.rivals) {
     const r = rivalById(rs.id);
@@ -3017,17 +3345,23 @@ function frame(now) {
     updateAmbience();
   }
   draw(raw);
+  tutUpdate();
 
   uiAcc += raw;
   if (uiAcc > 0.25) {
     uiAcc = 0;
     updateHUD();
     updateDistrictList();
+    renderContracts();
     renderTicker();
     if (G.selected && !$("insp").classList.contains("hidden")) {
       /* refresh only live numbers to avoid nuking focus while clicking */
       const p = G.selected, lr = $("live-rev"), lo = $("live-opex");
       if (p.owned && p.biz && lr) { lr.textContent = rate(p.revenue); lo.textContent = "-" + money(plotOpex(p)) + "/s"; }
+      /* a button priced above your balance must un-grey the moment you can afford it */
+      $("ibody").querySelectorAll("[data-cost]").forEach(bt => {
+        bt.disabled = G.cash < +bt.dataset.cost;
+      });
     }
   }
   requestAnimationFrame(frame);
@@ -3053,8 +3387,7 @@ try {
 updateHUD(); updateDistrictList(); renderTicker();
 if (!loaded) {
   G.cash = 250000 + lv("seed") * 400000;
-  setTimeout(() => toast("info", "Welcome to New York", "You have " + money(G.cash) +
-    " and no property. Buy a cheap Brooklyn block and start compounding. Press H for help."), 700);
+  setTimeout(() => tutStart(false), 650);
 } else {
   toast("info", "Empire Restored", "Welcome back. " + ownedPlots().length + " blocks under management.");
 }
@@ -3064,8 +3397,9 @@ requestAnimationFrame(frame);
 /* test hook for headless QA */
 window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
   centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp,
-  ipoShares, goPublic, legacyRevMult, legacyBuyoutMult, select, acceptOffer, declineOffer };
-window.SFX_TEST = SFX; window.SFX_PLAY = sfx;
+  ipoShares, goPublic, legacyRevMult, legacyBuyoutMult, select, acceptOffer, declineOffer,
+  tutStart, tutEnd };
+window.SFX_TEST = SFX; window.SFX_PLAY = sfx; window.TUT_TEST = TUT;
 </script>
 </body>
 </html>
