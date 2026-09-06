@@ -175,6 +175,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
 #spot{position:fixed;z-index:38;border:2px solid var(--gold);border-radius:8px;
   box-shadow:0 0 0 9999px rgba(3,6,11,.62), 0 0 22px rgba(255,207,74,.55);
   pointer-events:none;transition:all .22s cubic-bezier(.4,0,.2,1)}
+#coach.top{bottom:auto;top:64px}
 #coach{position:fixed;left:50%;transform:translateX(-50%);bottom:52px;z-index:40;width:min(520px,92vw);
   background:var(--panel2);border:1px solid var(--gold);border-radius:10px;padding:15px 18px;
   box-shadow:0 18px 60px rgba(0,0,0,.75)}
@@ -202,6 +203,8 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
   #insp{width:100%;top:auto;bottom:34px;height:52vh;border-left:0;border-top:1px solid var(--line)}
   #toasts{right:8px;max-width:64vw}
   #hint{display:none}
+  #coach{padding:11px 13px;width:94vw}
+  #coach-text{font-size:12px;line-height:1.5;margin:5px 0 9px}
 }
 </style>
 </head>
@@ -2380,7 +2383,7 @@ function renderInspector() {
       : "Unlicensed speakeasy / offshore shelter: +85% revenue, adds audit risk. Getting caught costs a fortune.") +
     '</span></button>';
 
-  if (!G.won.mega && p.landmark === "Empire State Site" && p.level >= levelCap(p) && !p.mega) {
+  if (!megaBuilt() && p.landmark === "Empire State Site" && p.level >= levelCap(p) && !p.mega) {
     const cost = 8e9;
     html += '<div class="sechead">Ultimate Project</div>' +
       '<button class="btn buy" id="a-mega" data-cost="' + cost + '"' +
@@ -2468,6 +2471,7 @@ function buyMicro(p, k) {
   renderInspector();
 }
 function sellPlot(p) {
+  if (G.offer && G.offer.plot === p) G.offer = null;   // a block being sold is no longer bidable
   if (p.biz && p.level >= 3 && !confirm("Sell " + p.name + " (tier " + p.level + ")? This cannot be undone."))
     return;
   const v = landPrice(p) * 0.7 + p.revenue * 30;
@@ -2619,7 +2623,10 @@ function rivalTurn(r, dt) {
   if (plots.length >= appetite) return;
   const boardShare = G.plots.filter(p => p.rival).length / Math.max(1, buildable().length);
   if (boardShare > 0.42) return;
-  const free = G.plots.filter(p => !p.owned && !p.rival && !p.park);
+  /* The tutorial highlights the cheapest Brooklyn parcel, which is exactly what a
+     cheapest-first rival sort picks. Leave it alone until the lesson is done. */
+  const free = G.plots.filter(p => !p.owned && !p.rival && !p.park &&
+    !(typeof TUT !== "undefined" && TUT.on && p === TUT.plot));
   if (!free.length) return;
   /* Blocking play: a slice of their buying is aimed at parcels you clearly want —
      next to your existing blocks, in districts you are close to cornering. */
@@ -2664,6 +2671,7 @@ function updateRivals(dt) {
    refusing makes that rival pricier and pushier for a while. */
 function updateOffers(dt) {
   G.offerTimer = (G.offerTimer || 0) + dt;
+  if (G.offer && !offerValid(G.offer)) G.offer = null;
   if (G.offer) {
     G.offer.left -= dt;
     if (G.offer.left <= 0) {
@@ -2716,9 +2724,34 @@ function distressedSale(r) {
   if (G.selected === p) renderInspector();
 }
 
+/** True while the offer's premise still holds. Blocks change hands by several
+    routes (sale, buyout, takeover, divestment), and a stale offer is money for
+    nothing in one direction or a double payment in the other. */
+function offerValid(o) {
+  if (!o || !o.plot) return false;
+  if (o.type === "sale") return o.plot.rival === o.rival && !o.plot.owned;
+  return o.plot.owned && !!o.plot.biz && !o.plot.mega;
+}
+
+/** Drops a live offer whose block just moved by some other route. */
+function invalidateOffer(plot) {
+  if (G.offer && (!plot || G.offer.plot === plot) && !offerValid(G.offer)) {
+    G.offer = null;
+    return true;
+  }
+  return false;
+}
+
 function acceptOffer() {
   const o = G.offer;
   if (!o) return;
+  if (!offerValid(o)) {
+    G.offer = null;
+    sfx("deny");
+    toast("bad", "Offer Withdrawn", "That block has already changed hands.");
+    renderInspector();
+    return;
+  }
   const p = o.plot, r = rivalById(o.rival);
   if (o.type === "sale") {                      /* you are the buyer */
     if (!spend(o.price)) return;
@@ -2770,6 +2803,7 @@ function buyoutPlot(p) {
   if (!spend(price)) return;
   if (r) r.cash += price * 0.8;
   p.rival = null; p.owned = true; p.glow = 1;
+  invalidateOffer(p);
   floatText(p.x, p.y, "ACQUIRED", "#ffcf4a");
   sfx("buy");
   toast("gold", "Block Acquired", p.name + " prised out of " + (r ? r.name : "rival hands") +
@@ -2793,7 +2827,8 @@ function hostileTakeover(r) {
   if (!spend(cost)) return;
   G.influence -= 40;
   const plots = rivalPlots(r.id);
-  for (const p of plots) { p.rival = null; p.owned = true; p.glow = 1; }
+  for (const p of plots) { p.rival = null; p.owned = true; p.glow = 1; invalidateOffer(p); }
+  invalidateOffer(null);
   r.eliminated = true; r.cash = 0;
   sfx("ipo");
   toast("gold", "HOSTILE TAKEOVER", r.name + " absorbed: " + plots.length +
@@ -2915,9 +2950,13 @@ function openDistrict(id) {
 }
 
 /** Human-readable progress toward unlocking the Megatower build. */
+/** The tower has to actually be standing and yours — selling it un-completes the goal. */
+function megaBuilt() { return G.plots.some(p => p.mega && p.owned); }
+
 function megaStatus() {
   const site = G.plots.find(p => p.landmark === "Empire State Site");
   if (!site) return "Site missing";
+  if (G.won.mega && !megaBuilt()) return "Tower sold — build it again";
   if (!site.owned) return "Site unowned — " + money(landPrice(site));
   if (!site.biz) return "Site vacant — found a business";
   if (site.level < levelCap(site)) return "Tier " + site.level + " / " + levelCap(site) + " at the site";
@@ -2933,9 +2972,9 @@ function goalState() {
       d: "Own 100% of every developable block — including every one your rivals hold.",
       p: own / total, v: own + " / " + total + " blocks (" +
         G.plots.filter(q => q.rival).length + " held by rivals)" },
-    { k: "mega", n: "The Empire State Megatower",
+    { k: "mega2", n: "The Empire State Megatower",
       d: "Own the Empire State Site landmark, build it to its height cap, then raise the Megatower ($8B).",
-      p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : megaStatus() }
+      p: megaBuilt() ? 1 : 0, v: megaBuilt() ? "COMPLETE" : megaStatus() }
   ];
 }
 /** Log-scaled net worth trace as inline SVG — legible across six orders of magnitude. */
@@ -3059,10 +3098,6 @@ function openPortfolio() {
 }
 
 function openHelp() {
-  openModalHelp();
-}
-
-function openModalHelp() {
   openModal('<h1>How To Play</h1>' +
     '<p><b>1. Acquire.</b> Click any dark block and buy the deed. Brooklyn is cheap; Wall Street pays.</p>' +
     '<p><b>2. Develop.</b> Found a business — Food, Retail, Tech, Finance or Residential — then build up tiers. ' +
@@ -3156,7 +3191,7 @@ function checkWin() {
   const gs = goalState();
   if (!G.won.buyout && gs[0].p >= 1) { G.won.buyout = true; toast("gold", "CITY HALL BOUGHT", "$100B net worth reached."); }
   if (!G.won.monopoly && gs[1].p >= 1) { G.won.monopoly = true; toast("gold", "TOTAL MONOPOLY", "Every block in New York is yours."); }
-  if (G.won.buyout && G.won.monopoly && G.won.mega && !G.won.all) {
+  if (G.won.buyout && G.won.monopoly && megaBuilt() && !G.won.all) {
     G.won.all = true;
     openModal('<h1 style="color:var(--gold)">YOU OWN NEW YORK</h1>' +
       '<p>Net worth <b>' + money(netWorth()) + '</b> · Prestige <b>' + Math.floor(G.prestige) + '</b> · ' +
@@ -3242,6 +3277,13 @@ function tutRender() {
 /** Positions the spotlight each frame; targets may be a selector or a map plot. */
 function tutUpdate() {
   if (!TUT.on) return;
+  /* if the highlighted parcel became unavailable before the player bought it,
+     pick another rather than stranding the lesson on a button that is gone */
+  if (TUT.i <= 2 && TUT.plot && (TUT.plot.rival || (TUT.plot.owned && TUT.i < 2))) {
+    const pool = districtPlots("brooklyn").filter(p => !p.owned && !p.rival && !p.park);
+    const next = pool.sort((a, b) => landPrice(a) - landPrice(b))[0];
+    if (next) { TUT.plot = next; centerOn(next, 1.35); TUT.box = null; }
+  }
   const st = TUT.steps[TUT.i];
   const spot = $("spot");
   if (!st || !st.target) { spot.hidden = true; }
@@ -3256,7 +3298,11 @@ function tutUpdate() {
       const w = TILE_W * cam.z, h = TILE_H * cam.z;
       r = { left: s.x - w / 2, top: s.y - h - 6, width: w, height: h * 2.2 };
     }
+    /* keep the coaching panel clear of whatever it is pointing at — on a phone the
+       inspector fills the lower half, and the panel was covering its own target */
     if (r && r.width > 0) {
+      const mid = r.top + r.height / 2;
+      $("coach").classList.toggle("top", mid > H * 0.52);
       const box = [Math.round(r.left - 6), Math.round(r.top - 6),
                    Math.round(r.width + 12), Math.round(r.height + 12)];
       /* writing styles every frame thrashes layout under a full-screen box-shadow */
@@ -3270,6 +3316,7 @@ function tutUpdate() {
       }
     } else if (!spot.hidden) { spot.hidden = true; TUT.box = null; }
   }
+  if (!st || !st.target) $("coach").classList.remove("top");
   if (st && st.wait && st.wait()) {
     sfx("good");
     tutNext();
@@ -3558,12 +3605,13 @@ if (!loaded) {
 spawnTraffic(true);
 requestAnimationFrame(frame);
 
-/* test hook for headless QA */
+/* Debug/QA surface. Deliberately exposed: this is a local single-player game with
+   no server and no scores to protect, and the headless test harness drives it. */
 window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
   centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp,
   ipoShares, goPublic, legacyRevMult, legacyBuyoutMult, select, acceptOffer, declineOffer,
-  tutStart, tutEnd, DISTRICTS, CB };
-window.SFX_TEST = SFX; window.SFX_PLAY = sfx; window.TUT_TEST = TUT;
+  tutStart, tutEnd, DISTRICTS, CB, buyoutPlot, hostileTakeover, goalState, megaBuilt };
+window.SFX_TEST = SFX; window.SFX_PLAY = sfx; window.TUT_TEST = TUT;   // audio + tutorial probes
 </script>
 </body>
 </html>
