@@ -213,6 +213,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="dlist" id="dlist"></div>
     <div class="grp">Management</div>
     <div class="row" id="btn-lobby"><i class="dot" style="background:#b07dff"></i>City Hall<span class="kbd">L</span></div>
+    <div class="row" id="btn-rivals"><i class="dot" style="background:#ff5c6b"></i>Competition<span class="kbd">R</span></div>
     <div class="row" id="btn-port"><i class="dot" style="background:#3ce88f"></i>Portfolio<span class="kbd">P</span></div>
     <div class="row" id="btn-goals"><i class="dot" style="background:#ffcf4a"></i>Objectives<span class="kbd">G</span></div>
     <div class="row" id="btn-help"><i class="dot" style="background:#48d8ff"></i>How To Play<span class="kbd">H</span></div>
@@ -373,8 +374,8 @@ const LOBBY = [
     can: () => G.tourismLv < 6, run: () => { G.tourismLv++; } },
   { id: "eminent", name: "Eminent Domain Writ", cost: 45, cash: 60e6, repeat: true,
     desc: "Seize one random unowned block in your weakest district, free.",
-    can: () => G.plots.some(p => !p.owned && !p.park), run: () => {
-      const free = G.plots.filter(p => !p.owned && !p.park);
+    can: () => G.plots.some(p => !p.owned && !p.rival && !p.park), run: () => {
+      const free = G.plots.filter(p => !p.owned && !p.rival && !p.park);
       if (!free.length) return;
       const p = pick(free); p.owned = true; p.biz = null; p.level = 0;
       toast("gold", "Eminent Domain", p.name + " seized by decree.");
@@ -442,7 +443,7 @@ const G = {
   netHistory: [], lastNet: 0, grossRate: 0, opexRate: 0,
   activeEvents: [], nextEvent: 45, tickerItems: [],
   cars: [], peds: [], fx: [],
-  won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, statsTimer: 0,
+  won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, statsTimer: 0, rivals: [], buyouts: 0,
   totalEarned: 0, started: Date.now()
 };
 
@@ -508,6 +509,7 @@ function generateWorld() {
         landBase: 0
       };
       if (!park) counters[d]++;
+      cell.rival = null;
       cell.landBase = 78000 * DISTRICTS[d].land * (0.8 + cell.seed * 0.55);
       /* pre-existing city fabric: every block already has a building you buy out */
       const dens = DISTRICTS[d].density;
@@ -518,6 +520,14 @@ function generateWorld() {
       G.grid[y][x] = cell;
       G.plots.push(cell);
     }
+  }
+  G.rivals = RIVAL_DEFS.map(d => ({ ...d, cash: d.seed, income: 0, timer: 0, eliminated: false }));
+  /* seed each rival with a starting block so the city is contested from turn one */
+  for (const r of G.rivals) {
+    const pool = districtPlots(r.bias).filter(p => !p.owned && !p.rival);
+    if (!pool.length) continue;
+    const p = pool[Math.floor(hash2(r.seed, 7) * pool.length)];
+    p.rival = r.id; p.biz = r.biz; p.level = 2; p.built = 1;
   }
   spawnTraffic(true);
 }
@@ -652,6 +662,7 @@ function netWorth() {
 function simulate(dt) {
   let gross = 0, opex = 0, pres = 0, riskAdd = 0;
   for (const p of G.plots) {
+    if (p.rival && p.built < 1) p.built = Math.min(1, p.built + dt * 0.55);
     if (!p.owned) continue;
     const r = plotRevenue(p);
     p.revenue = r;
@@ -706,6 +717,8 @@ function simulate(dt) {
       if (G.cash < -Math.max(5e5, worth * 0.35)) forcedLiquidation();
     }
   } else G.debtWarn = 0;
+
+  updateRivals(dt);
 
   G.trafficTimer = (G.trafficTimer || 0) + dt;
   if (G.trafficTimer > 5) { G.trafficTimer = 0; spawnTraffic(); }
@@ -1173,6 +1186,11 @@ function drawGround(p, s, tw, th) {
   }
   ctx.fillStyle = p.owned ? shade(D.ground, 0.08) : shade(D.ground, -0.09);
   diamond(s.x, s.y, tw, th); ctx.fill();
+  if (p.rival) {
+    const rc = (rivalById(p.rival) || {}).color || "#888";
+    ctx.globalAlpha = 0.16; ctx.fillStyle = rc;
+    diamond(s.x, s.y, tw, th); ctx.fill(); ctx.globalAlpha = 1;
+  }
   ctx.strokeStyle = p.owned ? "rgba(255,255,255,0.10)" : "rgba(255,255,255,0.05)";
   ctx.lineWidth = 1; ctx.stroke();
   const oc = overlayColor(p);
@@ -1199,7 +1217,7 @@ function drawPlot(p, s, tw, th) {
     return;
   }
 
-  if (p.owned && p.biz && p.level > 0) drawBuilding(p, s, tw, th);
+  if ((p.owned || p.rival) && p.biz && p.level > 0) drawBuilding(p, s, tw, th);
   else if (!p.owned) drawCivBuilding(p, s, tw, th);
   else if (p.owned) {
     /* cleared lot: fence + crane pad */
@@ -1282,7 +1300,19 @@ const FACADE = {
 /** Player-owned tower: stacked setbacks, lit windows, roof detail, ground shadow. */
 function drawBuilding(p, s, tw, th) {
   const D = DISTRICTS[p.d], B = BIZ[p.biz];
-  const pal = p.mega ? ["#d8c06a", "#9c8637", "#f0dd92", "rgba(255,245,190,0.95)"] : FACADE[p.biz];
+  let pal = p.mega ? ["#d8c06a", "#9c8637", "#f0dd92", "rgba(255,245,190,0.95)"] : FACADE[p.biz];
+  if (p.rival) {                                  /* rival stock: muted, slate-blended concrete */
+    const rc = (rivalById(p.rival) || {}).color || "#888888";
+    const mix = (c, t) => {
+      const n = parseInt(c.slice(1), 16);
+      const r = Math.round(((n >> 16) & 255) * (1 - t) + 96 * t);
+      const g = Math.round(((n >> 8) & 255) * (1 - t) + 104 * t);
+      const b2 = Math.round((n & 255) * (1 - t) + 122 * t);
+      return "rgb(" + r + "," + g + "," + b2 + ")";
+    };
+    const body = mix(rc, 0.62);
+    pal = [shade(body, 0.02), shade(body, -0.13), shade(body, 0.1), "rgba(226,233,245,0.55)"];
+  }
   const grow = 0.22 + 0.78 * p.built;
   const floors = p.level;
   const totalH = (13 + Math.pow(floors, 1.34) * 9.5) * cam.z * grow * (p.mega ? 1.55 : 1);
@@ -1400,6 +1430,17 @@ function drawBuilding(p, s, tw, th) {
     ctx.strokeStyle = "rgba(255,207,74," + (0.3 + Math.sin(blink * 2) * 0.2) + ")";
     ctx.lineWidth = 3; diamond(s.x, s.y, tw * 1.05, th * 1.05); ctx.stroke();
   }
+  /* rival pennant */
+  if (p.rival) {
+    const rc = (rivalById(p.rival) || {}).color || "#888";
+    const fy = top - 9 * cam.z;
+    ctx.strokeStyle = "rgba(230,235,245,0.8)"; ctx.lineWidth = 1.2 * cam.z;
+    ctx.beginPath(); ctx.moveTo(s.x, top); ctx.lineTo(s.x, fy); ctx.stroke();
+    ctx.fillStyle = rc;
+    ctx.beginPath();
+    ctx.moveTo(s.x, fy); ctx.lineTo(s.x + 9 * cam.z, fy + 2.6 * cam.z);
+    ctx.lineTo(s.x, fy + 5.2 * cam.z); ctx.closePath(); ctx.fill();
+  }
   /* back-room operation marker */
   if (p.sketchy) {
     ctx.fillStyle = "rgba(255,92,107,.95)";
@@ -1438,6 +1479,12 @@ function drawTooltip() {
   lines.push({ t: p.name, c: "#ffffff", b: true });
   lines.push({ t: DISTRICTS[p.d].name + (p.landmark ? " · LANDMARK" : ""), c: DISTRICTS[p.d].color });
   if (p.park) lines.push({ t: "Protected parkland", c: "#8ef0a8" });
+  else if (p.rival) {
+    const r = rivalById(p.rival) || { name: "Rival", color: "#888" };
+    lines.push({ t: "Held by " + r.name, c: r.color });
+    if (p.biz) lines.push({ t: BIZ[p.biz].icon + " tier " + p.level + " · " + rate(rivalRevenue(p)), c: "#7d90ab" });
+    lines.push({ t: "Buy out · " + money(buyoutPrice(p)), c: "#ffcf4a" });
+  }
   else if (!p.owned) lines.push({ t: "For sale · " + money(landPrice(p)), c: "#ffcf4a" });
   else if (!p.biz) lines.push({ t: "Owned · vacant lot", c: "#7d90ab" });
   else {
@@ -1509,7 +1556,7 @@ const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV
 
 /* Rotating contextual advice so the player always has a next move. */
 function advisorLine() {
-  const own = ownedPlots(), free = buildable().filter(p => !p.owned);
+  const own = ownedPlots(), free = buildable().filter(p => !p.owned && !p.rival);
   if (G.cash < 0) return "⚠ You are in debt at 0.55%/s — sell a block or wait for revenue to clear it.";
   if (!own.length) {
     const cheap = free.slice().sort((a, b) => landPrice(a) - landPrice(b))[0];
@@ -1521,6 +1568,12 @@ function advisorLine() {
     " influence. City Hall (L) will cut your " + pct(G.taxRate) + " tax rate.";
   const capped = own.filter(p => p.biz && p.level >= levelCap(p)).length;
   if (capped > 2) return capped + " towers have hit the height cap — buy a Rezoning Permit at City Hall (L).";
+  const rivalHeld = G.plots.filter(p => p.rival).length;
+  const takeable = G.rivals.filter(canTakeover);
+  if (takeable.length) return "You outweigh " + takeable[0].name +
+    " 2.5 to 1 — press R for a hostile takeover of their whole portfolio.";
+  if (!free.length && rivalHeld) return rivalHeld + " blocks are still in rival hands. " +
+    "Buy them out block by block, or take a whole developer over (R).";
   const afford = free.filter(p => landPrice(p) <= G.cash).length;
   if (afford > 0) return "You can afford " + afford + " more block" + (afford > 1 ? "s" : "") +
     ". Own a whole district for a +35% monopoly premium.";
@@ -1614,6 +1667,29 @@ function renderInspector() {
   html += '<div class="kv"><span>District yield</span><b>×' + D.rev.toFixed(2) + '</b></div>';
   html += '<div class="kv"><span>Height cap</span><b>' + levelCap(p) + ' tiers</b></div>';
   html += '<div class="kv"><span>Synergy</span><b>×' + synergyMult(p).toFixed(2) + '</b></div>';
+
+  if (p.rival) {
+    const r = rivalById(p.rival) || { name: "Rival", color: "#888", blurb: "" };
+    const B = p.biz ? BIZ[p.biz] : null;
+    const price = buyoutPrice(p);
+    $("i-sub").textContent = "Held by " + r.name;
+    html = '<div class="kv"><span>Controlled by</span><b style="color:' + r.color + '">' + r.name + '</b></div>' +
+      '<div class="kv"><span>Their asset</span><b>' +
+        (B ? B.icon + " " + B.tiers[Math.min(p.level - 1, 8)] + " · tier " + p.level : "vacant") + '</b></div>' +
+      '<div class="kv"><span>Their revenue</span><b style="color:var(--red)">' + rate(rivalRevenue(p)) + '</b></div>' +
+      '<div class="kv"><span>Land value</span><b>' + money(landPrice(p)) + '</b></div>' +
+      '<div class="sechead">Acquisition</div>' +
+      '<button class="btn buy" id="a-buyout"' + (G.cash < price ? " disabled" : "") + '>' +
+      'Buy Out This Block <span class="c">' + money(price) + '</span>' +
+      '<span class="d">They will not sell at market. You pay the premium and inherit the ' +
+      'building at its current tier.</span></button>' +
+      '<p style="font-size:11px;color:var(--dim);line-height:1.55;margin-top:8px">' + r.blurb +
+      ' Press <kbd>R</kbd> to compare standings — once you are worth 2.5× a rival you can ' +
+      'absorb their whole portfolio at once.</p>';
+    body.innerHTML = html;
+    const bo = $("a-buyout"); if (bo) bo.onclick = () => buyoutPlot(p);
+    return;
+  }
 
   if (!p.owned) {
     $("i-sub").textContent = "Unowned parcel · " + D.short;
@@ -1719,6 +1795,7 @@ function spend(n) {
   G.cash -= n; return true;
 }
 function buyPlot(p) {
+  if (p.rival) { buyoutPlot(p); return; }        // rival-held blocks go through the premium path
   const c = landPrice(p);
   if (!spend(c)) return;
   p.owned = true; p.glow = 1;
@@ -1806,6 +1883,185 @@ function openLobby() {
   });
 }
 
+/* ===================== RIVAL DEVELOPERS =====================
+   Three AI landlords competing for the same 93 blocks. They buy, build and
+   compound on their own timer; the player must buy them out to reach 100%. */
+const RIVAL_DEFS = [
+  { id: "vex", name: "Vexler Capital", short: "VEX", color: "#ff5c6b",
+    bias: "wall", biz: "finance", aggression: 1.25, seed: 900000,
+    blurb: "Leveraged, litigious and always bidding one dollar over you." },
+  { id: "hal", name: "Halcyon Estates", short: "HAL", color: "#b07dff",
+    bias: "uptown", biz: "resi", aggression: 0.85, seed: 1200000,
+    blurb: "Third-generation money. Buys quietly, never sells, never hurries." },
+  { id: "kil", name: "Kiln Works Group", short: "KLN", color: "#ffb03c",
+    bias: "brooklyn", biz: "tech", aggression: 1.05, seed: 650000,
+    blurb: "Converts warehouses into campuses and campuses into rent." }
+];
+
+function rivalById(id) { return G.rivals.find(r => r.id === id); }
+function rivalPlots(id) { return G.plots.filter(p => p.rival === id); }
+
+/** A rival block's revenue — a simplified version of the player formula. */
+function rivalRevenue(p) {
+  if (!p.rival || !p.biz || p.level < 1) return 0;
+  return 40 * BIZ[p.biz].mult * DISTRICTS[p.d].rev * Math.pow(p.level, 2.55);
+}
+
+/** Rivals build cheaper than the player — they are not paying your prestige premium. */
+function rivalUpgradeCost(p) { return upgradeCost(p) * 0.55; }
+
+function rivalWorth(r) {
+  let w = r.cash;
+  for (const p of rivalPlots(r.id)) w += landPrice(p) * 0.9 + rivalRevenue(p) * 45;
+  return w;
+}
+
+/** What it costs the player to prise one block out of a rival's hands. */
+function buyoutPrice(p) {
+  const r = rivalById(p.rival);
+  const premium = 2.2 + (r ? r.aggression * 0.6 : 0.6);
+  return landPrice(p) * premium + rivalRevenue(p) * 55;
+}
+
+/** One rival turn: collect income, then buy or build with what they have. */
+function rivalTurn(r, dt) {
+  const plots = rivalPlots(r.id);
+  let income = 0;
+  for (const p of plots) income += rivalRevenue(p) * 0.7;    // net of their own costs
+  r.cash += income * dt;
+  r.income = income;
+
+  r.timer = (r.timer || 0) + dt;
+  const period = 9 / r.aggression;
+  if (r.timer < period) return;
+  r.timer = 0;
+  r.turns = (r.turns || 0) + 1;
+
+  /* Rivals alternate between developing and acquiring. Without a dedicated build
+     phase, cheap land always wins the cash race and they never grow vertically. */
+  const upgradable = plots.filter(p => p.biz && p.level < levelCap(p));
+  upgradable.sort((a, b) => rivalUpgradeCost(a) - rivalUpgradeCost(b));
+  const target = upgradable[0];
+  const buildPhase = plots.length >= 3 && (r.turns % 5) < 3;
+  if (target && rivalUpgradeCost(target) < r.cash * (buildPhase ? 0.95 : 0.5)) {
+    r.cash -= rivalUpgradeCost(target);
+    target.level++;
+    target.built = 0.6;
+    return;
+  }
+  if (buildPhase) return;                 /* hold the cash, keep stacking floors */
+
+  /* land appetite: a hard personal cap, plus a collective ceiling on the board */
+  const appetite = Math.min(14, 3 + Math.round(r.aggression * 3 + G.time / 420));
+  if (plots.length >= appetite) return;
+  const boardShare = G.plots.filter(p => p.rival).length / Math.max(1, buildable().length);
+  if (boardShare > 0.42) return;
+  const free = G.plots.filter(p => !p.owned && !p.rival && !p.park);
+  if (!free.length) return;
+  free.sort((a, b) => (a.d === r.bias ? -1 : 0) - (b.d === r.bias ? -1 : 0) ||
+                      landPrice(a) - landPrice(b));
+  const buy = free[0];
+  const price = landPrice(buy) * 1.05;
+  if (price > r.cash * 0.55) return;      /* always keep powder dry for building up */
+  r.cash -= price;
+  buy.rival = r.id;
+  buy.biz = Math.random() < 0.65 ? r.biz : pick(Object.keys(BIZ));
+  buy.level = 1;
+  buy.built = 0;
+  if (ownedPlots().length > 0 && Math.random() < 0.45)
+    pushTicker("bad", r.name + " acquires <b>" + buy.name + "</b> in " + DISTRICTS[buy.d].name);
+}
+
+function updateRivals(dt) {
+  for (const r of G.rivals) if (!r.eliminated) rivalTurn(r, dt);
+}
+
+/** Player buys a single rival-held block at a premium. */
+function buyoutPlot(p) {
+  const price = buyoutPrice(p), r = rivalById(p.rival);
+  if (!spend(price)) return;
+  if (r) r.cash += price * 0.8;
+  p.rival = null; p.owned = true; p.glow = 1;
+  floatText(p.x, p.y, "ACQUIRED", "#ffcf4a");
+  toast("gold", "Block Acquired", p.name + " prised out of " + (r ? r.name : "rival hands") +
+    " for " + money(price) + ".");
+  pushTicker("good", "<b>" + p.name + "</b> bought out of " + (r ? r.name : "a rival") +
+    " for " + money(price));
+  G.buyouts = (G.buyouts || 0) + 1;
+  checkEliminated();
+  renderInspector(); updateDistrictList();
+}
+
+/** Full hostile takeover: absorb every block a rival holds in one transaction. */
+function takeoverCost(r) { return rivalWorth(r) * 1.7 + 5e6; }
+function canTakeover(r) {
+  return !r.eliminated && rivalPlots(r.id).length > 0 &&
+         netWorth() > rivalWorth(r) * 2.5 && G.influence >= 40;
+}
+function hostileTakeover(r) {
+  if (!canTakeover(r)) return;
+  const cost = takeoverCost(r);
+  if (!spend(cost)) return;
+  G.influence -= 40;
+  const plots = rivalPlots(r.id);
+  for (const p of plots) { p.rival = null; p.owned = true; p.glow = 1; }
+  r.eliminated = true; r.cash = 0;
+  toast("gold", "HOSTILE TAKEOVER", r.name + " absorbed: " + plots.length +
+    " blocks for " + money(cost) + ".");
+  pushTicker("good", "<b>" + r.name + " ACQUIRED</b> — " + plots.length + " blocks change hands");
+  flashScreen("#ffcf4a");
+  updateDistrictList();
+}
+
+function checkEliminated() {
+  for (const r of G.rivals) {
+    if (!r.eliminated && rivalPlots(r.id).length === 0 && r.cash < 2e5 && G.time > 90) {
+      r.eliminated = true;
+      toast("good", r.name + " Folds", "They have no blocks and no capital left in New York.");
+    }
+  }
+}
+
+function openRivals() {
+  const board = G.rivals.map(r => ({ r, w: rivalWorth(r), n: rivalPlots(r.id).length }))
+    .concat([{ me: true, w: netWorth(), n: ownedPlots().length }])
+    .sort((a, b) => b.w - a.w);
+  let html = '<h1>The Competition</h1><p>Three developers are buying the same city you are. ' +
+    'Every block they hold is a block between you and a total monopoly.</p><div class="wins">';
+  board.forEach((e, i) => {
+    if (e.me) {
+      html += '<div class="wc" style="border-color:var(--gold)"><b style="color:var(--gold)">' +
+        (i + 1) + '. You</b><small>Your empire</small>' +
+        '<div class="kv"><span>Net worth</span><b>' + money(e.w) + '</b></div>' +
+        '<div class="kv"><span>Blocks</span><b>' + e.n + '</b></div></div>';
+      return;
+    }
+    const r = e.r;
+    html += '<div class="wc" style="border-color:' + (r.eliminated ? "var(--line)" : r.color) + '">' +
+      '<b style="color:' + r.color + '">' + (i + 1) + '. ' + r.name +
+      (r.eliminated ? ' <span style="color:var(--dim)">— ACQUIRED</span>' : '') + '</b>' +
+      '<small>' + r.blurb + '</small>' +
+      '<div class="kv"><span>Net worth</span><b>' + money(e.w) + '</b></div>' +
+      '<div class="kv"><span>Blocks held</span><b>' + e.n + '</b></div>' +
+      '<div class="kv"><span>Income</span><b style="color:var(--green)">' + rate(r.income || 0) + '</b></div>';
+    if (!r.eliminated && e.n > 0) {
+      const ok = canTakeover(r);
+      html += '<button class="btn ' + (ok ? "buy" : "") + '" data-t="' + r.id + '"' +
+        (ok ? "" : " disabled") + ' style="margin-top:8px">Hostile Takeover ' +
+        '<span class="c">' + money(takeoverCost(r)) + ' + 40 inf</span>' +
+        '<span class="d">' + (ok ? "Absorb all " + e.n + " of their blocks at once."
+          : "Requires 2.5× their net worth and 40 influence.") + '</span></button>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  openModal(html);
+  $("mbox").querySelectorAll("[data-t]").forEach(b => b.onclick = () => {
+    hostileTakeover(rivalById(b.dataset.t));
+    openRivals();
+  });
+}
+
 /* Per-district policy programmes. One active policy per district at a time. */
 const POLICIES = {
   retailPush: { n: "Promote High-End Retail", d: "+35% retail & food revenue here, +12% operating costs.", cost: 2.2 },
@@ -1856,7 +2112,8 @@ function openDistrict(id) {
     openDistrict(id);
   });
   $("d-buyall").onclick = () => {
-    const free = districtPlots(id).filter(p => !p.owned).sort((a, b) => landPrice(a) - landPrice(b));
+    const free = districtPlots(id).filter(p => !p.owned && !p.rival)
+      .sort((a, b) => landPrice(a) - landPrice(b));
     let n = 0, spent = 0;
     for (const p of free) {
       const c = landPrice(p);
@@ -1884,8 +2141,10 @@ function goalState() {
   return [
     { k: "buyout", n: "Buy Out City Hall", d: "Accumulate $100B in net worth.",
       p: clamp(netWorth() / 1e11, 0, 1), v: money(netWorth()) + " / $100.00B" },
-    { k: "monopoly", n: "Total Real Estate Monopoly", d: "Own 100% of every developable block.",
-      p: own / total, v: own + " / " + total + " blocks" },
+    { k: "monopoly", n: "Total Real Estate Monopoly",
+      d: "Own 100% of every developable block — including every one your rivals hold.",
+      p: own / total, v: own + " / " + total + " blocks (" +
+        G.plots.filter(q => q.rival).length + " held by rivals)" },
     { k: "mega", n: "The Empire State Megatower",
       d: "Own the Empire State Site landmark, build it to its height cap, then raise the Megatower ($8B).",
       p: G.won.mega ? 1 : 0, v: G.won.mega ? "COMPLETE" : megaStatus() }
@@ -1976,13 +2235,16 @@ function openHelp() {
     '<p><b>4. Lobby.</b> Prestige generates Influence. Spend it at City Hall for tax cuts, rezoning ' +
     '(higher building caps), subway expansions and — if you are shameless — regulatory cleanups.</p>' +
     '<p><b>5. Gamble.</b> Back-room operations pay +85% but accrue audit risk. When the SEC arrives, fines scale with your empire.</p>' +
-    '<p><b>6. Collect.</b> Golden bearer-bond cases appear on your buildings every few seconds. ' +
+    '<p><b>6. Compete.</b> Three rival developers buy the same blocks you want. ' +
+    'Buy a block out of their hands at a premium, or — once you are worth 2.5× a rival — ' +
+    'absorb their entire portfolio in one hostile takeover (<kbd>R</kbd>).</p>' +
+    '<p><b>7. Collect.</b> Golden bearer-bond cases appear on your buildings every few seconds. ' +
     'Click one before it fades for an instant cash bonus scaled to your income.</p>' +
-    '<p><b>7. Survive the market.</b> Macro events hit every ~60 seconds and can halve a district or triple it.</p>' +
+    '<p><b>8. Survive the market.</b> Macro events hit every ~60 seconds and can halve a district or triple it.</p>' +
     '<h3>Controls</h3>' +
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
-    '<kbd>P</kbd> portfolio · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
     '<h3>Win Conditions</h3>' +
     '<p>Reach <b>$100B net worth</b>, own <b>every block in all four districts</b>, and build the ' +
     '<b>Empire State Megatower</b> on a maxed-out Wall Street tower.</p>');
@@ -2006,6 +2268,12 @@ const MILESTONES = [
   { id: "pres1k", t: () => G.prestige >= 1000, n: "Institution", d: "1,000 prestige. Old money treats you as old money." },
   { id: "lob5", t: () => (G.zoneBonus + G.transitLv + G.tourismLv) >= 8, n: "City Hall Regular",
     d: "Eight lobbying wins. The council takes your calls." },
+  { id: "buy1", t: () => G.buyouts >= 1, n: "First Buyout",
+    d: "You paid over the odds to take a block off a rival. Worth it." },
+  { id: "take1", t: () => G.rivals.some(r => r.eliminated), n: "Hostile Acquirer",
+    d: "An entire rival portfolio absorbed in one transaction." },
+  { id: "board", t: () => G.rivals.length > 0 && G.rivals.every(r => r.eliminated),
+    n: "Cleared The Board", d: "No developer left in New York but you." },
   { id: "audit", t: () => G.audits >= 1 && G.cash > 0, n: "Survived The Audit",
     d: "Fined and still solvent. The cost of doing business." }
 ];
@@ -2100,6 +2368,7 @@ document.addEventListener("keydown", e => {
   if (k === "l") openLobby();
   if (k === "g") openGoals();
   if (k === "p") openPortfolio();
+  if (k === "r") openRivals();
   if (k === "h") openHelp();
   const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
   if (ovs[k]) setOverlay(ovs[k]);
@@ -2126,6 +2395,7 @@ if (window.innerWidth <= 720) $("side").classList.add("collapsed");
 $("btn-lobby").onclick = openLobby;
 $("btn-goals").onclick = openGoals;
 $("btn-port").onclick = openPortfolio;
+$("btn-rivals").onclick = openRivals;
 $("btn-help").onclick = openHelp;
 $("btn-save").onclick = () => { save(); toast("good", "Empire Saved", "Progress written to local storage."); };
 $("btn-reset").onclick = () => {
@@ -2141,8 +2411,12 @@ function save() {
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
     tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, miles: G.miles, audits: G.audits,
     time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
-    plots: G.plots.map(p => p.owned ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega } : null)
-      .filter(Boolean)
+    buyouts: G.buyouts,
+    rivals: G.rivals.map(r => ({ id: r.id, cash: r.cash, eliminated: r.eliminated })),
+    plots: G.plots.map(p => (p.owned || p.rival)
+      ? { x: p.x, y: p.y, b: p.biz, l: p.level, u: p.up, s: p.sketchy, m: p.mega,
+          r: p.owned ? null : p.rival }
+      : null).filter(Boolean)
   };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(d)); } catch (err) { /* storage may be blocked */ }
 }
@@ -2156,10 +2430,19 @@ function load() {
     tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {}, miles: d.miles || {}, audits: d.audits || 0,
     time: d.time || 0, totalEarned: d.totalEarned || 0
   });
+  G.buyouts = d.buyouts || 0;
+  if (d.rivals) for (const rs of d.rivals) {
+    const r = rivalById(rs.id);
+    if (r) { r.cash = rs.cash; r.eliminated = rs.eliminated; }
+  }
+  for (const p of G.plots) { p.rival = null; p.owned = false; p.biz = null; p.level = 0; }
   for (const s of d.plots) {
     const p = G.grid[s.y] && G.grid[s.y][s.x];
     if (!p || p.park) continue;
-    p.owned = true; p.biz = s.b; p.level = s.l; p.up = s.u; p.sketchy = s.s; p.mega = s.m; p.built = 1;
+    p.biz = s.b; p.level = s.l; p.built = 1;
+    if (s.r) { p.rival = s.r; continue; }
+    p.owned = true; p.up = s.u || { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+    p.sketchy = s.s; p.mega = s.m;
   }
   /* offline automation earnings */
   const away = clamp((Date.now() - (d.ts || Date.now())) / 1000, 0, 8 * 3600);
@@ -2236,7 +2519,8 @@ spawnTraffic(true);
 requestAnimationFrame(frame);
 
 /* test hook for headless QA */
-window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen, buyPlot, foundBiz, levelUp };
+window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
+  centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp };
 </script>
 </body>
 </html>
