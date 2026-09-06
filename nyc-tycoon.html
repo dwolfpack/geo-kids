@@ -2263,15 +2263,33 @@ function drawWater(c, s, tw, th) {
 }
 
 function drawStreet(c, s, tw, th) {
-  ctx.fillStyle = "#1f262f";
+  /* Kerb line and carriageway. Quantising the occlusion keeps the shaded
+     colours down to a handful of cache entries instead of one per tile. */
+  const ao = Math.round(cellAO(c.x, c.y) * 8) / 8;
+  ctx.fillStyle = shade("#333c48", -ao * 0.55);       // sidewalk
   diamond(s.x, s.y, tw, th); ctx.fill();
-  const ao = cellAO(c.x, c.y);
-  if (ao > 0.02) {
-    ctx.fillStyle = "rgba(0,0,0," + ao.toFixed(3) + ")";
-    diamond(s.x, s.y, tw, th); ctx.fill();
-  }
+  ctx.fillStyle = shade("#1d242d", -ao * 0.5);        // asphalt
+  diamond(s.x, s.y, tw * 0.82, th * 0.82); ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.045)"; ctx.lineWidth = 1;
-  ctx.stroke();
+  diamond(s.x, s.y, tw, th); ctx.stroke();
+  /* zebra crossings on the avenue approaches */
+  if (cam.z > 1 && c.x % 3 === 2 && c.y % 4 === 3) {
+    ctx.strokeStyle = "rgba(226,232,240,0.26)";
+    ctx.lineWidth = Math.max(1, 1.4 * cam.z);
+    ctx.beginPath();
+    for (let k = 0; k < 3; k++) {
+      const o = -0.2 + k * 0.2;
+      for (let side = -1; side <= 1; side += 2) {
+        const e = side * 0.3, f = side * 0.42;
+        /* across the cross-street, then across the avenue */
+        ctx.moveTo(s.x + (e - o) * tw * 0.5, s.y + (e + o) * th * 0.5);
+        ctx.lineTo(s.x + (f - o) * tw * 0.5, s.y + (f + o) * th * 0.5);
+        ctx.moveTo(s.x + (o - e) * tw * 0.5, s.y + (o + e) * th * 0.5);
+        ctx.lineTo(s.x + (o - f) * tw * 0.5, s.y + (o + f) * th * 0.5);
+      }
+    }
+    ctx.stroke();
+  }
   if (cam.z > 0.75) {
     ctx.strokeStyle = "rgba(255,220,140,0.16)";
     ctx.setLineDash([4 * cam.z, 6 * cam.z]);
