@@ -352,29 +352,29 @@ const RIVER_X = 9;                   // East River column
 const DISTRICTS = {
   wall: {
     id: "wall", name: "Wall Street", short: "FiDi",
-    color: "#48d8ff", baseColor: "#48d8ff", ground: "#16324a", roof: "#20455f", accent: "#7ee9ff",
-    land: 3.1, rev: 2.25, prestige: 1.0, cap: 9, density: 1.55, civ: [66, 78, 100],
+    color: "#48d8ff", baseColor: "#48d8ff", ground: "#212b37", roof: "#20455f", accent: "#7ee9ff",
+    land: 3.1, rev: 2.25, prestige: 1.0, cap: 9, density: 1.55, civ: [78, 84, 96],
     blurb: "Financial District. Brutal land prices, colossal corporate payouts.",
     bias: "finance"
   },
   times: {
     id: "times", name: "Times Square", short: "Broadway",
-    color: "#ff4fa3", baseColor: "#ff4fa3", ground: "#3a1730", roof: "#54204a", accent: "#ff8fc8",
-    land: 2.4, rev: 1.85, prestige: 1.2, cap: 8, density: 1.05, civ: [82, 70, 90],
+    color: "#ff4fa3", baseColor: "#ff4fa3", ground: "#332430", roof: "#54204a", accent: "#ff8fc8",
+    land: 2.4, rev: 1.85, prestige: 1.2, cap: 8, density: 1.05, civ: [88, 80, 90],
     blurb: "Neon canyon. Tourist floods drive insane ad and retail revenue.",
     bias: "retail"
   },
   brooklyn: {
     id: "brooklyn", name: "Brooklyn", short: "DUMBO",
-    color: "#ff9d3c", baseColor: "#ff9d3c", ground: "#3b2416", roof: "#5a361f", accent: "#ffc37a",
-    land: 0.85, rev: 1.0, prestige: 0.8, cap: 7, density: 0.5, civ: [96, 66, 50],
+    color: "#ff9d3c", baseColor: "#ff9d3c", ground: "#352c24", roof: "#5a361f", accent: "#ffc37a",
+    land: 0.85, rev: 1.0, prestige: 0.8, cap: 7, density: 0.5, civ: [96, 79, 66],
     blurb: "Industrial chic. Cheap entry, gentrification compounds your yield.",
     bias: "tech"
   },
   uptown: {
     id: "uptown", name: "Upper East Side", short: "Central Park",
-    color: "#8ef0a8", baseColor: "#8ef0a8", ground: "#1c3a26", roof: "#2a5236", accent: "#c4ffd6",
-    land: 2.7, rev: 1.35, prestige: 2.4, cap: 7, density: 0.78, civ: [92, 84, 70],
+    color: "#8ef0a8", baseColor: "#8ef0a8", ground: "#26302b", roof: "#2a5236", accent: "#c4ffd6",
+    land: 2.7, rev: 1.35, prestige: 2.4, cap: 7, density: 0.78, civ: [94, 92, 82],
     blurb: "Old money. Safe dividends, enormous prestige, park-adjacency premiums.",
     bias: "resi"
   }
@@ -1543,23 +1543,34 @@ function diamond(sx, sy, w, h) {
   ctx.closePath();
 }
 
-/** Lighten (amt>0) or darken (amt<0) a colour, with an optional warm (>0) or
-    cool (<0) bias so sunlit and shaded surfaces sit on the same grade.
-    Accepts "#rrggbb" or "rgb(r,g,b)". */
-function shade(col, amt, warm) {
-  let r, g, b;
+/** Parse "#rrggbb" or "rgb(r,g,b)" into a [r,g,b] triple. */
+function rgbOf(col) {
   if (col.charCodeAt(0) === 35) {           // '#'
     const n = parseInt(col.slice(1), 16);
-    r = (n >> 16) & 255; g = (n >> 8) & 255; b = n & 255;
-  } else {
-    const m = col.match(/-?\d+/g);
-    r = +m[0]; g = +m[1]; b = +m[2];
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
   }
+  const m = col.match(/-?\d+/g);
+  return [+m[0], +m[1], +m[2]];
+}
+
+/* The renderer asks for the same handful of shaded colours a thousand times a
+   frame, so the results are cached rather than re-parsed. */
+const shadeCache = new Map();
+
+/** Lighten (amt>0) or darken (amt<0) a colour, with an optional warm (>0) or
+    cool (<0) bias so sunlit and shaded surfaces sit on the same grade. */
+function shade(col, amt, warm) {
+  const key = col + "|" + amt + "|" + (warm || 0);
+  const hit = shadeCache.get(key);
+  if (hit !== undefined) return hit;
+  const c = rgbOf(col);
   const wv = warm ? warm * 20 : 0;
-  r = clamp(Math.round(r + amt * 255 + wv), 0, 255);
-  g = clamp(Math.round(g + amt * 255 + wv * 0.3), 0, 255);
-  b = clamp(Math.round(b + amt * 255 - wv * 0.8), 0, 255);
-  return "rgb(" + r + "," + g + "," + b + ")";
+  const out = "rgb(" + clamp(Math.round(c[0] + amt * 255 + wv), 0, 255) + "," +
+                       clamp(Math.round(c[1] + amt * 255 + wv * 0.3), 0, 255) + "," +
+                       clamp(Math.round(c[2] + amt * 255 - wv * 0.8), 0, 255) + ")";
+  if (shadeCache.size > 4000) shadeCache.clear();
+  shadeCache.set(key, out);
+  return out;
 }
 
 /* =====================  LIGHTING MODEL  =====================
@@ -1651,6 +1662,16 @@ function cellAO(x, y) {
 /** Draw an isometric box: footprint w x d centred at (cx,cy), height h. */
 function isoBox(cx, cy, w, d, h, top, left, right) {
   const ty = cy - h;
+  if (w < 26) {                       // too small for the face split to read
+    ctx.fillStyle = left;
+    ctx.beginPath();
+    ctx.moveTo(cx - w / 2, cy); ctx.lineTo(cx, cy + d / 2); ctx.lineTo(cx + w / 2, cy);
+    ctx.lineTo(cx + w / 2, ty); ctx.lineTo(cx, ty + d / 2); ctx.lineTo(cx - w / 2, ty);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = top;
+    diamond(cx, ty, w, d); ctx.fill();
+    return;
+  }
   ctx.fillStyle = left;
   ctx.beginPath();
   ctx.moveTo(cx - w / 2, cy); ctx.lineTo(cx, cy + d / 2);
@@ -1730,99 +1751,116 @@ function drawDeck(cx, ty, w, d, mat, rimCol) {
 }
 
 /** Full rooftop dressing for the crown of a structure. Sizes are fractions of
-    the footprint width so plant stays in scale at every zoom level. */
+    the footprint width so plant stays in scale at every zoom level. Items are
+    laid out in disjoint depth bands and drawn in band order, which gives
+    correct back-to-front overlap without sorting anything per frame. */
 function drawRoofClutter(p, cx, ty, w, d, floors, tall) {
   if (w < 20 || cam.z < 0.55) return;
   const r = n => hash2(p.x * 131 + n * 7, p.y * 89 + n * 23);
-  const items = [];
-  const add = (du, dv, fn) => items.push({ o: du + dv, fn });
   const px = (du, dv) => cx + (du - dv) * w * 0.5;
   const py = (du, dv) => ty + (du + dv) * d * 0.5;
 
-  /* stair / lift bulkhead */
-  if (r(1) > 0.25) {
-    const du = -0.24 + r(2) * 0.18, dv = -0.24 + r(3) * 0.18;
-    const bw = w * (0.15 + r(4) * 0.07), bh = w * (0.1 + r(5) * 0.06);
-    add(du, dv, () => isoBox(px(du, dv), py(du, dv), bw, bw * 0.5, bh,
-      "#8b8c86", "#63645f", "#414340"));
+  /* --- flat, painted onto the deck: always underneath everything --- */
+  if (tall && floors >= 11 && w > 34 && r(14) > 0.45) {      // helipad
+    ctx.save();
+    ctx.translate(px(-0.02, 0.02), py(-0.02, 0.02)); ctx.scale(1, 0.5);
+    ctx.strokeStyle = "rgba(236,242,250,0.5)"; ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.arc(0, 0, w * 0.17, 0, TAU); ctx.stroke();
+    ctx.font = "700 " + (w * 0.18) + "px system-ui";
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.fillStyle = "rgba(236,242,250,0.45)";
+    ctx.fillText("H", 0, 0);
+    ctx.restore();
+    ctx.textBaseline = "alphabetic"; ctx.textAlign = "center";
   }
-  /* HVAC plant — the thing that actually covers a Manhattan roof */
-  const hv = 2 + Math.floor(r(6) * 4);
-  for (let i = 0; i < hv; i++) {
-    const du = -0.3 + r(10 + i) * 0.6, dv = -0.16 + r(20 + i) * 0.46;
-    const bw = w * (0.055 + r(30 + i) * 0.045), bh = w * (0.035 + r(40 + i) * 0.035);
-    add(du, dv, () => {
-      const x = px(du, dv), y = py(du, dv);
-      isoBox(x, y, bw, bw * 0.5, bh, "#a6acae", "#767c7e", "#4e5355");
-      if (cam.z > 1.2) {                              // fan grille on the housing
-        ctx.strokeStyle = "rgba(20,24,26,0.55)"; ctx.lineWidth = 1;
-        ctx.beginPath();
-        ctx.moveTo(x - bw * 0.22, y - bh); ctx.lineTo(x + bw * 0.22, y - bh);
-        ctx.stroke();
-      }
-    });
-  }
-  /* ventilation stacks: thin, and they break up the box silhouettes */
-  if (w > 30) for (let i = 0; i < 2; i++) {
-    if (r(60 + i) < 0.45) continue;
-    const du = -0.28 + r(62 + i) * 0.56, dv = -0.02 + r(64 + i) * 0.3;
-    add(du, dv, () => {
-      const x = px(du, dv), y = py(du, dv), hh = w * (0.05 + r(66 + i) * 0.05);
-      ctx.fillStyle = "#8d9294";
-      ctx.fillRect(x - w * 0.012, y - hh, w * 0.024, hh);
-      ctx.fillStyle = "#b6bcbe";
-      ctx.beginPath(); ctx.ellipse(x, y - hh, w * 0.018, w * 0.009, 0, 0, TAU); ctx.fill();
-    });
-  }
-  /* skylights / roof hatches */
-  if (r(7) > 0.45 && w > 30) {
+  if (r(7) > 0.45 && w > 30) {                               // skylights
+    ctx.fillStyle = "rgba(196,214,228,0.5)";
     for (let i = 0; i < 2; i++) {
-      const du = 0.02 + i * 0.13, dv = -0.26 + r(50 + i) * 0.16;
-      add(du, dv, () => {
-        ctx.fillStyle = "rgba(196,214,228,0.5)";
-        diamond(px(du, dv), py(du, dv) - w * 0.012, w * 0.075, d * 0.075);
-        ctx.fill();
-      });
+      const du = 0.02 + i * 0.13, dv = -0.3 + r(50 + i) * 0.1;
+      diamond(px(du, dv), py(du, dv) - w * 0.012, w * 0.075, d * 0.075);
+      ctx.fill();
     }
   }
-  /* rooftop garden */
-  if (r(8) > 0.7 && w > 30) {
-    const du = -0.06 + r(9) * 0.22, dv = 0.16;
-    add(du, dv, () => {
-      const x = px(du, dv), y = py(du, dv);
-      ctx.fillStyle = "#3f5e35";
-      diamond(x, y, w * 0.22, d * 0.22); ctx.fill();
-      ctx.fillStyle = "#557f45";
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath();
-        ctx.arc(x + (i - 1) * w * 0.06, y - w * 0.012, w * 0.021, 0, TAU); ctx.fill();
-      }
-    });
+  const garden = r(8) > 0.7 && w > 30;
+  let gx = 0, gy = 0;
+  if (garden) {                                              // garden bed
+    gx = px(-0.06 + r(9) * 0.16, 0.2); gy = py(-0.06 + r(9) * 0.16, 0.2);
+    ctx.fillStyle = "#3f5e35";
+    diamond(gx, gy, w * 0.22, d * 0.22); ctx.fill();
   }
-  /* water tower */
-  if (r(11) > 0.42 && w > 26) {
-    const du = 0.16 + r(13) * 0.12, dv = 0.02 + r(12) * 0.14;
-    add(du, dv, () => waterTower(px(du, dv), py(du, dv), w * 0.115));
+
+  /* --- standing plant, back band to front band --- */
+  if (r(1) > 0.25) {                                         // stair bulkhead
+    const du = -0.26 + r(2) * 0.14, dv = -0.26 + r(3) * 0.14;
+    const bw = w * (0.15 + r(4) * 0.07);
+    isoBox(px(du, dv), py(du, dv), bw, bw * 0.5, w * (0.1 + r(5) * 0.06),
+      "#8b8c86", "#63645f", "#414340");
   }
-  /* helipad on the genuinely tall stock */
-  if (tall && floors >= 11 && w > 34) {
-    add(-0.02, 0.02, () => {
-      const x = px(-0.02, 0.02), y = py(-0.02, 0.02);
-      ctx.save();
-      ctx.translate(x, y); ctx.scale(1, 0.5);
-      ctx.strokeStyle = "rgba(236,242,250,0.5)"; ctx.lineWidth = 1.4;
-      ctx.beginPath(); ctx.arc(0, 0, w * 0.17, 0, TAU); ctx.stroke();
-      ctx.font = "700 " + (w * 0.18) + "px system-ui";
-      ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.fillStyle = "rgba(236,242,250,0.45)";
-      ctx.fillText("H", 0, 0);
-      ctx.restore();
-      ctx.textBaseline = "alphabetic";
-    });
+  if (w > 30) for (let i = 0; i < 2; i++) {                   // vent stacks
+    if (r(60 + i) < 0.45) continue;
+    const du = -0.28 + r(62 + i) * 0.56, dv = -0.08 + r(64 + i) * 0.12;
+    const x = px(du, dv), y = py(du, dv), hh = w * (0.05 + r(66 + i) * 0.05);
+    ctx.fillStyle = "#8d9294";
+    ctx.fillRect(x - w * 0.012, y - hh, w * 0.024, hh);
+    ctx.fillStyle = "#b6bcbe";
+    ctx.beginPath(); ctx.ellipse(x, y - hh, w * 0.018, w * 0.009, 0, 0, TAU); ctx.fill();
   }
-  items.sort((a, b) => a.o - b.o);
-  for (const it of items) it.fn();
-  ctx.textAlign = "center";
+  const hv = 2 + Math.floor(r(6) * (w > 40 ? 4 : 2));         // HVAC plant
+  for (let i = 0; i < hv; i++) {
+    const du = -0.3 + r(10 + i) * 0.6, dv = 0.04 + r(20 + i) * 0.16;
+    const bw = w * (0.055 + r(30 + i) * 0.045), bh = w * (0.035 + r(40 + i) * 0.035);
+    const x = px(du, dv), y = py(du, dv);
+    isoBox(x, y, bw, bw * 0.5, bh, "#a6acae", "#767c7e", "#4e5355");
+    if (cam.z > 1.4) {                                        // fan grille
+      ctx.strokeStyle = "rgba(20,24,26,0.55)"; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x - bw * 0.22, y - bh); ctx.lineTo(x + bw * 0.22, y - bh);
+      ctx.stroke();
+    }
+  }
+  if (garden) {                                              // planting
+    ctx.fillStyle = "#557f45";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(gx + (i - 1) * w * 0.06, gy - w * 0.012, w * 0.021, 0, TAU); ctx.fill();
+    }
+  }
+  if (r(11) > 0.42 && w > 26) {                              // water tower
+    const du = 0.18 + r(13) * 0.1, dv = 0.22 + r(12) * 0.08;
+    waterTower(px(du, dv), py(du, dv), w * 0.115);
+  }
+}
+
+/** Blend two colours; t=0 keeps a, t=1 keeps b. */
+function mixCol(a, b, t) {
+  const key = a + "&" + b + "|" + t;
+  const hit = shadeCache.get(key);
+  if (hit !== undefined) return hit;
+  const A = rgbOf(a), B = rgbOf(b);
+  const out = "rgb(" + Math.round(A[0] + (B[0] - A[0]) * t) + "," +
+                       Math.round(A[1] + (B[1] - A[1]) * t) + "," +
+                       Math.round(A[2] + (B[2] - A[2]) * t) + ")";
+  if (shadeCache.size > 4000) shadeCache.clear();
+  shadeCache.set(key, out);
+  return out;
+}
+
+/* =====================  ATMOSPHERE  =====================
+   Distance in an aerial photograph is carried by haze, not by size: the far
+   end of the island loses contrast and drifts toward the colour of the sky.
+   The gradient is anchored to the two corners of the grid in screen space,
+   so it stays put as the camera pans and thins out as you zoom in. */
+function drawHaze() {
+  const far = worldToScreen(0, 0).y;
+  const near = worldToScreen(GRID_W, GRID_H).y;
+  const span = Math.max(near - far, 120);
+  if (far > H) return;
+  const g = ctx.createLinearGradient(0, far - span * 0.35, 0, far + span * 0.8);
+  g.addColorStop(0, "rgba(46,78,108,0.5)");
+  g.addColorStop(0.45, "rgba(38,66,94,0.22)");
+  g.addColorStop(1, "rgba(30,54,80,0)");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, Math.min(H, far + span * 0.8));
 }
 
 function overlayColor(p) {
@@ -1894,6 +1932,7 @@ function draw(dt) {
     } else if (it.k === 1) drawCar(it.c, tw, th);
     else drawPed(it.c, it.gx, it.gy);
   }
+  drawHaze();
   drawPickups();
   drawFx();
   drawTooltip();
@@ -1902,7 +1941,7 @@ function draw(dt) {
   drawLegend();
   /* vignette */
   const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.34, W / 2, H / 2, Math.max(W, H) * 0.78);
-  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.62)");
+  vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)");
   ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
   if (flashT > 0) {
@@ -2001,7 +2040,7 @@ function drawWater(c, s, tw, th) {
 }
 
 function drawStreet(c, s, tw, th) {
-  ctx.fillStyle = "#131a24";
+  ctx.fillStyle = "#1f262f";
   diamond(s.x, s.y, tw, th); ctx.fill();
   const ao = cellAO(c.x, c.y);
   if (ao > 0.02) {
@@ -2138,11 +2177,11 @@ function drawCivBuilding(p, s, tw, th) {
 
 /* Facade palettes per business archetype: [light face, dark face, roof, window] */
 const FACADE = {
-  food:    ["#8a5a34", "#5d3a20", "#a8703f", "rgba(255,206,140,0.95)"],
-  retail:  ["#9c3a68", "#66203f", "#c04b81", "rgba(255,160,220,0.95)"],
-  tech:    ["#3e6c92", "#26445e", "#4f87b2", "rgba(150,235,255,0.95)"],
-  finance: ["#2f7d5c", "#1d4f3a", "#3d9a71", "rgba(140,255,200,0.95)"],
-  resi:    ["#6a5a92", "#42375e", "#8271ad", "rgba(230,215,255,0.9)"]
+  food:    ["#8a7360", "#584a3e", "#a8703f", "rgba(255,206,140,0.95)"],
+  retail:  ["#8e7681", "#5b4a52", "#c04b81", "rgba(255,160,220,0.95)"],
+  tech:    ["#5a7889", "#3a4c58", "#4f87b2", "rgba(150,235,255,0.95)"],
+  finance: ["#5c7a6c", "#3b5049", "#3d9a71", "rgba(140,255,200,0.95)"],
+  resi:    ["#7b7589", "#4e4a58", "#8271ad", "rgba(230,215,255,0.9)"]
 };
 
 /** Player-owned tower: stacked setbacks, lit windows, roof detail, ground shadow. */
@@ -2187,9 +2226,8 @@ function drawBuilding(p, s, tw, th) {
     ctx.closePath(); ctx.fill();
     /* roof deck: parapet ring, material, and clutter on the crown */
     const mat = ROOF_MATS[Math.floor(hash2(p.x * 17 + i, p.y * 31 + 7) * 4) & 3];
-    drawDeck(s.x, top, w, d, mat, shade(mat[0], 0.07, SUN_WARM * 0.4));
+    drawDeck(s.x, top, w, d, mat, mixCol(shade(mat[0], 0.07, SUN_WARM * 0.4), pal[2], 0.34));
     if (i === segs - 1) drawRoofClutter(p, s.x, top, w, d, floors, true);
-    else if (cam.z > 0.8) drawRoofClutter(p, s.x, top, w, d, floors, false);
 
     /* windows */
     if (cam.z > 0.68 && segH > 16) {
