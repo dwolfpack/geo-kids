@@ -194,6 +194,7 @@ kbd{background:#16223a;border:1px solid var(--line2);border-radius:3px;padding:1
     <div class="stat"><div class="k">Legacy</div><div class="v" id="s-legacy" style="color:#ffcf4a">★0</div></div>
     <div class="stat"><div class="k">Date</div><div class="v" id="s-date">JAN 2025</div></div>
     <div id="speedbox">
+      <button class="sbtn on" id="sndbtn" title="Sound (M)">🔊</button>
       <button class="sbtn" id="sp0" title="Pause">II</button>
       <button class="sbtn on" id="sp1">1x</button>
       <button class="sbtn" id="sp2">2x</button>
@@ -442,10 +443,11 @@ const G = {
   taxRate: 0.28, zoneBonus: 0, transitLv: 0, tourismLv: 0, gentri: 0,
   perks: {}, plots: [], grid: [], selected: null, hovered: null,
   overlay: "none", speed: 1, time: 0, month: 0,
-  netHistory: [], lastNet: 0, grossRate: 0, opexRate: 0,
+  lastNet: 0, grossRate: 0, opexRate: 0,
   activeEvents: [], nextEvent: 45, tickerItems: [],
   cars: [], peds: [], fx: [],
-  won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, statsTimer: 0, rivals: [], buyouts: 0,
+  won: {}, taxPool: 0, taxTimer: 0, auditTimer: 0, rivals: [], buyouts: 0, lobbyUsed: {},
+  audits: 0, sold: 0, miles: {}, offer: null, offerTimer: 0, pickups: [], policy: {},
   totalEarned: 0, started: Date.now(),
   /* meta-progression: survives every IPO reset */
   legacy: { shares: 0, earned: 0, ipos: 0, best: 0, up: {} }
@@ -517,6 +519,7 @@ function goPublic() {
   G.legacy.earned += gained;
   G.legacy.ipos++;
   G.legacy.best = Math.max(G.legacy.best || 0, w);
+  sfx("ipo");
   resetRun();
   toast("gold", "LISTED ON THE NYSE", "The empire floated at " + money(w) + " for " +
     gained + " legacy shares. Empire " + (G.legacy.ipos + 1) + " begins.");
@@ -538,12 +541,13 @@ function resetRun() {
   G.influence = lv("machine") * 12;
   G.risk = 0; G.taxRate = Math.max(0.06, 0.28 - lv("machine") * 0.02);
   G.zoneBonus = 0; G.transitLv = 0; G.tourismLv = 0; G.gentri = 0;
-  G.perks = {}; G.policy = {}; G.won = {};
+  G.perks = {}; G.policy = {}; G.won = {}; G.lobbyUsed = {};
   G.activeEvents = []; G.nextEvent = 60; G.taxPool = 0; G.taxTimer = 0;
   G.auditTimer = 0; G.time = 0; G.month = 0; G.totalEarned = 0;
   G.buyouts = 0; G.pickups = []; G.fx = []; G.selected = null;
+  G.offer = null; G.offerTimer = 0;
   G.rivals = RIVAL_DEFS.map(d => ({ ...d, aggression: d.aggression * legacyRivalMult(),
-    cash: d.seed, income: 0, timer: 0, turns: 0, eliminated: false }));
+    cash: d.seed, income: 0, timer: 0, turns: 0, spite: 0, eliminated: false }));
   for (const r of G.rivals) {
     const pool = districtPlots(r.bias).filter(p => !p.owned && !p.rival);
     if (!pool.length) continue;
@@ -694,7 +698,8 @@ function generateWorld() {
       G.plots.push(cell);
     }
   }
-  G.rivals = RIVAL_DEFS.map(d => ({ ...d, cash: d.seed, income: 0, timer: 0, eliminated: false }));
+  G.rivals = RIVAL_DEFS.map(d => ({ ...d, cash: d.seed, income: 0, timer: 0, turns: 0,
+    spite: 0, eliminated: false }));
   /* seed each rival with a starting block so the city is contested from turn one */
   for (const r of G.rivals) {
     const pool = districtPlots(r.bias).filter(p => !p.owned && !p.rival);
@@ -858,7 +863,8 @@ function simulate(dt) {
   G.totalEarned += Math.max(0, profit * dt);
   G.taxPool += Math.max(0, profit * dt);                  // taxes are levied on profit
   G.prestige += pres * dt;
-  G.influence += (0.055 + G.prestige * 0.0032 + ownedPlots().length * 0.006) * dt;
+  G.influence += (0.055 + Math.sqrt(Math.max(0, G.prestige)) * 0.022 +
+                  ownedPlots().length * 0.006) * dt;
   G.risk = clamp(G.risk + riskAdd * dt, 0, 1);
 
   /* quarterly corporate taxes */
@@ -936,6 +942,7 @@ function triggerAudit() {
   G.cash -= fine;
   G.risk *= 0.35;
   G.audits = (G.audits || 0) + 1;
+  sfx("audit");
   const agency = pick(["SEC", "IRS", "NY State AG", "FinCEN", "DOJ Southern District"]);
   toast("bad", agency + " ENFORCEMENT ACTION", "Fined " + money(fine) +
     ". Audit risk reduced but your books are now on file.");
@@ -950,6 +957,7 @@ function fireEvent() {
   const def = pick(pool);
   G.activeEvents.push({ def, left: def.dur });
   if (def.once) def.once();
+  sfx(def.t === "good" ? "good" : "bad");
   toast(def.t === "good" ? "good" : "bad", def.name, def.text);
   pushTicker(def.t, def.name + " — " + def.text);
   flashScreen(def.t === "good" ? "#3ce88f" : "#ff5c6b");
@@ -989,6 +997,126 @@ function renderTicker() {
 
 let flashCol = null, flashT = 0;
 function flashScreen(c) { flashCol = c; flashT = 0.6; }
+
+/* ===================== PROCEDURAL AUDIO =====================
+   Everything is synthesised at runtime — no assets, no network. The context is
+   created lazily on the first gesture because browsers block autoplay. */
+const SFX = {
+  ctx: null, master: null, bus: null, hum: null, humGain: null,
+  on: true, ready: false, last: 0
+};
+
+function audioInit() {
+  if (SFX.ctx || !SFX.on) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) { SFX.on = false; return; }
+  try {
+    const ctx = new AC();
+    SFX.ctx = ctx;
+    SFX.master = ctx.createGain();
+    SFX.master.gain.value = 0.5;
+    SFX.master.connect(ctx.destination);
+
+    /* gentle bus compression keeps stacked events from clipping */
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -18; comp.ratio.value = 8; comp.attack.value = 0.004;
+    comp.connect(SFX.master);
+    SFX.bus = comp;
+
+    /* ambient city bed: two detuned saws under a low-pass, plus filtered noise */
+    const hum = ctx.createGain();
+    hum.gain.value = 0;
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 320; lp.Q.value = 0.6;
+    hum.connect(lp); lp.connect(SFX.master);
+    for (const f of [55, 82.5, 110]) {
+      const o = ctx.createOscillator();
+      o.type = "sawtooth"; o.frequency.value = f;
+      o.detune.value = (Math.random() - 0.5) * 18;
+      const g = ctx.createGain(); g.gain.value = f === 110 ? 0.05 : 0.12;
+      o.connect(g); g.connect(hum); o.start();
+    }
+    const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+    const nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * 0.35;
+    const noise = ctx.createBufferSource();
+    noise.buffer = nb; noise.loop = true;
+    const nf = ctx.createBiquadFilter();
+    nf.type = "bandpass"; nf.frequency.value = 620; nf.Q.value = 0.7;
+    const ng = ctx.createGain(); ng.gain.value = 0.22;
+    noise.connect(nf); nf.connect(ng); ng.connect(hum); noise.start();
+
+    SFX.hum = hum; SFX.humGain = hum.gain;
+    SFX.ready = true;
+  } catch (err) { SFX.on = false; }
+}
+
+/** One enveloped voice. type/freq/duration/level, optional pitch glide. */
+function tone(freq, dur, type, level, glide, delay) {
+  if (!SFX.ready || !SFX.on) return;
+  const ctx = SFX.ctx, t0 = ctx.currentTime + (delay || 0);
+  const o = ctx.createOscillator(), g = ctx.createGain();
+  o.type = type || "sine";
+  o.frequency.setValueAtTime(freq, t0);
+  if (glide) o.frequency.exponentialRampToValueAtTime(Math.max(20, glide), t0 + dur);
+  g.gain.setValueAtTime(0.0001, t0);
+  g.gain.exponentialRampToValueAtTime(Math.max(0.0002, level || 0.16), t0 + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  o.connect(g); g.connect(SFX.bus);
+  o.start(t0); o.stop(t0 + dur + 0.03);
+}
+
+function chord(freqs, dur, type, level, spread) {
+  freqs.forEach((f, i) => tone(f, dur, type, level, null, i * (spread || 0.055)));
+}
+
+const SOUNDS = {
+  click: () => tone(660, 0.05, "square", 0.05),
+  select: () => tone(880, 0.07, "triangle", 0.07),
+  buy: () => chord([523, 784], 0.22, "triangle", 0.12),
+  build: () => chord([392, 523, 659], 0.26, "triangle", 0.11),
+  cash: () => chord([1046, 1568, 2093], 0.4, "sine", 0.1, 0.04),
+  good: () => chord([523, 659, 784, 1046], 0.55, "sine", 0.09, 0.07),
+  bad: () => { tone(220, 0.5, "sawtooth", 0.1, 110); tone(147, 0.6, "sine", 0.08, 92); },
+  audit: () => { tone(180, 0.9, "sawtooth", 0.12, 70); tone(90, 1.1, "square", 0.06, 45); },
+  ipo: () => {
+    chord([392, 523, 659, 784, 1046], 0.9, "triangle", 0.12, 0.09);
+    chord([196, 262], 1.6, "sine", 0.1, 0.2);
+  },
+  deny: () => tone(180, 0.16, "square", 0.08, 120)
+};
+
+/** Play a named sound, rate-limited so bursts never turn into a buzz. */
+function sfx(name) {
+  if (!SFX.on) return;
+  audioInit();
+  if (!SFX.ready) return;
+  const now = performance.now();
+  if (name === "click" || name === "select") {
+    if (now - SFX.last < 45) return;
+    SFX.last = now;
+  }
+  const fn = SOUNDS[name];
+  if (fn) try { fn(); } catch (err) { /* context may be suspended */ }
+}
+
+/** Ambient bed tracks how alive the city is: pedestrians, traffic and speed. */
+function updateAmbience() {
+  if (!SFX.ready || !SFX.humGain) return;
+  const life = clamp(G.peds.length / 220, 0, 1) * 0.6 + clamp(G.cars.length / 150, 0, 1) * 0.4;
+  const target = G.speed === 0 ? 0 : 0.02 + life * 0.075;
+  const g = SFX.humGain;
+  g.setTargetAtTime(target, SFX.ctx.currentTime, 0.8);
+}
+
+function toggleAudio() {
+  SFX.on = !SFX.on;
+  if (SFX.on) { audioInit(); if (SFX.ctx && SFX.ctx.state === "suspended") SFX.ctx.resume(); sfx("select"); }
+  else if (SFX.humGain) SFX.humGain.setTargetAtTime(0, SFX.ctx.currentTime, 0.1);
+  const b = document.getElementById("sndbtn");
+  if (b) { b.textContent = SFX.on ? "🔊" : "🔇"; b.classList.toggle("on", SFX.on); }
+  try { localStorage.setItem("nyc-audio", SFX.on ? "1" : "0"); } catch (err) { /* ignore */ }
+}
 
 /* ---------- 5. RENDERING ---------- */
 const cv = document.getElementById("cv");
@@ -1116,6 +1244,7 @@ function tryCollect(sx, sy) {
     const h = 46 * cam.z + Math.sin(q.bob) * 5 * cam.z;
     if (Math.abs(sx - s.x) < 16 * cam.z && Math.abs(sy - (s.y - h)) < 16 * cam.z) {
       G.cash += q.value;
+      sfx("cash");
       floatText(q.p.x, q.p.y, "+" + money(q.value), "#ffcf4a");
       toast("gold", "Bearer Bonds Recovered", money(q.value) + " collected at " + q.p.name + ".");
       G.pickups.splice(i, 1);
@@ -1605,6 +1734,16 @@ function drawBuilding(p, s, tw, th) {
     ctx.strokeStyle = "rgba(255,207,74," + (0.3 + Math.sin(blink * 2) * 0.2) + ")";
     ctx.lineWidth = 3; diamond(s.x, s.y, tw * 1.05, th * 1.05); ctx.stroke();
   }
+  /* live offer marker */
+  if (G.offer && G.offer.plot === p) {
+    const bob = Math.sin(blink * 4) * 3 * cam.z;
+    ctx.fillStyle = "rgba(255,207,74,0.95)";
+    ctx.beginPath();
+    ctx.moveTo(s.x, top - 16 * cam.z + bob);
+    ctx.lineTo(s.x - 5 * cam.z, top - 24 * cam.z + bob);
+    ctx.lineTo(s.x + 5 * cam.z, top - 24 * cam.z + bob);
+    ctx.closePath(); ctx.fill();
+  }
   /* rival pennant */
   if (p.rival) {
     const rc = (rivalById(p.rival) || {}).color || "#888";
@@ -1657,6 +1796,8 @@ function drawTooltip() {
   else if (p.rival) {
     const r = rivalById(p.rival) || { name: "Rival", color: "#888" };
     lines.push({ t: "Held by " + r.name, c: r.color });
+    if (G.offer && G.offer.type === "sale" && G.offer.plot === p)
+      lines.push({ t: "★ DISTRESSED SALE · " + money(G.offer.price), c: "#ffcf4a" });
     if (p.biz) lines.push({ t: BIZ[p.biz].icon + " tier " + p.level + " · " + rate(rivalRevenue(p)), c: "#7d90ab" });
     lines.push({ t: "Buy out · " + money(buyoutPrice(p)), c: "#ffcf4a" });
   }
@@ -1743,6 +1884,11 @@ function advisorLine() {
     " influence. City Hall (L) will cut your " + pct(G.taxRate) + " tax rate.";
   const capped = own.filter(p => p.biz && p.level >= levelCap(p)).length;
   if (capped > 2) return capped + " towers have hit the height cap — buy a Rezoning Permit at City Hall (L).";
+  if (G.offer) {
+    const r = rivalById(G.offer.rival);
+    return (r ? r.name : "A rival") + " is bidding " + money(G.offer.price) + " for " +
+      G.offer.plot.name + " — open the block to accept or decline.";
+  }
   if (netWorth() >= IPO_FLOOR && ownedPlots().length > 4)
     return "You can take the empire public (B) for " + ipoShares() +
       " legacy shares — permanent bonuses on every future run.";
@@ -1819,6 +1965,7 @@ function centerOn(p, zoom) {
 }
 
 function select(p) {
+  if (p && p !== G.selected) sfx("select");
   G.selected = p;
   if (p) { $("insp").classList.remove("hidden"); renderInspector(); }
   else $("insp").classList.add("hidden");
@@ -1860,6 +2007,15 @@ function renderInspector() {
       '<div class="kv"><span>Their revenue</span><b style="color:var(--red)">' + rate(rivalRevenue(p)) + '</b></div>' +
       '<div class="kv"><span>Land value</span><b>' + money(landPrice(p)) + '</b></div>' +
       '<div class="sechead">Acquisition</div>' +
+      ((G.offer && G.offer.type === "sale" && G.offer.plot === p)
+        ? '<div class="up" style="border-color:var(--gold)"><div class="info">' +
+          '<b style="color:var(--gold)">Distressed sale: ' + money(G.offer.price) + '</b>' +
+          '<small>' + (r.name || "They") + ' need liquidity. Offer lapses in ' +
+          Math.ceil(G.offer.left) + 's.</small></div></div>' +
+          '<button class="btn buy" id="a-accept">Take It At ' + money(G.offer.price) +
+          '<span class="d">Below the standard buyout premium.</span></button>' +
+          '<button class="btn" id="a-decline">Pass<span class="d">Let the offer lapse.</span></button>'
+        : '') +
       '<button class="btn buy" id="a-buyout"' + (G.cash < price ? " disabled" : "") + '>' +
       'Buy Out This Block <span class="c">' + money(price) + '</span>' +
       '<span class="d">They will not sell at market. You pay the premium and inherit the ' +
@@ -1869,6 +2025,8 @@ function renderInspector() {
       'absorb their whole portfolio at once.</p>';
     body.innerHTML = html;
     const bo = $("a-buyout"); if (bo) bo.onclick = () => buyoutPlot(p);
+    const sa = $("a-accept"); if (sa) sa.onclick = acceptOffer;
+    const sd = $("a-decline"); if (sd) sd.onclick = declineOffer;
     return;
   }
 
@@ -1954,6 +2112,19 @@ function renderInspector() {
       'and the third win condition.</span></button>';
   }
 
+  if (G.offer && G.offer.plot === p) {
+    const r = rivalById(G.offer.rival);
+    html += '<div class="sechead">Standing Offer</div>' +
+      '<div class="up" style="border-color:' + (r ? r.color : "var(--line2)") + '">' +
+      '<div class="info"><b>' + (r ? r.name : "A rival") + ' bids ' + money(G.offer.price) + '</b>' +
+      '<small>Expires in ' + Math.ceil(G.offer.left) + 's. Refusing makes them bid against you ' +
+      'and raises their asking prices.</small></div></div>' +
+      '<button class="btn buy" id="a-accept">Accept ' + money(G.offer.price) +
+      '<span class="d">Hand over the block and the building on it.</span></button>' +
+      '<button class="btn danger" id="a-decline">Decline' +
+      '<span class="d">Keep the block. They will not take it well.</span></button>';
+  }
+
   html += '<div class="sechead">Divest</div>';
   html += '<button class="btn danger" id="a-sell">Sell Property <span class="c">' +
     money(price * 0.7 + p.revenue * 30) + '</span><span class="d">Liquidate land and business at a discount.</span></button>';
@@ -1963,16 +2134,23 @@ function renderInspector() {
   body.querySelectorAll("[data-up]").forEach(b => b.onclick = () => buyMicro(p, b.dataset.up));
   $("a-sketch").onclick = () => { p.sketchy = !p.sketchy; renderInspector(); };
   const mg = $("a-mega"); if (mg) mg.onclick = () => buildMega(p);
+  const ac = $("a-accept"); if (ac) ac.onclick = acceptOffer;
+  const dc = $("a-decline"); if (dc) dc.onclick = declineOffer;
   $("a-sell").onclick = () => sellPlot(p);
 }
 
 /* ---------- transactions ---------- */
 function spend(n) {
   if (G.cash < 0) {
+    sfx("deny");
     toast("bad", "Credit Frozen", "Clear your negative balance before making new commitments.");
     return false;
   }
-  if (G.cash < n) { toast("bad", "Insufficient Funds", "You need " + money(n - G.cash) + " more."); return false; }
+  if (G.cash < n) {
+    sfx("deny");
+    toast("bad", "Insufficient Funds", "You need " + money(n - G.cash) + " more.");
+    return false;
+  }
   G.cash -= n; return true;
 }
 function buyPlot(p) {
@@ -1980,6 +2158,7 @@ function buyPlot(p) {
   const c = landPrice(p);
   if (!spend(c)) return;
   p.owned = true; p.glow = 1;
+  sfx("buy");
   floatText(p.x, p.y, "-" + money(c), "#ffcf4a");
   toast("gold", "Deed Acquired", p.name + " for " + money(c) + ".");
   pushTicker("", "Acquisition: <b>" + p.name + "</b> for " + money(c));
@@ -1989,6 +2168,7 @@ function foundBiz(p, k) {
   const c = foundCost(p, k);
   if (!spend(c)) return;
   p.biz = k; p.level = 1; p.built = 0; p.glow = 1;
+  sfx("build");
   floatText(p.x, p.y, BIZ[k].icon + " OPEN", BIZ[k].color);
   toast("good", "Now Open", BIZ[k].tiers[0] + " at " + p.name + ".");
   renderInspector(); updateDistrictList(); spawnTraffic();
@@ -1997,6 +2177,7 @@ function levelUp(p) {
   const c = upgradeCost(p);
   if (!spend(c)) return;
   p.level++; p.built = 0.55; p.glow = 1;
+  sfx("build");
   floatText(p.x, p.y, "TIER " + p.level, "#3ce88f");
   renderInspector(); updateDistrictList();
 }
@@ -2004,6 +2185,7 @@ function buyMicro(p, k) {
   const c = microCost(p, k);
   if (!spend(c)) return;
   p.up[k]++; p.glow = 1;
+  sfx("select");
   floatText(p.x, p.y, UPG[k].icon + " +1", UPG[k].color);
   renderInspector();
 }
@@ -2020,6 +2202,7 @@ function sellPlot(p) {
 function buildMega(p) {
   if (!spend(8e9)) return;
   p.mega = true; p.built = 0; G.won.mega = true;
+  sfx("ipo");
   centerOn(p, 1.0);
   toast("gold", "EMPIRE STATE MEGATOWER", "The tallest structure ever built rises over " + p.name + ".");
   pushTicker("good", "<b>MEGATOWER TOPPED OUT</b> — the skyline belongs to you");
@@ -2029,12 +2212,20 @@ function buildMega(p) {
 
 /* ---------- modals ---------- */
 function openModal(html) {
+  sfx("click");
   $("mbox").innerHTML = html + '<button class="btn close" id="m-close">Close</button>';
   $("modal").classList.add("open");
   $("m-close").onclick = closeModal;
 }
 function closeModal() { $("modal").classList.remove("open"); }
 $("modal").onclick = e => { if (e.target.id === "modal") closeModal(); };
+
+/** Repeat lobbying escalates: City Hall charges more each time you come back. */
+function lobbyCost(l) {
+  const used = (G.lobbyUsed && G.lobbyUsed[l.id]) || 0;
+  const mult = l.repeat ? 1 + used * 0.55 : 1;
+  return { inf: Math.ceil(l.cost * mult), cash: l.cash * mult };
+}
 
 function openLobby() {
   let html = '<h1>City Hall</h1><p>Influence accrues from prestige and portfolio size. ' +
@@ -2043,10 +2234,13 @@ function openLobby() {
     '</b> &nbsp;·&nbsp; Cash: <b style="color:var(--gold)">' + money(G.cash) + '</b></p>' +
     '<h3>Lobbying Actions</h3><div class="lob">';
   for (const l of LOBBY) {
-    const ok = l.can() && G.influence >= l.cost && G.cash >= l.cash;
+    const c = lobbyCost(l);
+    const used = (G.lobbyUsed && G.lobbyUsed[l.id]) || 0;
+    const ok = l.can() && G.influence >= c.inf && G.cash >= c.cash;
     html += '<div class="lobc' + (ok ? "" : " dis") + '" data-l="' + l.id + '">' +
-      '<b>' + l.name + '</b><small>' + l.desc + '</small>' +
-      '<div class="cost">' + l.cost + ' influence + ' + money(l.cash) + '</div></div>';
+      '<b>' + l.name + (used ? ' <span style="color:var(--dim)">×' + used + '</span>' : '') + '</b>' +
+      '<small>' + l.desc + '</small>' +
+      '<div class="cost">' + c.inf + ' influence + ' + money(c.cash) + '</div></div>';
   }
   html += '</div><h3>Current Policy</h3>' +
     '<div class="kv"><span>Corporate tax rate</span><b>' + pct(G.taxRate) + '</b></div>' +
@@ -2056,8 +2250,11 @@ function openLobby() {
   openModal(html);
   $("mbox").querySelectorAll(".lobc").forEach(c => c.onclick = () => {
     const l = LOBBY.find(x => x.id === c.dataset.l);
-    if (!l.can() || G.influence < l.cost || G.cash < l.cash) return;
-    G.influence -= l.cost; G.cash -= l.cash; l.run();
+    const cost = lobbyCost(l);
+    if (!l.can() || G.influence < cost.inf || G.cash < cost.cash) { sfx("deny"); return; }
+    G.influence -= cost.inf; G.cash -= cost.cash;
+    G.lobbyUsed[l.id] = ((G.lobbyUsed && G.lobbyUsed[l.id]) || 0) + 1;
+    l.run(); sfx("good");
     toast("good", l.name, "Passed. The city adjusts.");
     pushTicker("good", "City Hall enacts <b>" + l.name + "</b>");
     openLobby();
@@ -2100,7 +2297,12 @@ function rivalWorth(r) {
 /** What it costs the player to prise one block out of a rival's hands. */
 function buyoutPrice(p) {
   const r = rivalById(p.rival);
-  const premium = 2.2 + (r ? r.aggression * 0.6 : 0.6);
+  let premium = 2.2 + (r ? r.aggression * 0.6 : 0.6);
+  /* they price to your need: the closer you are to owning the district, the more it costs */
+  const ps = districtPlots(p.d);
+  const share = ps.length ? ps.filter(q => q.owned).length / ps.length : 0;
+  premium += share * 1.4;
+  if (r && r.spite > 0) premium += 0.5;          // you turned them down recently
   return (landPrice(p) * premium + rivalRevenue(p) * 55) * legacyBuyoutMult();
 }
 
@@ -2139,8 +2341,24 @@ function rivalTurn(r, dt) {
   if (boardShare > 0.42) return;
   const free = G.plots.filter(p => !p.owned && !p.rival && !p.park);
   if (!free.length) return;
-  free.sort((a, b) => (a.d === r.bias ? -1 : 0) - (b.d === r.bias ? -1 : 0) ||
-                      landPrice(a) - landPrice(b));
+  /* Blocking play: a slice of their buying is aimed at parcels you clearly want —
+     next to your existing blocks, in districts you are close to cornering. */
+  const adj = p => {
+    let n = 0;
+    for (const [dx, dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
+      const q = G.grid[p.y + dy] && G.grid[p.y + dy][p.x + dx];
+      if (q && q.owned) n++;
+    }
+    return n;
+  };
+  const blocking = (r.turns % 2 === 0) || r.spite > 0;
+  if (blocking) {
+    const ps = d => { const l = districtPlots(d); return l.filter(q => q.owned).length / Math.max(1, l.length); };
+    free.sort((a, b) => (adj(b) - adj(a)) || (ps(b.d) - ps(a.d)) || landPrice(a) - landPrice(b));
+  } else {
+    free.sort((a, b) => (a.d === r.bias ? -1 : 0) - (b.d === r.bias ? -1 : 0) ||
+                        landPrice(a) - landPrice(b));
+  }
   const buy = free[0];
   const price = landPrice(buy) * 1.05;
   if (price > r.cash * 0.55) return;      /* always keep powder dry for building up */
@@ -2150,11 +2368,120 @@ function rivalTurn(r, dt) {
   buy.level = 1;
   buy.built = 0;
   if (ownedPlots().length > 0 && Math.random() < 0.45)
-    pushTicker("bad", r.name + " acquires <b>" + buy.name + "</b> in " + DISTRICTS[buy.d].name);
+    pushTicker("bad", r.name + " acquires <b>" + buy.name + "</b> in " + DISTRICTS[buy.d].name +
+      (blocking && adj(buy) > 0 ? " — right next to yours" : ""));
 }
 
 function updateRivals(dt) {
-  for (const r of G.rivals) if (!r.eliminated) rivalTurn(r, dt);
+  for (const r of G.rivals) {
+    if (r.spite > 0) r.spite = Math.max(0, r.spite - dt);
+    if (!r.eliminated) rivalTurn(r, dt);
+  }
+  updateOffers(dt);
+}
+
+/* Rivals periodically bid for one of YOUR blocks. Selling is real money now;
+   refusing makes that rival pricier and pushier for a while. */
+function updateOffers(dt) {
+  G.offerTimer = (G.offerTimer || 0) + dt;
+  if (G.offer) {
+    G.offer.left -= dt;
+    if (G.offer.left <= 0) {
+      const p = G.offer.plot;
+      G.offer = null;
+      if (G.selected === p) renderInspector();
+    }
+    return;
+  }
+  if (G.offerTimer < 150) return;
+  G.offerTimer = 0;
+  const live = G.rivals.filter(r => !r.eliminated && rivalPlots(r.id).length > 0);
+  const mine = ownedPlots().filter(p => p.biz && p.level >= 2 && !p.mega);
+  if (!live.length || mine.length < 4) return;
+  const r = pick(live);
+  /* They bid on what they can actually finance: their whole balance sheet backs the
+     offer, and they shop at the cheap end of your portfolio. */
+  const raise = r.cash + rivalWorth(r) * 0.45;
+  const affordable = mine
+    .map(p => ({ p, v: landPrice(p) * 0.85 + p.revenue * 40 }))
+    .filter(e => e.v * 1.3 <= raise)
+    .sort((a, b) => a.v - b.v);
+  if (!affordable.length) { distressedSale(r); return; }      // priced out of your portfolio
+  const target = affordable[Math.floor(Math.random() * Math.min(affordable.length, 5))];
+  const p = target.p, value = target.v;
+  const price = Math.min(value * rnd(1.5, 2.2), raise);
+  G.offer = { type: "buy", plot: p, rival: r.id, price, left: 45 };
+  sfx("bad");
+  toast("info", r.name + " Makes An Offer",
+    money(price) + " for " + p.name + " — roughly " + (price / Math.max(1, value)).toFixed(1) +
+    "× its book value. Open the block to accept or let it lapse.");
+  pushTicker("", r.name + " bids <b>" + money(price) + "</b> for " + p.name);
+  if (G.selected === p) renderInspector();
+}
+
+/* Once you have outgrown a rival they stop bidding and start divesting: a block
+   of theirs, offered below the price they would normally hold out for. */
+function distressedSale(r) {
+  const held = rivalPlots(r.id);
+  if (!held.length) { G.offerTimer = 90; return; }
+  const p = held.slice().sort((a, b) => rivalRevenue(a) - rivalRevenue(b))[0];
+  const price = buyoutPrice(p) * 0.55;
+  if (price > G.cash * 2.5) { G.offerTimer = 90; return; }    // don't taunt a broke player
+  G.offer = { type: "sale", plot: p, rival: r.id, price, left: 60 };
+  sfx("good");
+  toast("gold", r.name + " Is Divesting",
+    "They will let " + p.name + " go for " + money(price) +
+    " — well under the usual buyout premium. Open the block to take it.");
+  pushTicker("good", r.name + " offers <b>" + p.name + "</b> at " + money(price) + " — a distressed price");
+  if (G.selected === p) renderInspector();
+}
+
+function acceptOffer() {
+  const o = G.offer;
+  if (!o) return;
+  const p = o.plot, r = rivalById(o.rival);
+  if (o.type === "sale") {                      /* you are the buyer */
+    if (!spend(o.price)) return;
+    if (r) r.cash += o.price;
+    p.rival = null; p.owned = true; p.glow = 1;
+    G.offer = null;
+    G.buyouts = (G.buyouts || 0) + 1;
+    sfx("buy");
+    toast("gold", "Distressed Sale Closed", p.name + " acquired from " +
+      (r ? r.name : "a rival") + " for " + money(o.price) + ".");
+    pushTicker("good", "<b>" + p.name + "</b> taken off " + (r ? r.name : "a rival") +
+      " at a distressed " + money(o.price));
+    checkEliminated();
+    renderInspector(); updateDistrictList();
+    return;
+  }
+  G.cash += o.price;
+  if (r) r.cash = Math.max(0, r.cash - o.price * 0.6);
+  p.owned = false; p.rival = o.rival; p.sketchy = false; p.mega = false;
+  p.up = { marketing: 0, synergy: 0, automation: 0, luxury: 0 };
+  G.offer = null;
+  G.sold = (G.sold || 0) + 1;
+  sfx("cash");
+  toast("gold", "Offer Accepted", p.name + " sold to " + (r ? r.name : "a rival") +
+    " for " + money(o.price) + ".");
+  pushTicker("good", "You sell <b>" + p.name + "</b> for " + money(o.price));
+  renderInspector(); updateDistrictList();
+}
+
+function declineOffer() {
+  const o = G.offer;
+  if (!o) return;
+  const r = rivalById(o.rival);
+  G.offer = null;
+  sfx("deny");
+  if (o.type === "sale") {
+    toast("info", "Passed", "You let " + (r ? r.name : "the rival") + "'s divestment lapse.");
+  } else {
+    if (r) r.spite = 120;
+    toast("bad", "Offer Declined", (r ? r.name : "They") +
+      " will remember that — expect them to bid against you and price their blocks higher.");
+  }
+  renderInspector();
 }
 
 /** Player buys a single rival-held block at a premium. */
@@ -2164,6 +2491,7 @@ function buyoutPlot(p) {
   if (r) r.cash += price * 0.8;
   p.rival = null; p.owned = true; p.glow = 1;
   floatText(p.x, p.y, "ACQUIRED", "#ffcf4a");
+  sfx("buy");
   toast("gold", "Block Acquired", p.name + " prised out of " + (r ? r.name : "rival hands") +
     " for " + money(price) + ".");
   pushTicker("good", "<b>" + p.name + "</b> bought out of " + (r ? r.name : "a rival") +
@@ -2187,6 +2515,7 @@ function hostileTakeover(r) {
   const plots = rivalPlots(r.id);
   for (const p of plots) { p.rival = null; p.owned = true; p.glow = 1; }
   r.eliminated = true; r.cash = 0;
+  sfx("ipo");
   toast("gold", "HOSTILE TAKEOVER", r.name + " absorbed: " + plots.length +
     " blocks for " + money(cost) + ".");
   pushTicker("good", "<b>" + r.name + " ACQUIRED</b> — " + plots.length + " blocks change hands");
@@ -2250,8 +2579,6 @@ const POLICIES = {
   artsGrant: { n: "Encourage Arts & Culture", d: "+30% foot traffic and +60% prestige from this district.", cost: 2.0 },
   deregulate: { n: "Deregulate Zoning", d: "+1 height tier in this district, +40% audit-risk accrual here.", cost: 3.4 }
 };
-G.policy = {};
-
 function policyMult(p, kind) {
   const pol = G.policy[p.d];
   if (!pol) return 1;
@@ -2425,7 +2752,7 @@ function openHelp() {
     '<h3>Controls</h3>' +
     '<p><kbd>Drag</kbd> pan · <kbd>Wheel</kbd> zoom · <kbd>Click</kbd> select block · <kbd>1–5</kbd> overlays · ' +
     '<kbd>WASD</kbd>/<kbd>arrows</kbd> pan · <kbd>L</kbd> City Hall · <kbd>G</kbd> objectives · ' +
-    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
+    '<kbd>P</kbd> portfolio · <kbd>R</kbd> rivals · <kbd>B</kbd> board room · <kbd>M</kbd> mute · <kbd>H</kbd> help · <kbd>Space</kbd> pause · <kbd>Esc</kbd> deselect</p>' +
     '<h3>Going Public</h3>' +
     '<p>Once an empire is worth <b>$1B</b> you can file for an IPO from the Board Room ' +
     '(<kbd>B</kbd>). Floating liquidates the run — the city, the rivals and City Hall all ' +
@@ -2462,6 +2789,8 @@ const MILESTONES = [
     d: "An entire rival portfolio absorbed in one transaction." },
   { id: "board", t: () => G.rivals.length > 0 && G.rivals.every(r => r.eliminated),
     n: "Cleared The Board", d: "No developer left in New York but you." },
+  { id: "sold", t: () => (G.sold || 0) >= 1, n: "Everything Is For Sale",
+    d: "You sold a block to a rival at their price." },
   { id: "ipo1", t: () => G.legacy.ipos >= 1, n: "Rang The Bell",
     d: "First public listing. The empire is now a ticker symbol." },
   { id: "ipo3", t: () => G.legacy.ipos >= 3, n: "Serial Founder",
@@ -2480,6 +2809,7 @@ function checkMilestones() {
     try { hit = m.t(); } catch (err) { hit = false; }
     if (!hit) continue;
     G.miles[m.id] = true;
+    sfx("good");
     toast("gold", "★ " + m.n, m.d);
     pushTicker("good", "MILESTONE — <b>" + m.n + "</b>");
   }
@@ -2503,6 +2833,8 @@ function checkWin() {
 /* ---------- 7. INPUT ---------- */
 let drag = null, moved = 0;
 cv.addEventListener("pointerdown", e => {
+  audioInit();
+  if (SFX.ctx && SFX.ctx.state === "suspended") SFX.ctx.resume();
   drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y };
   moved = 0; cv.classList.add("dragging"); cv.setPointerCapture(e.pointerId);
 });
@@ -2564,6 +2896,7 @@ document.addEventListener("keydown", e => {
   if (k === "p") openPortfolio();
   if (k === "r") openRivals();
   if (k === "b") openBoardroom();
+  if (k === "m") toggleAudio();
   if (k === "h") openHelp();
   const ovs = { "1": "none", "2": "zoning", "3": "traffic", "4": "profit", "5": "risk" };
   if (ovs[k]) setOverlay(ovs[k]);
@@ -2582,6 +2915,7 @@ function setSpeed(s) {
     $(id).classList.toggle("on", v === s);
   });
 }
+$("sndbtn").onclick = toggleAudio;
 $("sp0").onclick = () => setSpeed(0); $("sp1").onclick = () => setSpeed(1);
 $("sp2").onclick = () => setSpeed(2); $("sp3").onclick = () => setSpeed(4);
 $("iclose").onclick = () => select(null);
@@ -2607,7 +2941,7 @@ function save() {
   const d = {
     cash: G.cash, prestige: G.prestige, influence: G.influence, risk: G.risk,
     taxRate: G.taxRate, zoneBonus: G.zoneBonus, transitLv: G.transitLv,
-    tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, miles: G.miles, audits: G.audits,
+    tourismLv: G.tourismLv, gentri: G.gentri, perks: G.perks, won: G.won, policy: G.policy, lobbyUsed: G.lobbyUsed, miles: G.miles, audits: G.audits,
     time: G.time, totalEarned: G.totalEarned, ts: Date.now(),
     buyouts: G.buyouts, legacy: G.legacy,
     rivals: G.rivals.map(r => ({ id: r.id, cash: r.cash, eliminated: r.eliminated })),
@@ -2625,7 +2959,7 @@ function load() {
   Object.assign(G, {
     cash: d.cash, prestige: d.prestige, influence: d.influence, risk: d.risk,
     taxRate: d.taxRate, zoneBonus: d.zoneBonus, transitLv: d.transitLv,
-    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {}, miles: d.miles || {}, audits: d.audits || 0,
+    tourismLv: d.tourismLv, gentri: d.gentri || 0, perks: d.perks || {}, won: d.won || {}, policy: d.policy || {}, lobbyUsed: d.lobbyUsed || {}, miles: d.miles || {}, audits: d.audits || 0,
     time: d.time || 0, totalEarned: d.totalEarned || 0
   });
   G.buyouts = d.buyouts || 0;
@@ -2680,6 +3014,7 @@ function frame(now) {
     while (acc >= 0.1) { simulate(0.1); acc -= 0.1; }
     updateParticles(dt);
     updatePickups(dt);
+    updateAmbience();
   }
   draw(raw);
 
@@ -2708,6 +3043,13 @@ cam.y = iso(GRID_W / 2, GRID_H / 2).y - 40;
 cam.z = cam.tz = 1.22;
 setOverlay("none");
 setSpeed(1);
+try {
+  if (localStorage.getItem("nyc-audio") === "0") {
+    SFX.on = false;
+    $("sndbtn").textContent = "🔇";
+    $("sndbtn").classList.remove("on");
+  }
+} catch (err) { /* storage may be blocked */ }
 updateHUD(); updateDistrictList(); renderTicker();
 if (!loaded) {
   G.cash = 250000 + lv("seed") * 400000;
@@ -2722,7 +3064,8 @@ requestAnimationFrame(frame);
 /* test hook for headless QA */
 window.NYC = { G, cam, simulate, netWorth, plotRevenue, landPrice, upgradeCost, worldToScreen,
   centerOn, rivalWorth, rivalRevenue, buyoutPrice, buyPlot, foundBiz, levelUp,
-  ipoShares, goPublic, legacyRevMult, legacyBuyoutMult };
+  ipoShares, goPublic, legacyRevMult, legacyBuyoutMult, select, acceptOffer, declineOffer };
+window.SFX_TEST = SFX; window.SFX_PLAY = sfx;
 </script>
 </body>
 </html>
