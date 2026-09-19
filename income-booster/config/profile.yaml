@@ -1,0 +1,48 @@
+# Operator profile. This is the single most important file in the system —
+# every score is computed relative to it. Edit it when your situation changes;
+# the rubric will re-rank everything on the next scan.
+
+operator:
+  handle: dror
+  # >>> ACTION REQUIRED <<<
+  # Name your actual domain expertise. The scanner CANNOT score `operator_fit`
+  # meaningfully while this is empty, and will flag every candidate as
+  # "domain unverified". Be specific: "K-12 geography/education content and
+  # Israeli school procurement" beats "education".
+  domains: []
+  # Languages you can sell and deliver in. Non-English markets are consistently
+  # less competitive and are scored as a moat contributor.
+  languages: [en, he]
+  geo: IL
+
+capabilities:
+  # 0-5 self-assessment. Used directly by operator_fit.
+  domain_expertise: 4
+  distribution_and_sales: 4
+  content_and_writing: 2
+  software_build: 0      # 0 = you do not write code. Drives operator_build_burden.
+
+constraints:
+  hours_per_week: 8               # midpoint of the 5-10 band
+  capital_cap_usd: 500            # hard gate: proposals above this are rejected
+  horizon: fast_cash              # fast_cash | build_asset | both
+  target_days_to_first_dollar: 30
+
+# Things you never want proposed, regardless of score. The scanner treats these
+# as hard gates. Add to this list every time you reject something for a reason
+# that will recur — that is how the digest stays signal.
+exclusions:
+  - anything requiring me to personally write code
+  - crypto / token / trading schemes
+  - dropshipping and print-on-demand
+  - reselling AI-generated content as human-written
+  - paid-course-about-making-money businesses
+  - MLM or anything with a recruitment component
+  - work requiring me to be on calls outside 09:00-18:00 Asia/Jerusalem
+
+notifications:
+  channel: gmail
+  email: dror.wolf@gmail.com
+  digest_cron_utc: "0 5 * * 1"    # Mondays 08:00 Asia/Jerusalem
+  max_proposals_per_digest: 3
+  send_empty_digest: false        # silence is a valid output
