@@ -1,0 +1,29 @@
+==============================================================================
+NYC METRO TYCOON — WHOLE-PROJECT BENCHMARK
+commit efd3e68   2026-09-20 09:55 UTC
+==============================================================================
+
+── STATIC ───────────────────────────────────────────────────────────────────
+nyc-tycoon.html         194.0 KB    gz 61.0 KB  4303 lines     0 external refs
+                      js 176.3 KB   css 13.3 KB161 functions
+geo-kids/index.html      41.4 KB    gz 11.9 KB   971 lines     4 external refs
+                      js 19.5 KB   css 14.8 KB24 functions
+
+── LOAD ─────────────────────────────────────────────────────────────────────
+nyc-tycoon.html       DOMContentLoaded    92 ms    load    92 ms   (median of 5)
+geo-kids/index.html   DOMContentLoaded    39 ms    load   960 ms   (median of 5)
+
+── RUNTIME BY CITY SCALE ────────────────────────────────────────────────────
+city                   fps 1x   fps 4x      heap   canvas ops/frame   sim ms
+empty (0 blocks)         48.2     46.2     10 MB             27,142    0.163
+early (10 blocks)          45     47.3     10 MB             27,343    0.112
+mid (40 blocks)          40.5     43.3     10 MB             30,365    0.178
+full (93 blocks)         34.3     35.3     10 MB             38,267    0.495
+
+── SAVE PAYLOAD ─────────────────────────────────────────────────────────────
+full city save           11.6 KB      2 storage keys  (localStorage cap is ~5 MB)
+
+── ECONOMY (greedy bot, 60 simulated minutes) ────────────────────────────────
+net worth at 60 min   median $5.84B   spread $0.15B – $52.64B   (357.9x, n=5)
+
+==============================================================================
