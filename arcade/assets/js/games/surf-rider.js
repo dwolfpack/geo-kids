@@ -97,7 +97,8 @@
           g.addScore(landPts * Math.max(1, g.combo));
           g.combo++; g.comboT = 3;
           g.banner((spins > 0 ? spins + '  SPIN  AIR!' : 'AIR!') + '  +' + landPts, 1.1, C.green);
-          g.sfx('power');
+          g.popup('+' + landPts, g.w * 0.42, g.h * 0.5, { color: C.yellow, size: 14 });
+          g.rumble(45); g.sfx('power');
           g.air = 0; g.airSpin = 0; g.vFace = -0.2;
           for (var s = 0; s < 16; s++) g.burst(g.w * 0.42, g.h * 0.55, ['#ffffff', '#bfeaff'], 2, 180, 220);
         }
@@ -379,6 +380,7 @@
     g.setLives(g.lives - 1);
     g.combo = 0; g.tubeT = 0;
     g.sfx('splash'); g.sfx('crash');
+    g.hitstop(0.12); g.rumble(90);
     g.shake(18); g.flash('#bfeaff', 0.14);
     g.burst(g.w * 0.42, g.h * 0.6, ['#ffffff', '#bfeaff', '#8fd8ff'], 30, 240, 200);
     g.banner(msg, 1.3, C.red);

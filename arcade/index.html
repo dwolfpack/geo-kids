@@ -21,6 +21,15 @@
   .coin-btn.alt { background: var(--cyan); border-color:#c2f6ff; box-shadow: 0 4px 0 #0b7fa0, 0 0 18px rgba(34,224,255,0.5); }
   .stats { display:flex; gap:18px; justify-content:center; flex-wrap:wrap; margin: 18px 0 4px; font-size:8px; color:var(--dim); }
   .stats b { color: var(--green); font-weight: normal; }
+  .cabinet { --accent: var(--purple); }
+  .cabinet { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+  .cabinet:hover, .cabinet:focus-visible {
+    border-color: var(--accent);
+    box-shadow: 0 10px 0 rgba(0,0,0,0.6), 0 0 30px color-mix(in srgb, var(--accent) 55%, transparent);
+  }
+  .cabinet .name { color: var(--accent); text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 50%, transparent); }
+  .cabinet .badge { background: var(--accent); }
+  .cabinet .screen { box-shadow: inset 0 0 26px color-mix(in srgb, var(--accent) 30%, transparent); }
   .howto { margin: 26px auto 0; max-width: 760px; border:2px solid var(--line); border-radius:10px;
            background: rgba(0,0,0,0.4); padding: 16px 18px; font-size: 8px; color: var(--steel); line-height: 2.2; }
   .howto b { color: var(--yellow); font-weight: normal; }
@@ -79,25 +88,73 @@
     catch (e) { return 0; }
   }
 
-  function drawArt(cv, game) {
-    var art = game.art, cols = art[0].length, rows = art.length;
-    var cell = 14;
-    cv.width = cols * cell;
-    cv.height = Math.round(cols * cell * 0.75);
-    var ctx = cv.getContext('2d');
+  /* Each cabinet screen runs a small attract loop: a drifting neon floor,
+     the game's icon bobbing above it, and a scanline sweep down the glass. */
+  var screens = [];
+
+  function setupArt(cv, game) {
+    var cols = game.art[0].length, rows = game.art.length;
+    cv.width = 224;
+    cv.height = 168;                       /* 4:3 glass */
+    /* size the icon to sit inside the screen with a margin, rather than
+       overflowing it - the art is square but the screen is not */
+    var cell = Math.max(4, Math.floor(Math.min(cv.width * 0.52 / cols, cv.height * 0.62 / rows)));
+    screens.push({ cv: cv, ctx: cv.getContext('2d'), game: game, cell: cell, seed: Math.random() * 10 });
+  }
+
+  function drawArt(sc, t) {
+    var ctx = sc.ctx, cv = sc.cv, game = sc.game, cell = sc.cell;
+    var art = game.art, rows = art.length;
+    var accent = game.pal[Object.keys(game.pal)[0]] || '#fff';
+
     var grd = ctx.createLinearGradient(0, 0, 0, cv.height);
     grd.addColorStop(0, game.bg[0]);
     grd.addColorStop(1, game.bg[1]);
     ctx.fillStyle = grd;
     ctx.fillRect(0, 0, cv.width, cv.height);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.05)';
-    ctx.lineWidth = 1;
-    for (var x = 0; x <= cv.width; x += cell) { ctx.beginPath(); ctx.moveTo(x + .5, 0); ctx.lineTo(x + .5, cv.height); ctx.stroke(); }
-    for (var y = 0; y <= cv.height; y += cell) { ctx.beginPath(); ctx.moveTo(0, y + .5); ctx.lineTo(cv.width, y + .5); ctx.stroke(); }
+    /* horizon glow */
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    var hz = ctx.createRadialGradient(cv.width / 2, cv.height * 0.72, 4, cv.width / 2, cv.height * 0.72, cv.width * 0.6);
+    hz.addColorStop(0, accent);
+    hz.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = hz;
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.restore();
 
-    var oy = Math.round((cv.height - rows * cell) / 2);
-    ctx.shadowBlur = 10;
+    /* scrolling perspective floor */
+    ctx.save();
+    ctx.globalAlpha = 0.22;
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1;
+    var hy = cv.height * 0.72;
+    for (var v = -6; v <= 6; v++) {
+      ctx.beginPath();
+      ctx.moveTo(cv.width / 2 + v * 9, hy);
+      ctx.lineTo(cv.width / 2 + v * 44, cv.height);
+      ctx.stroke();
+    }
+    for (var d = 0; d < 6; d++) {
+      var f = ((t * 0.35 + sc.seed + d / 6) % 1);
+      var ly = hy + (cv.height - hy) * f * f;
+      ctx.beginPath(); ctx.moveTo(0, ly); ctx.lineTo(cv.width, ly); ctx.stroke();
+    }
+    ctx.restore();
+
+    /* the icon, centred and bobbing over the floor */
+    var bob = Math.sin(t * 1.6 + sc.seed) * 3;
+    var ox = Math.round((cv.width - art[0].length * cell) / 2);
+    var oy = Math.round((cv.height - rows * cell) / 2 - cv.height * 0.07 + bob);
+    /* its own shadow on the floor sells the depth */
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(cv.width / 2, cv.height * 0.84, art[0].length * cell * 0.36, cell * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.shadowBlur = 8;
     for (var r = 0; r < rows; r++) {
       for (var c = 0; c < art[r].length; c++) {
         var ch = art[r][c];
@@ -105,10 +162,27 @@
         var col = game.pal[ch] || '#fff';
         ctx.shadowColor = col;
         ctx.fillStyle = col;
-        ctx.fillRect(c * cell, oy + r * cell, cell, cell);
+        ctx.fillRect(ox + c * cell, oy + r * cell, cell, cell);
       }
     }
     ctx.shadowBlur = 0;
+
+    /* sweep + scanlines on the glass */
+    ctx.save();
+    var sy = ((t * 42 + sc.seed * 60) % (cv.height + 60)) - 30;
+    var sweep = ctx.createLinearGradient(0, sy, 0, sy + 30);
+    sweep.addColorStop(0, 'rgba(255,255,255,0)');
+    sweep.addColorStop(0.5, 'rgba(255,255,255,0.10)');
+    sweep.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sweep;
+    ctx.fillRect(0, sy, cv.width, 30);
+    ctx.restore();
+  }
+
+  function attract(ts) {
+    var t = ts / 1000;
+    for (var i = 0; i < screens.length; i++) drawArt(screens[i], t);
+    requestAnimationFrame(attract);
   }
 
   games.forEach(function (game) {
@@ -126,8 +200,9 @@
       '<div class="name">' + game.title + '</div>' +
       '<div class="kind">' + game.kind + ' &middot; ' + game.blurb + '</div>' +
       '<div class="hs">HI ' + String(hs).padStart(6, '0') + '</div>';
+    a.style.setProperty('--accent', game.pal[Object.keys(game.pal)[0]] || '#9d4dff');
     rack.appendChild(a);
-    drawArt(a.querySelector('canvas'), game);
+    setupArt(a.querySelector('canvas'), game);
   });
 
   document.getElementById('statCount').textContent = games.length;
@@ -139,6 +214,12 @@
     var g = games[Math.floor(Math.random() * games.length)];
     location.href = 'games/' + g.id + '.html';
   });
+  /* run the attract loops, but not for anyone who asked for less motion */
+  if (!window.matchMedia || !window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+    requestAnimationFrame(attract);
+  else
+    screens.forEach(function (sc) { drawArt(sc, 0); });
+
   document.getElementById('resetBtn').addEventListener('click', function () {
     try { games.forEach(function (g) { localStorage.removeItem('neon95:hs:' + g.id); }); } catch (e) {}
     location.reload();

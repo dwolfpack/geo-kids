@@ -412,6 +412,7 @@
     }
     if (hitAny) {
       g.sfx('punch');
+      g.hitstop(jumpKick ? 0.07 : 0.045);
       g.shake(5);
       sync(g);
     }
@@ -423,10 +424,12 @@
     f.vx = dir * (knockdown ? 260 : 90);
     g.hits.push({ x: f.x, y: f.y - 30, t: 0 });
     g.burst(f.x - g.cam, f.y - 30, [C.yellow, C.orange, '#fff'], 8, 130);
-    if (knockdown) { f.down = 0.8; f.hurt = 0; }
+    if (knockdown) { f.down = 0.8; f.hurt = 0; g.hitstop(0.10); g.rumble(60); }
     if (f.hp <= 0) {
       f.hp = 0; f.t = 0;
-      g.addScore(f.def.score * Math.max(1, Math.floor(g.combo / 3) + 1));
+      var kill = f.def.score * Math.max(1, Math.floor(g.combo / 3) + 1);
+      g.addScore(kill);
+      g.popup('+' + kill, f.x - g.cam, f.y - 60, { color: C.yellow, size: 13 });
       g.sfx('explode');
       g.burst(f.x - g.cam, f.y - 30, [C.red, C.orange, C.yellow], 20, 200);
       if (Math.random() < 0.22) g.items.push({ x: f.x, y: f.y, kind: Math.random() < 0.6 ? 'meat' : 'potion', t: 0 });
@@ -441,6 +444,7 @@
     g.pvx = dir * 150;
     g.hurt = 0.3;
     g.shake(12); g.flash('#a01020', 0.14);
+    g.hitstop(0.08); g.rumble(70);
     g.sfx('hit');
     sync(g);
     if (g.hp <= 0) {

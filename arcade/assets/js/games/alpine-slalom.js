@@ -162,7 +162,8 @@
             g.addScore(pts);
             g.timeLeft += spins * 1.5;
             g.banner(spins >= 2 ? 'DOUBLE  SPIN!  +' + pts : 'SPIN!  +' + pts, 1.1, C.green);
-            g.sfx('power');
+            g.popup('+' + pts, g.x, g.h * LINE - 70, { color: C.yellow, size: 14 });
+            g.rumble(50); g.sfx('power');
           }
           g.spin = 0; g.trick = 0;
           g.burst(g.x, playerY + 14, ['#ffffff', '#cfe8ff'], 14, 130, 60);
@@ -189,6 +190,7 @@
             var bonus = 200 + g.combo * 25;
             g.addScore(bonus);
             g.timeLeft += 1.6;
+            g.popup('+' + bonus, o.x, g.h * LINE - 40, { color: C.green });
             g.sfx('gate');
             g.setHud('gates', String(g.gates));
           } else {
@@ -399,6 +401,7 @@
     g.speed *= 0.25;
     g.timeLeft -= 2;
     g.shake(20); g.flash(C.red, 0.16);
+    g.hitstop(0.12); g.rumble(80);
     g.sfx('crash');
     g.burst(g.x, g.h * LINE, ['#ffffff', '#cfe8ff', C.pink], 24, 200, 120);
     g.banner(msg + '  -2s', 1.1, C.red);

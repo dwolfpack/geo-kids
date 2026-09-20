@@ -383,6 +383,20 @@
       setLives: function (n) { g.lives = n; syncHud(); },
       setHud: function (id, v) { if (slots[id]) slots[id].textContent = String(v); },
       shake: function (amt) { shakeAmt = Math.max(shakeAmt, amt); },
+      /* freeze the action for a beat - the single biggest 'feel' win on impacts */
+      hitstop: function (sec) { hitstopT = Math.max(hitstopT, sec || 0.06); },
+      /* a number that pops off the thing you just hit */
+      popup: function (text, x, y, opt) {
+        opt = opt || {};
+        popups.push({ text: String(text), x: x, y: y, t: 0,
+                      life: opt.life || 0.8, size: opt.size || 12,
+                      color: opt.color || A.C.yellow, vy: opt.vy === undefined ? -52 : opt.vy });
+      },
+      /* phone haptics, off with the sound */
+      rumble: function (ms) {
+        if (AudioBox.muted) return;
+        try { if (navigator.vibrate) navigator.vibrate(ms || 30); } catch (e) {}
+      },
       flash: function (col, dur) { flashCol = col || '#fff'; flashT = flashLeft = dur || 0.12; },
       banner: function (txt, dur, col) { bannerTxt = txt; bannerLeft = bannerT = dur || 1.6; bannerCol = col || A.C.yellow; },
       burst: function (x, y, color, n, spd, grav) {
@@ -391,7 +405,8 @@
           var a = Math.random() * Math.PI * 2, s = spd * (0.3 + Math.random() * 0.9);
           parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
                        life: 0.4 + Math.random() * 0.5, t: 0, gr: grav === undefined ? 140 : grav,
-                       c: Array.isArray(color) ? A.pick(color) : color, s: 2 + Math.random() * 3 });
+                       c: Array.isArray(color) ? A.pick(color) : color,
+                       s: 2 + Math.random() * 3, hot: Math.random() < 0.45 });
         }
       },
       over: function (msg) { if (state === 'play') { state = 'over'; overMsg = msg || 'GAME OVER'; overT = 0; finish(); } },
@@ -482,12 +497,13 @@
     var state = 'title', overMsg = 'GAME OVER', overT = 0, won = false;
     var paused = false, shakeAmt = 0, flashT = 0, flashLeft = 0, flashCol = '#fff';
     var bannerTxt = '', bannerLeft = 0, bannerT = 1, bannerCol = A.C.yellow;
-    var parts = [];
-    var titleT = 0, scoreAcc = 0;
+    var parts = [], popups = [];
+    var titleT = 0, scoreAcc = 0, hitstopT = 0;
+    var wipeT = 0, wipeDur = 0.45, vignette = null;
 
     function reset() {
       g.score = 0; scoreAcc = 0; g.lives = 3; g.level = 1; g.time = 0;
-      parts.length = 0; shakeAmt = 0; won = false; bannerLeft = 0;
+      parts.length = 0; popups.length = 0; shakeAmt = 0; won = false; bannerLeft = 0; hitstopT = 0;
       cfg.setup(g);
       syncHud();
     }
@@ -495,6 +511,7 @@
       AudioBox.boot();
       reset();
       state = 'play'; paused = false; overT = 0;
+      wipeT = wipeDur;                      /* neon wipe into the action */
       A.sfx('start');
       if (cfg.music) Music.play(cfg.music);
     }
@@ -541,37 +558,144 @@
     if (window.ResizeObserver) new ResizeObserver(resize).observe(stage);
 
     /* ---------- overlays ---------- */
+    function roundRect(x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    /* the cabinet card every overlay sits in */
+    function panel(x, y, w, h, col) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(9,4,22,0.92)';
+      roundRect(x, y, w, h, 10); ctx.fill();
+      ctx.strokeStyle = col; ctx.lineWidth = 2;
+      ctx.shadowColor = col; ctx.shadowBlur = 16;
+      roundRect(x + 1, y + 1, w - 2, h - 2, 10); ctx.stroke();
+      /* corner ticks, like a targeting frame */
+      ctx.shadowBlur = 0; ctx.lineWidth = 3;
+      var t = 16;
+      [[x, y, 1, 1], [x + w, y, -1, 1], [x, y + h, 1, -1], [x + w, y + h, -1, -1]].forEach(function (c) {
+        ctx.beginPath();
+        ctx.moveTo(c[0] + t * c[2], c[1]);
+        ctx.lineTo(c[0], c[1]);
+        ctx.lineTo(c[0], c[1] + t * c[3]);
+        ctx.stroke();
+      });
+      ctx.restore();
+    }
+
+    /* A / B / C button glyphs with what they do on this cabinet */
+    function buttonLegend(cx, y, small) {
+      var btns = cfg.buttons || [];
+      if (!btns.length) return;
+      var cols = [A.C.pink, A.C.cyan, A.C.yellow];
+      var gap = Math.min(120, cfg.width / (btns.length + 0.6));
+      var startX = cx - gap * (btns.length - 1) / 2;
+      for (var i = 0; i < btns.length; i++) {
+        var bx = startX + i * gap, col = cols[i % cols.length];
+        ctx.save();
+        ctx.fillStyle = col; ctx.shadowColor = col; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(bx, y, 13, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        g.text((btns[i].id || 'a').toUpperCase(), bx, y + 1, { size: 10, color: '#08040f', glow: false });
+        g.text(btns[i].label, bx, y + 26, { size: Math.max(6, small - 3), color: A.C.steel, glow: false });
+      }
+    }
+
+    function chevrons(cx, y, col, t) {
+      ctx.save();
+      for (var i = 0; i < 3; i++) {
+        ctx.globalAlpha = 0.25 + 0.75 * Math.max(0, Math.sin(t * 5 - i * 0.7));
+        ctx.strokeStyle = col; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(cx - 10, y + i * 9 - 9);
+        ctx.lineTo(cx, y + i * 9 - 3);
+        ctx.lineTo(cx + 10, y + i * 9 - 9);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
     function drawOverlay() {
       ctx.save();
-      ctx.fillStyle = 'rgba(5,2,14,0.80)';
+      ctx.fillStyle = 'rgba(5,2,14,0.78)';
       ctx.fillRect(0, 0, cfg.width, cfg.height);
       var cx = cfg.width / 2, cy = cfg.height / 2;
       var big = Math.max(14, Math.min(26, cfg.width / 17));
       var small = Math.max(8, Math.min(13, cfg.width / 36));
+      var pw = Math.min(cfg.width - 28, 430);
 
       if (state === 'title') {
-        var bob = Math.sin(titleT * 3) * 4;
-        g.text(cfg.title, cx, cy - 150 + bob, { size: big, color: A.C.cyan, glow: A.C.cyan });
-        if (cfg.tagline) g.text(cfg.tagline, cx, cy - 112 + bob, { size: small, color: A.C.pink });
         var lines = cfg.instructions || [];
+        var ph = 126 + lines.length * 22 + ((cfg.buttons || []).length ? 70 : 0) + 74;
+        var py = cy - ph / 2;
+        panel(cx - pw / 2, py, pw, ph, A.C.purple);
+
+        var bob = Math.sin(titleT * 3) * 3;
+        /* chromatic split on the title, the way a CRT smears a bright colour */
+        g.text(cfg.title, cx - 2, py + 44 + bob, { size: big, color: 'rgba(255,46,136,0.55)', glow: false });
+        g.text(cfg.title, cx + 2, py + 44 + bob, { size: big, color: 'rgba(34,224,255,0.55)', glow: false });
+        g.text(cfg.title, cx, py + 44 + bob, { size: big, color: '#fff', glow: A.C.cyan });
+        if (cfg.tagline) g.text(cfg.tagline, cx, py + 78 + bob, { size: small, color: A.C.pink });
+
+        ctx.save();
+        ctx.strokeStyle = 'rgba(157,77,255,0.5)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(cx - pw / 2 + 26, py + 100); ctx.lineTo(cx + pw / 2 - 26, py + 100); ctx.stroke();
+        ctx.restore();
+
+        var ly = py + 126;
         for (var i = 0; i < lines.length; i++)
-          g.text(lines[i], cx, cy - 56 + i * 24, { size: small - 1, color: A.C.steel, glow: false });
+          g.text(lines[i], cx, ly + i * 22, { size: small - 1, color: A.C.steel, glow: false });
+
+        var by = ly + lines.length * 22 + 22;
+        buttonLegend(cx, by, small);
+
+        var sy = py + ph - 62;
         if (Math.floor(titleT * 2) % 2 === 0)
-          g.text(cfg.startText, cx, cy + 78, { size: small + 2, color: A.C.yellow, glow: A.C.yellow });
-        g.text('TAP  OR  PRESS  SPACE', cx, cy + 116, { size: small - 1, color: A.C.dim, glow: false });
-        g.text('BEST  ' + A.pad(g.best, 6), cx, cy + 158, { size: small, color: A.C.green });
+          g.text(cfg.startText, cx, sy, { size: small + 3, color: A.C.yellow, glow: A.C.yellow });
+        g.text('BEST  ' + A.pad(g.best, 6), cx, sy + 30, { size: small, color: A.C.green });
+        chevrons(cx, py + ph + 24, A.C.cyan, titleT);
+
       } else if (state === 'over') {
-        g.text(overMsg, cx, cy - 60, { size: big, color: won ? A.C.green : A.C.pink, glow: won ? A.C.green : A.C.pink });
-        g.text('SCORE  ' + A.pad(g.score, 6), cx, cy - 5, { size: small + 2, color: A.C.ink });
-        g.text('BEST   ' + A.pad(g.best, 6), cx, cy + 30, { size: small + 2, color: A.C.yellow });
-        if (g.score >= g.best && g.score > 0)
-          g.text('NEW  HIGH  SCORE!', cx, cy + 70, { size: small, color: A.C.green, glow: A.C.green });
+        var oh = 250, oy = cy - oh / 2;
+        var oc = won ? A.C.green : A.C.pink;
+        panel(cx - pw / 2, oy, pw, oh, oc);
+        var pop = Math.min(1, overT * 6);                 /* the card punches in */
+        ctx.save();
+        ctx.translate(cx, oy + 52);
+        ctx.scale(0.85 + pop * 0.15, 0.85 + pop * 0.15);
+        ctx.translate(-cx, -(oy + 52));
+        g.text(overMsg, cx, oy + 52, { size: big, color: oc, glow: oc });
+        ctx.restore();
+
+        row('SCORE', A.pad(g.score, 6), oy + 106, A.C.ink);
+        row('BEST', A.pad(g.best, 6), oy + 136, A.C.yellow);
+        if (g.score >= g.best && g.score > 0 && Math.floor(overT * 4) % 2 === 0)
+          g.text('NEW  HIGH  SCORE!', cx, oy + 172, { size: small, color: A.C.green, glow: A.C.green });
         if (Math.floor(overT * 2) % 2 === 0 && overT > 0.7)
-          g.text('TAP  TO  PLAY  AGAIN', cx, cy + 120, { size: small, color: A.C.cyan });
+          g.text('TAP  TO  PLAY  AGAIN', cx, oy + oh - 26, { size: small, color: A.C.cyan });
+
       } else if (paused) {
-        g.text('PAUSED', cx, cy, { size: big, color: A.C.yellow, glow: A.C.yellow });
-        g.text('PRESS  P  TO  RESUME', cx, cy + 44, { size: small, color: A.C.dim, glow: false });
+        panel(cx - pw / 2, cy - 70, pw, 140, A.C.yellow);
+        g.text('PAUSED', cx, cy - 18, { size: big, color: A.C.yellow, glow: A.C.yellow });
+        g.text('PRESS  P  OR  TAP  TO  RESUME', cx, cy + 26, { size: small - 1, color: A.C.dim, glow: false });
       }
+
+      function row(label, value, y, col) {
+        var lx = cx - pw / 2 + 34, rx = cx + pw / 2 - 34;
+        g.text(label, lx, y, { size: small, color: A.C.dim, align: 'left', glow: false });
+        g.text(value, rx, y, { size: small + 2, color: col, align: 'right' });
+        ctx.save();
+        ctx.globalAlpha = 0.3; ctx.fillStyle = A.C.dim;
+        for (var dx = lx + 58; dx < rx - 70; dx += 8) ctx.fillRect(dx, y, 2, 2);
+        ctx.restore();
+      }
+
       if (cfg.drawOverlayExtra) cfg.drawOverlayExtra(g, ctx, state);
       ctx.restore();
     }
@@ -610,7 +734,10 @@
         if (shakeAmt < 0.2) shakeAmt = 0;
       }
 
-      if (state === 'play' && !paused) {
+      var frozen = hitstopT > 0;
+      if (frozen) hitstopT -= dt;
+
+      if (state === 'play' && !paused && !frozen) {
         g.time += dt;
         cfg.update(g, dt);
         for (var i = parts.length - 1; i >= 0; i--) {
@@ -626,9 +753,24 @@
       ctx.save();
       for (var j = 0; j < parts.length; j++) {
         var q = parts[j];
-        ctx.globalAlpha = Math.max(0, 1 - q.t / q.life);
+        var qa = Math.max(0, 1 - q.t / q.life);
+        ctx.globalAlpha = qa;
         ctx.fillStyle = q.c;
-        ctx.fillRect(q.x - q.s / 2, q.y - q.s / 2, q.s, q.s);
+        if (q.hot) { ctx.shadowColor = q.c; ctx.shadowBlur = 8; } else { ctx.shadowBlur = 0; }
+        var qs = q.s * (0.4 + qa * 0.6);
+        ctx.fillRect(q.x - qs / 2, q.y - qs / 2, qs, qs);
+      }
+      ctx.restore();
+
+      /* score popups rise off whatever you just hit */
+      ctx.save();
+      for (var k = popups.length - 1; k >= 0; k--) {
+        var pu = popups[k];
+        if (state === 'play' && !paused && !frozen) { pu.t += dt; pu.y += pu.vy * dt; pu.vy *= 0.94; }
+        if (pu.t >= pu.life) { popups.splice(k, 1); continue; }
+        var pa = Math.max(0, 1 - pu.t / pu.life);
+        ctx.globalAlpha = pa;
+        g.text(pu.text, pu.x, pu.y, { size: pu.size, color: pu.color, glow: pu.color, blur: 10 });
       }
       ctx.restore();
 
@@ -646,11 +788,49 @@
 
       if (state !== 'play' || paused) drawOverlay();
 
+      /* ---- CRT glass ---- */
       ctx.save();
       ctx.globalAlpha = 0.09;
       ctx.fillStyle = '#000';
       for (var y = 0; y < cfg.height; y += 4) ctx.fillRect(0, y, cfg.width, 2);
+
+      /* the slow bright band that rolls down a real tube */
+      var bandY = ((titleT * 70) % (cfg.height + 260)) - 130;
+      var band = ctx.createLinearGradient(0, bandY, 0, bandY + 130);
+      band.addColorStop(0, 'rgba(160,220,255,0)');
+      band.addColorStop(0.5, 'rgba(160,220,255,0.055)');
+      band.addColorStop(1, 'rgba(160,220,255,0)');
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = band;
+      ctx.fillRect(0, bandY, cfg.width, 130);
+
+      /* vignette: built once, the tube is darker at the corners */
+      if (!vignette) {
+        vignette = ctx.createRadialGradient(
+          cfg.width / 2, cfg.height / 2, Math.min(cfg.width, cfg.height) * 0.52,
+          cfg.width / 2, cfg.height / 2, Math.max(cfg.width, cfg.height) * 0.82);
+        vignette.addColorStop(0, 'rgba(0,0,0,0)');
+        vignette.addColorStop(0.65, 'rgba(0,0,0,0.10)');
+        vignette.addColorStop(1, 'rgba(0,0,0,0.30)');
+      }
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, cfg.width, cfg.height);
       ctx.restore();
+
+      /* ---- neon wipe when a game starts ---- */
+      if (wipeT > 0) {
+        wipeT -= dt;
+        var wp = Math.max(0, wipeT / wipeDur);
+        ctx.save();
+        ctx.globalAlpha = wp * 0.9;
+        ctx.fillStyle = '#07040f';
+        ctx.fillRect(0, 0, cfg.width, cfg.height);
+        ctx.globalAlpha = Math.min(1, wp * 1.6);
+        var wy = (1 - wp) * cfg.height;
+        ctx.fillStyle = A.C.cyan; ctx.shadowColor = A.C.cyan; ctx.shadowBlur = 24;
+        ctx.fillRect(0, wy - 2, cfg.width, 4);
+        ctx.restore();
+      }
 
       edge = {};
       pointer.justDown = false; pointer.justUp = false;

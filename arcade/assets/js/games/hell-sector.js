@@ -404,6 +404,7 @@
     g.hp -= dmg;
     g.hurtT = 0.35;
     g.shake(9); g.flash('#a01020', 0.14);
+    g.hitstop(0.04); g.rumble(50);
     g.sfx('hit');
     if (g.hp <= 0) {
       g.hp = 0;
@@ -449,6 +450,8 @@
             en.dead = 0.01;
             g.kills++;
             g.addScore(en.def.score);
+            g.hitstop(0.05);
+            g.popup('+' + en.def.score, g.w / 2 + Arcade.rand(-60, 60), VIEW_H * 0.42, { color: C.orange });
             g.sfx('explode');
             if (g.kills === g.total) g.banner('FLOOR  CLEARED  -  FIND  THE  EXIT', 1.8, C.green);
           }

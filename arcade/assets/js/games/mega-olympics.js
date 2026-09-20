@@ -184,10 +184,15 @@
       for (var i = 0; i < g.hurdles.length; i++) {
         var hx = 13 + i * 9;
         if (!g.hurdles[i].down && g.dist > hx - 0.6 && g.dist < hx + 0.6) {
-          if (g.jy > 22) { g.hurdles[i].down = true; g.addScore(120); g.sfx('gate'); }
+          if (g.jy > 22) {
+            g.hurdles[i].down = true; g.addScore(120);
+            g.popup('+120', g.w * 0.2, g.h * 0.6, { color: C.green });
+            g.sfx('gate');
+          }
           else {
             g.hurdles[i].down = true; g.hurdleHit++;
             g.power *= 0.42; g.sfx('crash'); g.shake(12); g.flash(C.red, 0.1);
+            g.hitstop(0.09); g.rumble(70);
           }
         }
       }
@@ -246,7 +251,13 @@
   function finishEvent(g) {
     var ev = g.ev;
     g.medal = g.foul ? '' : medalOf(ev, g.result);
-    if (g.medal) { g.medals[g.medal]++; g.sfx('medal'); }
+    if (g.medal) {
+      g.medals[g.medal]++;
+      g.sfx('medal'); g.rumble(140);
+      g.flash(MEDAL_COL[g.medal], 0.2);
+      for (var c = 0; c < 26; c++)
+        g.burst(Arcade.rand(0, g.w), Arcade.rand(0, g.h * 0.4), [MEDAL_COL[g.medal], C.ink], 2, 160, 220);
+    }
     else g.sfx('over');
     g.addScore(MEDAL_PTS[g.medal] + Math.floor((ev.higher ? g.result * 40 : Math.max(0, 30 - g.result) * 120)));
     g.results.push({ name: ev.name, value: g.foul ? 'FOUL' : g.result.toFixed(2) + ev.unit, medal: g.medal });

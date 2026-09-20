@@ -253,7 +253,8 @@
         g.timeLeft += LAP_BONUS;
         g.addScore(1500);
         g.nitro = Math.min(1, g.nitro + 0.4);
-        g.sfx('medal');
+        g.sfx('medal'); g.rumble(90);
+        g.popup('+' + LAP_BONUS + 's', g.w / 2, g.h * 0.4, { color: C.green, size: 16 });
         g.banner('LAP ' + g.lap + '  +' + LAP_BONUS + 's', 1.6, C.yellow);
         g.setHud('lap', g.lap + '/' + LAPS);
       }
@@ -278,6 +279,7 @@
           g.speed = r.spd * 0.35;
           g.spin = 0.35;
           g.sfx('crash'); g.shake(18); g.flash(C.red, 0.12);
+          g.hitstop(0.11); g.rumble(70);
           g.burst(g.w / 2, g.h - 120, [C.orange, C.yellow, C.red], 22, 220);
           r.z = (r.z + 700) % g.trackLen;
         }
@@ -286,6 +288,7 @@
           r.passed = true; g.passCount++;
           g.addScore(180);
           g.nitro = Math.min(1, g.nitro + 0.12);
+          g.popup('+180', g.w / 2 + Arcade.rand(-70, 70), g.h * 0.55, { color: C.cyan });
           g.sfx('blip');
         }
         if (d > 900) r.passed = false;
