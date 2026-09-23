@@ -10,13 +10,12 @@ This is the resume point. When a session resumes, it fetches `games/foundation`,
 | Pirate Trader | `game/pirate-trader` | ✅ gauntlet passed | [#6](https://github.com/dwolfpack/geo-kids/pull/6) |
 | Merchant Caravan | `game/merchant-caravan` | ✅ gauntlet passed | [#7](https://github.com/dwolfpack/geo-kids/pull/7) |
 | Lemonade Empire | `game/lemonade-empire` | ✅ gauntlet passed | [#8](https://github.com/dwolfpack/geo-kids/pull/8) |
-| Island Shop | `game/island-shop` | ⏳ next | — |
-| Kids Market | `game/kids-market` | ⬜ | — |
+| Island Shop | `game/island-shop` | ✅ gauntlet passed | [#9](https://github.com/dwolfpack/geo-kids/pull/9) |
+| Kids Market | `game/kids-market` | ⏳ next | — |
 
 ## Next step
-Build Island Shop on `game/island-shop`. Copy the engine from
-`origin/game/lemonade-empire:games/lemonade-empire/engine/`, which is the newest copy with tighter
-bottom-bar sizing. Include the `barFits` check in e2e.
+Build Kids Market (the stretch game) on `game/kids-market`. Copy the engine from
+`origin/game/island-shop:games/island-shop/engine/`, which is the newest copy and hides toasts when a modal opens.
 
 ## Gauntlet results
 - **Pirate Trader:**
@@ -33,7 +32,13 @@ bottom-bar sizing. Include the `barFits` check in e2e.
   - Offline earnings are capped. Per-second earnings never exceed the theoretical maximum.
   - e2e: 30/30 checks pass.
 
+- **Island Shop:**
+  - Sim: first milestone median 3.1 min, 🪙2,000 median 15.6 min (p10 12.5, p90 20.5), win reached by 440/500 within an hour.
+  - The sim caught a banana tag rounding edge case. It's fixed.
+  - e2e: 28/28 checks pass.
+
 ## Lessons carried forward
+- Money rounding: round prices you pay down and prices you're paid up, and assert that margin in the sim.
 - Gate "time spent broke" in the sims. The formal no-dead-end check misses poverty spirals.
 - Price impact must stay small relative to late-game capacity, or growth plateaus.
 - Set milestone values from the measured growth curve instead of guessing them upfront.
