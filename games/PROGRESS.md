@@ -11,43 +11,29 @@ This is the resume point. When a session resumes, it fetches `games/foundation`,
 | Merchant Caravan | `game/merchant-caravan` | ✅ gauntlet passed | [#7](https://github.com/dwolfpack/geo-kids/pull/7) |
 | Lemonade Empire | `game/lemonade-empire` | ✅ gauntlet passed | [#8](https://github.com/dwolfpack/geo-kids/pull/8) |
 | Island Shop | `game/island-shop` | ✅ gauntlet passed | [#9](https://github.com/dwolfpack/geo-kids/pull/9) |
-| Kids Market | `game/kids-market` | ⏳ next | — |
+| Kids Market | `game/kids-market` | ✅ gauntlet passed | [#10](https://github.com/dwolfpack/geo-kids/pull/10) |
 
 ## Next step
-Build Kids Market (the stretch game) on `game/kids-market`. Copy the engine from
-`origin/game/island-shop:games/island-shop/engine/`, which is the newest copy and hides toasts when a modal opens.
+**All five games are done.** What's left is review and merging:
+1. Merge [#5](https://github.com/dwolfpack/geo-kids/pull/5), the foundation, first. It adds the `/games/` hub and the geo-kids "Trading Games" card.
+2. Merge the game PRs in any order: [#6](https://github.com/dwolfpack/geo-kids/pull/6), [#7](https://github.com/dwolfpack/geo-kids/pull/7), [#8](https://github.com/dwolfpack/geo-kids/pull/8), [#9](https://github.com/dwolfpack/geo-kids/pull/9) and [#10](https://github.com/dwolfpack/geo-kids/pull/10).
+   Each game is self-contained under `games/<name>/`.
 
-## Gauntlet results
-- **Pirate Trader:**
-  - Sim: first milestone median 2.3 min, 🪙2,000 median 12.1 min (p10 9.1, p90 17.5). No arbitrage and no dead ends.
-  - e2e: 28/28 checks pass.
+## Final summary
 
-- **Merchant Caravan:**
-  - Sim: first milestone median 3.1 min, 🪙5,000 median 11.4 min (p10 8.9, p90 14.9), win reached by 217/500 within an hour.
-  - The sim caught contract farming and a poverty trap. Both are fixed.
-  - e2e: 31/31 checks pass.
+| Game | Teaches | 1st goal | Big goal (median) | e2e |
+|---|---|---|---|---|
+| 🏴‍☠️ Pirate Trader | Buy low / sell high, world ports, capitals | 🪙500 · 2.3 min | 🪙2,000 · 12.1 min | 28 ✓ |
+| 🐫 Merchant Caravan | Route planning, upkeep, contracts, market memory | 🪙1,000 · 3.1 min | 🪙5,000 · 11.4 min | 31 ✓ |
+| 🍋 Lemonade Empire | Pricing & demand, profit per unit, compounding | 🪙500 · 3.6 min | 🪙10,000 · 12.1 min | 30 ✓ |
+| 🏝️ Island Shop | Customer willingness to pay, stock, rent, spoilage | 🪙400 · 3.1 min | 🪙2,000 · 15.6 min | 28 ✓ |
+| 📈 Kids Market | Diversifying, fees, news, patience, dividends | 🪙500 · 3.6 min | 🪙1,500 · 16.2 min | 24 ✓ |
 
-- **Lemonade Empire:**
-  - Sim (1 s steps): first milestone median 3.6 min, 🪙10,000 median 12.1 min (p10 10.4, p90 14.1), win median 43.5 min.
-  - Offline earnings are capped. Per-second earnings never exceed the theoretical maximum.
-  - e2e: 30/30 checks pass.
-
-- **Island Shop:**
-  - Sim: first milestone median 3.1 min, 🪙2,000 median 15.6 min (p10 12.5, p90 20.5), win reached by 440/500 within an hour.
-  - The sim caught a banana tag rounding edge case. It's fixed.
-  - e2e: 28/28 checks pass.
-
-## Lessons carried forward
-- Money rounding: round prices you pay down and prices you're paid up, and assert that margin in the sim.
-- Gate "time spent broke" in the sims. The formal no-dead-end check misses poverty spirals.
-- Price impact must stay small relative to late-game capacity, or growth plateaus.
-- Set milestone values from the measured growth curve instead of guessing them upfront.
-- Real-time games need test hooks (`replace`, `advance`, `away`). A reload races the game's own `pagehide` save.
-- Check that bottom-bar buttons fit (`barFits`) at 375px in both languages. This check is now in every e2e.
-- Add `[hidden] { display: none !important; }` in the engine. Without it, any `display:flex` element ignores `hidden`.
-- In RTL, isolate numbers (`direction: ltr` on floats), and avoid putting a coin emoji right after "ל-" in Hebrew text.
-- Heuristic sim players must not sell right after buying. Track `boughtAt`.
-- Save screenshots as JPEG (quality 55) to keep the repo small.
+All games share these properties:
+- Hebrew (RTL) and English, mobile-first at 375px, every tap target ≥44px, safe-area aware, offline PWA.
+- No ads, purchases, tracking or network calls. Everything keeps working when storage is blocked.
+- Each economy sim runs 1,000 playthroughs and checks no arbitrage or churn profit, no dead ends and no poverty traps.
+- Screenshots are in each game's `tests/screens/`.
 
 ## How to run the gauntlet for a game
 ```
