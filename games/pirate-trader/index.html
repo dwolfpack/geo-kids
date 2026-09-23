@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2E7D96">
+<meta name="description" content="Pirate Trader — sail between real ports, buy low, sell high.">
+<title>סוחר הים 🏴‍☠️</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="ge-hud">
+  <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+  <div class="ge-wallet" id="wallet" aria-live="polite">🪙 0</div>
+  <div class="spacer"></div>
+  <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+  <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+</header>
+
+<main class="ge-main" id="main">
+  <!-- Port view -->
+  <section id="view-port">
+    <div class="scene" id="scene" aria-hidden="true">
+      <div class="scene-sun"></div>
+      <div class="scene-cloud c1">☁️</div>
+      <div class="scene-cloud c2">☁️</div>
+      <div class="scene-town" id="scene-town">🏘️</div>
+      <div class="scene-ship">⛵</div>
+      <div class="scene-sea"><div class="wave w1"></div><div class="wave w2"></div></div>
+    </div>
+    <div class="port-head ge-card">
+      <div class="port-title">
+        <span class="port-flag" id="port-flag"></span>
+        <div>
+          <h1 id="port-name"></h1>
+          <div class="port-sub" id="port-sub"></div>
+        </div>
+      </div>
+      <div class="port-stats">
+        <span class="chip" id="day-chip"></span>
+        <span class="chip" id="hold-chip"></span>
+      </div>
+      <div class="ge-progress">
+        <div class="ge-progress-label"><span id="rank-label"></span><span id="goal-label"></span></div>
+        <div class="ge-progress-track"><div class="ge-progress-fill" id="goal-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="ge-card harbor" id="harbor" hidden></div>
+
+    <div class="ge-card market">
+      <div class="market-head">
+        <h2 id="market-title"></h2>
+        <div class="qty" role="group" id="qty-group">
+          <button type="button" data-qty="1">×1</button>
+          <button type="button" data-qty="5">×5</button>
+          <button type="button" data-qty="max" id="qty-max">Max</button>
+        </div>
+      </div>
+      <p class="legend" id="legend"></p>
+      <div id="goods"></div>
+    </div>
+  </section>
+
+  <!-- Map view -->
+  <section id="view-map" hidden>
+    <div class="ge-card map-card">
+      <h2 id="map-title"></h2>
+      <div id="map"></div>
+    </div>
+    <div id="dests"></div>
+  </section>
+</main>
+
+<nav class="ge-bar" id="bar-port">
+  <button class="ge-btn ge-btn-ghost" id="btn-fish" type="button"></button>
+  <button class="ge-btn ge-btn-warm" id="btn-ship" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-map" type="button"></button>
+</nav>
+<nav class="ge-bar" id="bar-map" hidden>
+  <button class="ge-btn ge-btn-ghost" id="btn-back" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-sail" type="button" disabled></button>
+</nav>
+
+<div class="voyage" id="voyage" hidden aria-live="polite">
+  <div class="voyage-sky"></div>
+  <div class="voyage-label" id="voyage-label"></div>
+  <div class="voyage-track"><div class="voyage-ship" id="voyage-ship"><span class="voyage-ship-inner">⛵</span></div></div>
+  <div class="voyage-sea"><div class="wave w1"></div><div class="wave w2"></div></div>
+</div>
+
+<script src="../../geo-kids/js/countries-data.js"></script>
+<script src="engine/engine.js"></script>
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

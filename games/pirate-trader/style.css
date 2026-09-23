@@ -1,0 +1,142 @@
+/* Pirate Trader — game-specific styles on top of engine/engine.css */
+:root {
+  --accent: #2E7D96;
+  --accent-ink: #fff;
+  --sea: #3A9BB8;
+  --sea-deep: #2A7F9C;
+  --sky-top: #BFE6F2;
+  --sky-bot: #E8F6F9;
+  --cheap: #3F8558;
+  --wanted: #C0492F;
+}
+body { background: linear-gradient(180deg, #DDF0F3 0%, var(--bg) 40%); }
+
+/* ---------- harbour scene ---------- */
+.scene {
+  position: relative; height: 120px; border-radius: var(--radius); overflow: hidden;
+  background: linear-gradient(180deg, var(--sky-top), var(--sky-bot) 70%);
+  border: 2px solid var(--line); margin-bottom: 10px; box-shadow: var(--shadow);
+}
+.scene-sun { position: absolute; top: 14px; inset-inline-end: 22px; width: 38px; height: 38px; border-radius: 50%; background: #FFD66B; box-shadow: 0 0 0 8px rgba(255, 214, 107, .35); }
+.scene-cloud { position: absolute; font-size: 1.6rem; opacity: .9; animation: drift 28s linear infinite; }
+.scene-cloud.c1 { top: 10px; left: -40px; }
+.scene-cloud.c2 { top: 34px; left: -40px; animation-delay: -14s; font-size: 1.2rem; }
+.scene-town { position: absolute; bottom: 34px; inset-inline-start: 14px; font-size: 2.2rem; }
+.scene-ship { position: absolute; bottom: 30px; left: 50%; font-size: 2.6rem; transform: translateX(-50%); animation: bob 2.6s ease-in-out infinite; }
+.scene-sea { position: absolute; left: 0; right: 0; bottom: 0; height: 42px; background: var(--sea); overflow: hidden; }
+.wave {
+  position: absolute; left: 0; width: 200%; height: 16px; top: -8px;
+  background: radial-gradient(circle at 10px 16px, transparent 10px, var(--sea) 11px) 0 0 / 20px 16px repeat-x;
+  animation: waves 6s linear infinite;
+}
+.wave.w2 { top: 10px; opacity: .5; background-color: transparent; background-image: radial-gradient(circle at 10px 16px, transparent 10px, var(--sea-deep) 11px); animation-duration: 9s; animation-direction: reverse; }
+@keyframes bob { 0%, 100% { transform: translateX(-50%) translateY(0) rotate(-3deg); } 50% { transform: translateX(-50%) translateY(-5px) rotate(3deg); } }
+@keyframes waves { to { transform: translateX(-20px); } }
+@keyframes drift { to { transform: translateX(calc(100vw + 80px)); } }
+
+/* ---------- port header ---------- */
+.port-title { display: flex; align-items: center; gap: 12px; }
+.port-flag { font-size: 2.4rem; line-height: 1; }
+.port-title h1 { font-size: 1.45rem; line-height: 1.15; }
+.port-sub { color: var(--ink-soft); font-size: .92rem; font-weight: 600; }
+.port-stats { display: flex; gap: 8px; flex-wrap: wrap; margin: 10px 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 12px; border-radius: 999px; background: #fff; border: 2px solid var(--line); font-weight: 700; font-size: .9rem; }
+.chip.full { border-color: var(--sun); background: #FFF3D1; }
+
+/* ---------- harbour master quiz ---------- */
+.harbor { border-color: #9BD1E0; background: #F2FAFC; }
+.harbor h2 { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; }
+.harbor p { color: var(--ink-soft); margin-bottom: 10px; }
+.quiz-opts { display: grid; grid-template-columns: 1fr; gap: 8px; }
+@media (min-width: 520px) { .quiz-opts { grid-template-columns: repeat(3, 1fr); } }
+.quiz-opts .ge-btn { justify-content: flex-start; font-size: 1rem; }
+.quiz-opts .flag { font-size: 1.5rem; }
+.harbor .fact { margin-top: 8px; font-size: .92rem; color: var(--ink); }
+
+/* ---------- market ---------- */
+.market-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.market-head h2 { margin: 0; }
+.qty { display: inline-flex; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 3px; gap: 3px; }
+.qty button { min-width: 52px; min-height: 44px; border: none; border-radius: 10px; background: transparent; font-weight: 800; cursor: pointer; }
+.qty button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.legend { color: var(--ink-soft); font-size: .85rem; margin-bottom: 8px; }
+.good {
+  display: grid; grid-template-columns: 40px 1fr 84px 84px; align-items: center; gap: 8px;
+  padding: 8px 0; border-top: 2px dashed var(--line);
+}
+.good:first-child { border-top: none; }
+.good-icon { font-size: 1.8rem; text-align: center; }
+.good-name { font-weight: 800; font-size: 1rem; }
+.good-meta { font-size: .8rem; color: var(--ink-soft); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-weight: 800; font-size: .72rem; }
+.tag-cheap { background: #E1F1E6; color: var(--cheap); }
+.tag-wanted { background: #FBE3DD; color: var(--wanted); }
+.have { font-weight: 800; color: var(--ink); }
+.trade {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  min-height: 56px; padding: 4px 6px; border-radius: 14px; font-size: .78rem; line-height: 1.15;
+}
+.trade b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.trade.sell { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: none; }
+.trade.sell.profit { border-color: var(--cheap); background: #EDF7F0; }
+.trade.sell.loss { border-color: #E7C58C; }
+.trade.buy { background: var(--accent); color: #fff; }
+
+/* ---------- map ---------- */
+.map-card h2 { margin-bottom: 6px; }
+#map svg { width: 100%; height: auto; display: block; border-radius: 14px; direction: ltr; }
+.map-sea { fill: #CFEAF1; }
+.map-grid { stroke: rgba(46, 125, 150, .12); stroke-width: 1; }
+.map-land { fill: #F3E7C4; stroke: #D8C48F; stroke-width: 1.2; stroke-linejoin: round; }
+.map-pin { fill: var(--accent); stroke: #fff; stroke-width: 2; }
+.map-pin.locked { fill: #A9B5B1; }
+.map-pin.here { fill: var(--sun); }
+.map-pin.sel { fill: var(--coral); }
+.map-route { stroke: var(--coral); stroke-width: 3; stroke-dasharray: 7 6; fill: none; animation: dash 1s linear infinite; }
+.map-label { font: 700 11px var(--font); fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 3px; }
+@keyframes dash { to { stroke-dashoffset: -13; } }
+
+.dest {
+  width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center;
+  text-align: start; padding: 10px 12px; margin-bottom: 8px; min-height: 64px;
+  background: var(--card); border: 2px solid var(--line); border-radius: 16px; cursor: pointer;
+  box-shadow: var(--shadow);
+}
+.dest[aria-pressed="true"] { border-color: var(--coral); background: #FFF1EC; }
+.dest:disabled { opacity: .55; cursor: not-allowed; }
+.dest .flag { font-size: 1.8rem; text-align: center; }
+.dest .dname { font-weight: 800; }
+.dest .dmeta { font-size: .82rem; color: var(--ink-soft); }
+.dest .dcost { font-weight: 800; font-size: .9rem; text-align: end; white-space: nowrap; }
+.dest .dcost small { display: block; font-weight: 600; color: var(--ink-soft); }
+
+/* ---------- voyage overlay ---------- */
+.voyage { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; justify-content: flex-end; background: linear-gradient(180deg, #9FD5E6, #E8F6F9 60%); }
+.voyage-label { position: absolute; top: calc(30% + var(--safe-top)); left: 0; right: 0; text-align: center; font-weight: 900; font-size: 1.4rem; padding: 0 16px; white-space: pre-line; }
+.voyage-track { position: absolute; left: 0; right: 0; bottom: 30vh; height: 70px; }
+.voyage-ship { position: absolute; bottom: 0; left: 0; font-size: 3.6rem; will-change: transform; }
+[dir="ltr"] .voyage-ship-inner { display: inline-block; transform: scaleX(-1); }
+[dir="rtl"] .voyage-ship { left: auto; right: 0; }
+.voyage-sea { position: relative; height: 32vh; background: var(--sea); overflow: hidden; }
+.voyage-sea .wave { top: -8px; }
+
+/* ---------- ship modal ---------- */
+.ups { display: flex; flex-direction: column; gap: 8px; text-align: start; }
+.up {
+  display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center;
+  padding: 10px; border: 2px solid var(--line); border-radius: 14px; background: #fff;
+}
+.up .ico { font-size: 1.7rem; text-align: center; }
+.up .uname { font-weight: 800; color: var(--ink); }
+.up .udesc { font-size: .82rem; }
+.up .lvl { font-size: .78rem; font-weight: 700; color: var(--accent); }
+.up .ge-btn { min-width: 96px; }
+.reset-link { margin-top: 12px; background: none; border: none; color: var(--ink-soft); text-decoration: underline; min-height: 44px; cursor: pointer; }
+
+.event-big { font-size: 1.1rem; color: var(--ink); }
+.event-odds { font-size: .85rem; color: var(--ink-soft); }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-ship { animation: none; }
+  .scene-cloud, .wave, .map-route { animation: none; }
+}
