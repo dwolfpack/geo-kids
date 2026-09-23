@@ -18,6 +18,17 @@ async function noOverflow(page, label) {
   const o = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   check(o <= 0, `${label}: no horizontal overflow (${o}px)`);
 }
+async function barFits(page, label) {
+  const bad = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll(".ge-bar:not([hidden]) .ge-btn").forEach((b) => {
+      const r = b.getBoundingClientRect();
+      if (r.left < -1 || r.right > window.innerWidth + 1 || b.scrollWidth > b.clientWidth + 2) out.push(b.id);
+    });
+    return out;
+  });
+  check(bad.length === 0, `${label}: bottom-bar buttons fit on screen ${bad.join(" ")}`);
+}
 async function tapBoxesOK(page, label) {
   const small = await page.evaluate(() => {
     const out = [];
@@ -66,6 +77,7 @@ async function craft(page, fn, arg) {
   await shot(page, "mobile-2-city", true);
   await noOverflow(page, "city");
   await tapBoxesOK(page, "city");
+  await barFits(page, "city");
 
   let s = await st(page);
   check(s.city === "samarkand" && s.money === 150 && s.camels === 2, "new game starts in Samarkand with 🪙150 and 2 camels");
@@ -86,6 +98,7 @@ async function craft(page, fn, arg) {
   await shot(page, "mobile-3-map", true);
   await noOverflow(page, "map");
   await tapBoxesOK(page, "map");
+  await barFits(page, "map");
   await page.tap("#btn-go");
   await page.waitForSelector("#trek:not([hidden])");
   await page.waitForTimeout(600);
@@ -165,6 +178,7 @@ async function craft(page, fn, arg) {
   check((await page.evaluate(() => document.documentElement.dir)) === "ltr", "language toggle switches to English (ltr)");
   await shot(page, "mobile-9-english", true);
   await noOverflow(page, "english city");
+  await barFits(page, "english city");
 
   await page.waitForTimeout(800);
   const swReady = await page.evaluate(async () => { if (!navigator.serviceWorker) return false; const r = await navigator.serviceWorker.ready; return !!r.active; });
