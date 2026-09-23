@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#C98A3E">
+<meta name="description" content="Merchant Caravan — lead camels along the Silk Road, fill orders, buy low and sell high.">
+<title>שיירת הסוחרים 🐫</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="ge-hud">
+  <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+  <div class="ge-wallet" id="wallet" aria-live="polite">🪙 0</div>
+  <div class="spacer"></div>
+  <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+  <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+</header>
+
+<main class="ge-main" id="main">
+  <section id="view-city">
+    <div class="scene" id="scene" aria-hidden="true">
+      <div class="scene-sun"></div>
+      <div class="dune d1"></div>
+      <div class="dune d2"></div>
+      <div class="scene-city" id="scene-city">🕌</div>
+      <div class="scene-camels" id="scene-camels"></div>
+      <div class="scene-palm">🌴</div>
+    </div>
+
+    <div class="city-head ge-card">
+      <div class="city-title">
+        <span class="city-flag" id="city-flag"></span>
+        <div>
+          <h1 id="city-name"></h1>
+          <div class="city-sub" id="city-sub"></div>
+        </div>
+      </div>
+      <div class="city-stats">
+        <span class="chip" id="day-chip"></span>
+        <span class="chip" id="load-chip"></span>
+        <span class="chip" id="team-chip"></span>
+        <span class="chip" id="stamp-chip"></span>
+      </div>
+      <div class="ge-progress">
+        <div class="ge-progress-label"><span id="rank-label"></span><span id="goal-label"></span></div>
+        <div class="ge-progress-track"><div class="ge-progress-fill" id="goal-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="ge-card order" id="order"></div>
+
+    <div class="ge-card market">
+      <div class="market-head">
+        <h2 id="market-title"></h2>
+        <div class="qty" role="group" id="qty-group">
+          <button type="button" data-qty="1">×1</button>
+          <button type="button" data-qty="5">×5</button>
+          <button type="button" data-qty="max" id="qty-max">Max</button>
+        </div>
+      </div>
+      <p class="legend" id="legend"></p>
+      <div id="goods"></div>
+    </div>
+
+    <div class="ge-card journal" id="journal"></div>
+  </section>
+
+  <section id="view-map" hidden>
+    <div class="ge-card map-card">
+      <h2 id="map-title"></h2>
+      <div id="map"></div>
+      <p class="map-hint" id="map-hint"></p>
+    </div>
+    <div id="dests"></div>
+  </section>
+</main>
+
+<nav class="ge-bar" id="bar-city">
+  <button class="ge-btn ge-btn-ghost" id="btn-job" type="button"></button>
+  <button class="ge-btn ge-btn-warm" id="btn-team" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-map" type="button"></button>
+</nav>
+<nav class="ge-bar" id="bar-map" hidden>
+  <button class="ge-btn ge-btn-ghost" id="btn-back" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-go" type="button" disabled></button>
+</nav>
+
+<div class="trek" id="trek" hidden aria-live="polite">
+  <div class="trek-label" id="trek-label"></div>
+  <div class="trek-track"><div class="trek-camels" id="trek-camels"></div></div>
+  <div class="trek-sand"></div>
+</div>
+
+<script src="../../geo-kids/js/countries-data.js"></script>
+<script src="engine/engine.js"></script>
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

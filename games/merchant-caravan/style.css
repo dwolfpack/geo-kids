@@ -1,0 +1,137 @@
+/* Merchant Caravan — desert theme on top of engine/engine.css */
+:root {
+  --accent: #A8541F;
+  --accent-ink: #fff;
+  --sand: #F2D29B;
+  --sand-deep: #E2B56C;
+  --dusk-top: #FBD9A5;
+  --dusk-bot: #FFF3DD;
+  --cheap: #3F8558;
+  --wanted: #B8442E;
+  --bg: #F6EBD9;
+  --line: #EAD9BC;
+  --card: #FFFBF3;
+}
+body { background: linear-gradient(180deg, #FBE8CB 0%, var(--bg) 40%); }
+
+/* ---------- desert scene ---------- */
+.scene {
+  position: relative; height: 120px; border-radius: var(--radius); overflow: hidden;
+  background: linear-gradient(180deg, var(--dusk-top), var(--dusk-bot) 75%);
+  border: 2px solid var(--line); margin-bottom: 10px; box-shadow: var(--shadow);
+}
+.scene-sun { position: absolute; top: 12px; inset-inline-end: 24px; width: 40px; height: 40px; border-radius: 50%; background: #FFB347; box-shadow: 0 0 0 10px rgba(255, 179, 71, .3); }
+.dune { position: absolute; bottom: -40px; border-radius: 50%; }
+.dune.d1 { left: -20%; width: 90%; height: 90px; background: var(--sand-deep); }
+.dune.d2 { right: -25%; width: 100%; height: 80px; background: var(--sand); }
+.scene-city { position: absolute; bottom: 30px; inset-inline-start: 14px; font-size: 2.2rem; }
+.scene-palm { position: absolute; bottom: 26px; inset-inline-end: 18px; font-size: 1.9rem; }
+.scene-camels { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; font-size: 2rem; }
+.scene-camels span { display: inline-block; animation: plod 1.2s ease-in-out infinite; }
+.scene-camels span:nth-child(2n) { animation-delay: -.6s; }
+[dir="ltr"] .scene-camels, [dir="ltr"] .trek-camels { transform: translateX(-50%) scaleX(-1); }
+[dir="ltr"] .trek-camels { transform: scaleX(-1); }
+@keyframes plod { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+/* ---------- city header ---------- */
+.city-title { display: flex; align-items: center; gap: 12px; }
+.city-flag { font-size: 2.4rem; line-height: 1; }
+.city-title h1 { font-size: 1.45rem; line-height: 1.15; }
+.city-sub { color: var(--ink-soft); font-size: .92rem; font-weight: 600; }
+.city-stats { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; background: #fff; border: 2px solid var(--line); font-weight: 700; font-size: .86rem; }
+.chip.full { border-color: var(--sun); background: #FFF3D1; }
+
+/* ---------- order (contract) ---------- */
+.order { border-color: #E7C58C; background: #FFF7E6; }
+.order h2 { display: flex; align-items: center; gap: 8px; font-size: 1.05rem; margin-bottom: 6px; }
+.order .want { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800; }
+.order .want .big { font-size: 2rem; }
+.order .meta { color: var(--ink-soft); font-size: .9rem; margin: 4px 0 10px; }
+.order .ge-btn { width: 100%; }
+.order.waiting { background: #fff; }
+
+/* ---------- market (same layout as the other games) ---------- */
+.market-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap; }
+.market-head h2 { margin: 0; }
+.qty { display: inline-flex; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 3px; gap: 3px; }
+.qty button { min-width: 52px; min-height: 44px; border: none; border-radius: 10px; background: transparent; font-weight: 800; cursor: pointer; }
+.qty button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.legend { color: var(--ink-soft); font-size: .85rem; margin-bottom: 8px; }
+.good { display: grid; grid-template-columns: 40px 1fr 84px 84px; align-items: center; gap: 8px; padding: 8px 0; border-top: 2px dashed var(--line); }
+.good:first-child { border-top: none; }
+.good-icon { font-size: 1.8rem; text-align: center; }
+.good-name { font-weight: 800; }
+.good-meta { font-size: .8rem; color: var(--ink-soft); display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+.tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-weight: 800; font-size: .72rem; }
+.tag-cheap { background: #E1F1E6; color: var(--cheap); }
+.tag-wanted { background: #FBE3DD; color: var(--wanted); }
+.tag-order { background: #FFF1CC; color: #7A5200; }
+.have { font-weight: 800; color: var(--ink); }
+.trade { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 56px; padding: 4px 6px; border-radius: 14px; font-size: .78rem; line-height: 1.15; }
+.trade b { font-size: 1rem; font-variant-numeric: tabular-nums; }
+.trade.sell { background: #fff; color: var(--ink); border: 2px solid var(--line); box-shadow: none; }
+.trade.sell.profit { border-color: var(--cheap); background: #EDF7F0; }
+.trade.sell.loss { border-color: #E7C58C; }
+.trade.buy { background: var(--accent); color: #fff; }
+
+/* ---------- journal ---------- */
+.journal h2 { font-size: 1.05rem; }
+.journal .fact { color: var(--ink); }
+.stamps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.stamp { font-size: 1.4rem; width: 40px; height: 40px; display: grid; place-items: center; border-radius: 10px; background: #fff; border: 2px dashed var(--line); }
+.stamp.got { border-style: solid; border-color: var(--sand-deep); }
+.stamp:not(.got) { filter: grayscale(1); opacity: .35; }
+
+/* ---------- route map ---------- */
+#map svg { width: 100%; height: auto; display: block; border-radius: 14px; direction: ltr; }
+.m-bg { fill: #FBEBCB; }
+.m-sea { fill: #CFE6EE; }
+.m-road { stroke: #B48A55; stroke-width: 4; stroke-linecap: round; }
+.m-road.locked { stroke: #C9B79B; stroke-dasharray: 2 8; }
+.m-road.next { stroke: var(--accent); stroke-width: 5; }
+.m-road.sel { stroke: var(--coral); stroke-width: 6; }
+.m-city { fill: #fff; stroke: #B48A55; stroke-width: 3; }
+.m-city.here { fill: var(--sun); stroke: var(--accent); }
+.m-city.sel { fill: var(--coral); stroke: #fff; }
+.m-label { font: 700 12px var(--font); fill: var(--ink); paint-order: stroke; stroke: #FFFBF3; stroke-width: 4px; }
+.m-order { font-size: 13px; }
+.map-hint { color: var(--ink-soft); font-size: .85rem; margin-top: 6px; }
+
+.dest {
+  width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center;
+  text-align: start; padding: 10px 12px; margin-bottom: 8px; min-height: 64px;
+  background: var(--card); border: 2px solid var(--line); border-radius: 16px; cursor: pointer; box-shadow: var(--shadow);
+}
+.dest[aria-pressed="true"] { border-color: var(--coral); background: #FFF1EC; }
+.dest:disabled { opacity: .55; cursor: not-allowed; }
+.dest .flag { font-size: 1.8rem; text-align: center; }
+.dest .dname { font-weight: 800; }
+.dest .dmeta { font-size: .82rem; color: var(--ink-soft); }
+.dest .dcost { font-weight: 800; font-size: .9rem; text-align: end; white-space: nowrap; }
+.dest .dcost small { display: block; font-weight: 600; color: var(--ink-soft); }
+.dest.locked { background: #FFF7E6; border-style: dashed; }
+
+/* ---------- trek overlay ---------- */
+.trek { position: fixed; inset: 0; z-index: 40; background: linear-gradient(180deg, #FBC98A, #FFF0D6 65%); }
+.trek-label { position: absolute; top: calc(28% + var(--safe-top)); left: 0; right: 0; text-align: center; font-weight: 900; font-size: 1.4rem; padding: 0 16px; white-space: pre-line; }
+.trek-track { position: absolute; left: 0; right: 0; bottom: 30vh; height: 70px; }
+.trek-camels { position: absolute; bottom: 0; right: 0; font-size: 3rem; white-space: nowrap; will-change: transform; }
+[dir="ltr"] .trek-camels { right: auto; left: 0; }
+.trek-sand { position: absolute; left: 0; right: 0; bottom: 0; height: 30vh; background: var(--sand); box-shadow: inset 0 12px 0 var(--sand-deep); }
+
+/* ---------- team modal ---------- */
+.ups { display: flex; flex-direction: column; gap: 8px; text-align: start; }
+.up { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px; border: 2px solid var(--line); border-radius: 14px; background: #fff; }
+.up .ico { font-size: 1.7rem; text-align: center; }
+.up .uname { font-weight: 800; color: var(--ink); }
+.up .udesc { font-size: .82rem; }
+.up .lvl { font-size: .78rem; font-weight: 700; color: var(--accent); }
+.up .ge-btn { min-width: 96px; }
+.team-sum { margin-bottom: 10px; font-weight: 700; color: var(--ink); }
+.reset-link { margin-top: 12px; background: none; border: none; color: var(--ink-soft); text-decoration: underline; min-height: 44px; cursor: pointer; }
+.event-big { font-size: 1.1rem; color: var(--ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-camels span { animation: none; }
+}
