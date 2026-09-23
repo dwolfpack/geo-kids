@@ -9,14 +9,14 @@ This is the resume point. When a session resumes, it fetches `games/foundation`,
 | Foundation (docs + hub) | `games/foundation` | ✅ done | [#5](https://github.com/dwolfpack/geo-kids/pull/5) |
 | Pirate Trader | `game/pirate-trader` | ✅ gauntlet passed | [#6](https://github.com/dwolfpack/geo-kids/pull/6) |
 | Merchant Caravan | `game/merchant-caravan` | ✅ gauntlet passed | [#7](https://github.com/dwolfpack/geo-kids/pull/7) |
-| Lemonade Empire | `game/lemonade-empire` | ⏳ next | — |
-| Island Shop | `game/island-shop` | ⬜ | — |
+| Lemonade Empire | `game/lemonade-empire` | ✅ gauntlet passed | [#8](https://github.com/dwolfpack/geo-kids/pull/8) |
+| Island Shop | `game/island-shop` | ⏳ next | — |
 | Kids Market | `game/kids-market` | ⬜ | — |
 
 ## Next step
-Build Lemonade Empire (an idle tycoon) on `game/lemonade-empire`. Copy the engine from
-`origin/game/merchant-caravan:games/merchant-caravan/engine/`. This game is time-based rather than
-turn-based, so its sim steps simulated seconds instead of actions.
+Build Island Shop on `game/island-shop`. Copy the engine from
+`origin/game/lemonade-empire:games/lemonade-empire/engine/`, which is the newest copy with tighter
+bottom-bar sizing. Include the `barFits` check in e2e.
 
 ## Gauntlet results
 - **Pirate Trader:**
@@ -28,10 +28,17 @@ turn-based, so its sim steps simulated seconds instead of actions.
   - The sim caught contract farming and a poverty trap. Both are fixed.
   - e2e: 31/31 checks pass.
 
+- **Lemonade Empire:**
+  - Sim (1 s steps): first milestone median 3.6 min, 🪙10,000 median 12.1 min (p10 10.4, p90 14.1), win median 43.5 min.
+  - Offline earnings are capped. Per-second earnings never exceed the theoretical maximum.
+  - e2e: 30/30 checks pass.
+
 ## Lessons carried forward
 - Gate "time spent broke" in the sims. The formal no-dead-end check misses poverty spirals.
 - Price impact must stay small relative to late-game capacity, or growth plateaus.
 - Set milestone values from the measured growth curve instead of guessing them upfront.
+- Real-time games need test hooks (`replace`, `advance`, `away`). A reload races the game's own `pagehide` save.
+- Check that bottom-bar buttons fit (`barFits`) at 375px in both languages. This check is now in every e2e.
 - Add `[hidden] { display: none !important; }` in the engine. Without it, any `display:flex` element ignores `hidden`.
 - In RTL, isolate numbers (`direction: ltr` on floats), and avoid putting a coin emoji right after "ל-" in Hebrew text.
 - Heuristic sim players must not sell right after buying. Track `boughtAt`.
