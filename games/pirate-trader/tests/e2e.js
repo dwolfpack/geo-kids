@@ -30,6 +30,17 @@ async function clearModals(page, max = 10) {
   }
 }
 
+async function barFits(page, label) {
+  const bad = await page.evaluate(() => {
+    const out = [];
+    document.querySelectorAll(".ge-bar:not([hidden]) .ge-btn").forEach((b) => {
+      const r = b.getBoundingClientRect();
+      if (r.left < -1 || r.right > window.innerWidth + 1 || b.scrollWidth > b.clientWidth + 2) out.push(b.id);
+    });
+    return out;
+  });
+  check(bad.length === 0, `${label}: bottom-bar buttons fit on screen ${bad.join(" ")}`);
+}
 async function tapBoxesOK(page, label) {
   // Every visible button must be at least 44x44 CSS px (48 target, 44 hard floor).
   const small = await page.evaluate(() => {
@@ -62,6 +73,7 @@ async function tapBoxesOK(page, label) {
   await page.screenshot({ path: path.join(SHOTS, "mobile-2-port.jpg"), type: "jpeg", quality: 55, fullPage: true });
   await noOverflow(page, "port");
   await tapBoxesOK(page, "port");
+  await barFits(page, "port");
 
   let s = await st(page);
   check(s.port === "lisbon" && s.money === 150, "new game starts in Lisbon with 🪙150");
@@ -86,6 +98,7 @@ async function tapBoxesOK(page, label) {
   await page.screenshot({ path: path.join(SHOTS, "mobile-3-map.jpg"), type: "jpeg", quality: 55, fullPage: true });
   await noOverflow(page, "map");
   await tapBoxesOK(page, "map");
+  await barFits(page, "map");
   await page.tap("#btn-sail");
   await page.waitForSelector("#voyage:not([hidden])");
   await page.waitForTimeout(700);
@@ -151,6 +164,7 @@ async function tapBoxesOK(page, label) {
   check(dir === "ltr", "language toggle switches to English (ltr)");
   await page.screenshot({ path: path.join(SHOTS, "mobile-8-english.jpg"), type: "jpeg", quality: 55, fullPage: true });
   await noOverflow(page, "english port");
+  await barFits(page, "english port");
 
   // Offline: service worker serves the game with no network
   await page.waitForTimeout(800);
