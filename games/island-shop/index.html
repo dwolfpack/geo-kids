@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2FA39A">
+<meta name="description" content="Island Shop — buy goods from ships that visit your island, price them, and keep customers happy.">
+<title>החנות באי 🏝️</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="ge-hud">
+  <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+  <div class="ge-wallet" id="wallet" aria-live="polite">🪙 0</div>
+  <div class="spacer"></div>
+  <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+  <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+</header>
+
+<main class="ge-main">
+  <div class="scene" aria-hidden="true">
+    <div class="sun"></div>
+    <div class="sea"><div class="wave"></div></div>
+    <div class="beach"></div>
+    <div class="palm">🌴</div>
+    <div class="hut">🛖</div>
+    <div class="ship" id="scene-ship"><span class="ship-flag" id="ship-flag"></span><span class="ship-hull">🚢</span></div>
+  </div>
+
+  <div class="ge-card head">
+    <h1 id="shop-title"></h1>
+    <div class="chips">
+      <span class="chip" id="rep-chip"></span>
+      <span class="chip" id="shelf-chip"></span>
+      <span class="chip" id="visit-chip"></span>
+    </div>
+    <div class="ge-progress">
+      <div class="ge-progress-label"><span id="rank-label"></span><span id="goal-label"></span></div>
+      <div class="ge-progress-track"><div class="ge-progress-fill" id="goal-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="ge-card ship-card" id="ship-card"></div>
+  <div class="ge-card" id="shelves"></div>
+  <div class="ge-card yesterday" id="yesterday" hidden></div>
+</main>
+
+<nav class="ge-bar" id="bar">
+  <button class="ge-btn ge-btn-ghost" id="btn-clean" type="button"></button>
+  <button class="ge-btn ge-btn-warm" id="btn-shop" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-open" type="button"></button>
+</nav>
+
+<div class="day" id="day" hidden>
+  <div class="day-top">
+    <div class="day-title" id="day-title"></div>
+    <div class="day-track"><div class="day-fill" id="day-fill"></div></div>
+  </div>
+  <div class="day-stage">
+    <div class="day-customer" id="day-customer"></div>
+    <div class="day-bubble" id="day-bubble" aria-live="polite"></div>
+    <div class="day-counter">🛖</div>
+  </div>
+  <div class="day-tally" id="day-tally"></div>
+  <button class="ge-btn ge-btn-ghost day-skip" id="day-skip" type="button"></button>
+</div>
+
+<script src="../../geo-kids/js/countries-data.js"></script>
+<script src="engine/engine.js"></script>
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
