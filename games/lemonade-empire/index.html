@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2C230">
+<meta name="description" content="Lemonade Empire — grow one lemonade stand into a world chain. Find the best price!">
+<title>אימפריית הלימונדה 🍋</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="ge-hud">
+  <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+  <div class="ge-wallet" id="wallet" aria-live="polite">🪙 0</div>
+  <div class="rate" id="rate"></div>
+  <div class="spacer"></div>
+  <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+  <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+</header>
+
+<main class="ge-main" id="main">
+  <section id="view-stand">
+    <div class="stand-scene" id="scene" aria-hidden="true">
+      <div class="sky-sun" id="sky-sun"></div>
+      <div class="rain" id="rain"></div>
+      <div class="city-skyline" id="skyline">🏙️</div>
+      <div class="stand">
+        <div class="awning"></div>
+        <div class="counter"><span class="jug">🍋</span><span class="helpers" id="helpers-row"></span></div>
+      </div>
+      <div class="queue" id="queue"></div>
+    </div>
+
+    <div class="ge-card head">
+      <div class="head-title">
+        <span class="flag" id="city-flag"></span>
+        <div><h1 id="city-name"></h1><div class="sub" id="city-sub"></div></div>
+      </div>
+      <div class="chips">
+        <span class="chip" id="weather-chip"></span>
+        <span class="chip" id="waiting-chip"></span>
+        <span class="chip" id="helpers-chip"></span>
+      </div>
+      <div class="ge-progress">
+        <div class="ge-progress-label"><span id="rank-label"></span><span id="goal-label"></span></div>
+        <div class="ge-progress-track"><div class="ge-progress-fill" id="goal-fill"></div></div>
+      </div>
+    </div>
+
+    <div class="ge-card price-card">
+      <h2 id="price-title"></h2>
+      <div class="price-row">
+        <label class="sr-only" for="price" id="price-label"></label>
+        <input type="range" id="price" min="2" max="12" step="1" value="3">
+        <output id="price-out" for="price"></output>
+      </div>
+      <div class="readouts">
+        <div><span class="ro-num" id="ro-cust"></span><span class="ro-lbl" id="ro-cust-l"></span></div>
+        <div><span class="ro-num" id="ro-profit"></span><span class="ro-lbl" id="ro-profit-l"></span></div>
+        <div class="ro-main"><span class="ro-num" id="ro-coins"></span><span class="ro-lbl" id="ro-coins-l"></span></div>
+      </div>
+      <p class="sweet" id="sweet"></p>
+    </div>
+
+    <div class="ge-card" id="stand-ups"></div>
+    <div class="ge-card fact" id="fact"></div>
+  </section>
+
+  <section id="view-cities" hidden>
+    <div class="ge-card"><h2 id="cities-title"></h2><p class="muted" id="cities-hint"></p></div>
+    <div id="cities"></div>
+  </section>
+</main>
+
+<nav class="ge-bar" id="bar">
+  <button class="ge-btn ge-btn-ghost" id="btn-cities" type="button"></button>
+  <button class="ge-btn ge-btn-primary squeeze" id="btn-tap" type="button"></button>
+  <button class="ge-btn ge-btn-ghost" id="btn-ups" type="button"></button>
+</nav>
+
+<script src="../../geo-kids/js/countries-data.js"></script>
+<script src="engine/engine.js"></script>
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
