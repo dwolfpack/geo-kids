@@ -99,7 +99,7 @@ const M = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, flatShad
 const mat = {
   sand: M(0xF1DDA4), rock: M(0x8C7B6B), rockDark: M(0x6E6258), trunk: M(0x8B5A2B), leaf: M(0x3E9E4A),
   red: M(0xFF5B2E, { roughness: 0.4 }), white: M(0xF7F7F2, { roughness: 0.5 }), glass: M(0x1C4E72, { roughness: 0.15, metalness: 0.3 }),
-  dark: M(0x2B2F36), ring: new THREE.MeshStandardMaterial({ color: 0xFFD34D, emissive: 0xFFB300, emissiveIntensity: 0.9, roughness: 0.3 }),
+  dark: M(0x2B2F36), ring: new THREE.MeshStandardMaterial({ color: 0xFFC400, emissive: 0xFF9E00, emissiveIntensity: 1.1, roughness: 0.3, fog: false }),
   flame: new THREE.MeshBasicMaterial({ color: 0xFF7A1A }), flame2: new THREE.MeshBasicMaterial({ color: 0xFFD54A }),
   smoke: new THREE.MeshStandardMaterial({ color: 0x46413D, transparent: true, opacity: 0.42, flatShading: false, roughness: 1, depthWrite: false }),
   steam: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.7, flatShading: true, depthWrite: false }),
@@ -110,7 +110,7 @@ const mat = {
   shadow: new THREE.MeshBasicMaterial({ color: 0x06384A, transparent: true, opacity: 0.22, depthWrite: false }),
   reticle: new THREE.MeshBasicMaterial({ color: 0xBDF3FF, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
-  flare: new THREE.MeshBasicMaterial({ color: 0xFF8A3D, transparent: true, opacity: 0.6, depthWrite: false }),
+  flare: new THREE.MeshBasicMaterial({ color: 0xFF7A1A, transparent: true, opacity: 0.75, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
   mountain: M(0xA7B9C2)
 };
@@ -131,7 +131,7 @@ function rotorBlurTex() {
   const c = document.createElement("canvas"); c.width = c.height = 128;
   const g = c.getContext("2d");
   const grd = g.createRadialGradient(64, 64, 6, 64, 64, 64);
-  grd.addColorStop(0, "rgba(60,64,70,0.35)"); grd.addColorStop(0.75, "rgba(210,220,228,0.22)"); grd.addColorStop(0.95, "rgba(255,255,255,0.35)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  grd.addColorStop(0, "rgba(60,64,70,0.18)"); grd.addColorStop(0.75, "rgba(210,220,228,0.1)"); grd.addColorStop(0.95, "rgba(255,255,255,0.2)"); grd.addColorStop(1, "rgba(255,255,255,0)");
   g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
@@ -157,7 +157,7 @@ function buildHeli() {
   const bladeMat = new THREE.MeshBasicMaterial({ color: 0x3A3F47, transparent: true, opacity: 0.35, depthWrite: false });
   for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(geo.box, bladeMat); b.scale.set(0.3, 0.05, 5.2); b.position.z = 2.6; const arm = new THREE.Group(); arm.add(b); arm.rotation.y = i * Math.PI / 2; rotor.add(arm); }
   const blur = new THREE.Mesh(geo.disc, new THREE.MeshBasicMaterial({ map: rotorBlurTex(), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-  blur.scale.setScalar(5.3); blur.rotation.x = -Math.PI / 2; rotor.add(blur);
+  blur.scale.setScalar(4.8); blur.rotation.x = -Math.PI / 2; rotor.add(blur);
   g.add(rotor);
   g.userData = { rotor, tail };
   g.scale.setScalar(1.45);
@@ -224,7 +224,7 @@ function buildRaft() {
   const pole = new THREE.Mesh(geo.cyl, mat.white); pole.scale.set(0.08, 3.2, 0.08); pole.position.set(1.3, 2.1, 0); g.add(pole);
   const flag = new THREE.Mesh(geo.box, new THREE.MeshBasicMaterial({ color: 0xFF7A00 })); flag.scale.set(1.3, 0.8, 0.06); flag.position.set(1.95, 3.3, 0); g.add(flag);
   g.userData = { arm, beacon, flag };
-  g.scale.setScalar(2);
+  g.scale.setScalar(2.6);
   return g;
 }
 function buildBirds() {
@@ -407,7 +407,7 @@ function startStage(n) {
     world.add(f);
     S.fires.push({ obj: f, x, z, out: false, smokeT: 0 });
   }
-  for (const z of slots(st.rafts, -320, -L + 120)) {
+  for (const z of slots(st.rafts, -190, -L + 120)) {
     const r = buildRaft(); const x = lane();
     r.position.set(x, 0, z); world.add(r);
     S.rafts.push({ obj: r, x, z, saved: false });
@@ -538,7 +538,7 @@ function step(dt) {
   const hz = -S.dist;
   S.inv = Math.max(0, S.inv - dt);
   S.dropCd = Math.max(0, S.dropCd - dt);
-  S.shake = Math.max(0, S.shake - dt * 2.5);
+  S.shake = Math.max(0, S.shake - dt * 1.6);
   S.flash = Math.max(0, S.flash - dt * 4.5);
 
   // Refill: skim the sea
@@ -606,14 +606,26 @@ function step(dt) {
   const hit = (h) => {
     if (S.inv > 0 || h.hit) return;
     h.hit = true; S.hearts--; S.inv = 1.6; S.shake = 1; S.flash = 1; S.slow = 0.3;
-    for (let i = 0; i < 22; i++) spawn(mat.spark, V(S.x, S.y, hz), V((Math.random() - 0.5) * 16, (Math.random() - 0.2) * 12, (Math.random() - 0.5) * 10), 0.7, 0.35);
+    for (let i = 0; i < 28; i++) spawn(mat.spark, V(S.x, S.y, hz), V((Math.random() - 0.5) * 18, (Math.random() - 0.2) * 14, (Math.random() - 0.5) * 10), 0.8, 0.45);
     for (let i = 0; i < 6; i++) spawn(mat.smoke, V(S.x, S.y, hz + 1), V((Math.random() - 0.5) * 4, 3, 6), 1.2, 0.9, 1.5);
     flashEl.style.opacity = "0.55";
     GE.sfx("whoops");
     showBanner(t("ouch"));
     if (S.hearts <= 0) endStage(false);
   };
-  for (const s of S.stacks) if (Math.abs(s.z - hz) < 3 && Math.abs(s.x - S.x) < s.r + 1.2 && S.y < s.h) hit(s);
+  for (const s of S.stacks) {
+    if (!s.hit && Math.abs(s.z - hz) < 3.5 && Math.abs(s.x - S.x) < s.r + 1.2 && S.y < s.h) {
+      const wasInv = S.inv > 0;
+      if (s.obj) {
+        // The stack shatters so the camera never ends up inside rock.
+        s.obj.visible = false;
+        for (let i = 0; i < 26; i++) spawn(mat.rock, V(s.x + (Math.random() - 0.5) * s.r * 2, 2 + Math.random() * Math.min(s.h, 18), s.z), V((Math.random() - 0.5) * 18, 4 + Math.random() * 10, 6 + Math.random() * 10), 1.1, 0.7 + Math.random() * 0.6);
+        for (let i = 0; i < 14; i++) spawn(mat.water, V(s.x, 0.5, s.z), V((Math.random() - 0.5) * 14, 8 + Math.random() * 8, (Math.random() - 0.5) * 8), 0.9, 0.7);
+        S.vx = (S.x >= s.x ? 1 : -1) * 22; // knocked sideways
+      }
+      if (!wasInv) hit(s); else s.hit = true;
+    }
+  }
   for (const b of S.birds) if (Math.abs(b.z - hz) < 3 && Math.hypot(b.x - S.x, b.y - S.y) < 3.2) hit(b);
   for (const c of S.clouds) if (Math.abs(c.z - hz) < 5 && Math.hypot(c.x - S.x, c.y - S.y) < 5) hit(c);
 
@@ -630,7 +642,7 @@ function step(dt) {
   }
   for (const r of S.rafts) if (!r.saved) {
     r.obj.userData.flag.rotation.y = Math.sin(S.time * 6 + r.x) * 0.3;
-    if (Math.abs(r.z + S.dist) < 300 && Math.random() < dt * 6) spawn(mat.flare, V(r.x + 2.6, 7, r.z), V(0.8, 5, 0), 1.6, 0.6, 1.2);
+    if (Math.abs(r.z + S.dist) < 380 && Math.random() < dt * 10) spawn(mat.flare, V(r.x + 3.4, 9, r.z), V(0.6, 9, 0), 2.2, 1.1, 1.6);
     r.obj.userData.arm.rotation.z = Math.sin(S.time * 8) * 0.8; r.obj.userData.beacon.visible = Math.sin(S.time * 10) > 0; r.obj.position.y = Math.sin(S.time * 2 + r.x) * 0.25; }
   for (const g of S.rings) g.obj.rotation.z += dt * 1.5;
   for (const b of S.birds) { b.obj.userData.wings.forEach(([l, r], i) => { const a = Math.sin(S.time * 14 + i) * 0.7; l.rotation.z = a; r.rotation.z = -a; }); b.obj.position.x = b.x + Math.sin(S.time + b.phase) * 2; b.x = b.obj.position.x; }
@@ -674,7 +686,7 @@ function render(realDt) {
   reticle.position.set(land.x, 3, land.z);
   reticle.material.opacity = 0.4 + Math.sin(S.time * 8) * 0.2;
   camera.position.copy(camPos);
-  if (S.shake > 0) camera.position.add(V((Math.random() - 0.5) * S.shake * 3.2, (Math.random() - 0.5) * S.shake * 2.4, 0));
+  if (S.shake > 0) camera.position.add(V((Math.random() - 0.5) * S.shake * 4.5, (Math.random() - 0.5) * S.shake * 3.4, 0));
   camera.lookAt(camLook);
   camera.rotation.z += S.bank * 0.55 + (S.shake > 0 ? (Math.random() - 0.5) * S.shake * 0.12 : 0);
   flashEl.style.opacity = String(Math.max(0, S.flash * S.flash * 0.55 - 0.03));
