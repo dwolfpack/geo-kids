@@ -658,7 +658,7 @@ function step(dt) {
 
 /* ---------------- chase camera ---------------- */
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
-const CAM = { back: 8.6, up: 5, side: 1.1, lookAhead: 22, lookDown: 4.2 };
+const CAM = { back: 6.6, up: 3.9, side: 0.8, lookAhead: 22, lookDown: 4.4 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
 function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
@@ -829,7 +829,7 @@ function resize() {
   const portrait = w < h;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 8.6, up: 5, side: 1.1, lookDown: 4.2 });
+  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 6.6, up: 3.9, side: 0.8, lookDown: 4.4 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
