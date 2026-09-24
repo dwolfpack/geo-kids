@@ -533,7 +533,7 @@ function step(dt) {
   S.y = Math.max(BOX.yMin, Math.min(BOX.yMax, S.y + S.vy * dt));
   if (S.stage === 2) S.x += Math.sin(S.time * 0.7) * 1.4 * dt; // storm wind
   S.bank += (-S.vx / 17 * 0.85 - S.bank) * Math.min(1, dt * 9);
-  S.pitch += (-S.vy / 11 * 0.25 + 0.12 - S.pitch) * Math.min(1, dt * 6);
+  S.pitch += (S.vy / 11 * 0.22 - 0.2 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward
   S.dist += S.speed * dt;
   const hz = -S.dist;
   S.inv = Math.max(0, S.inv - dt);
