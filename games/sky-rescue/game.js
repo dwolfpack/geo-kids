@@ -367,7 +367,7 @@ function startStage(n) {
   clearWorld();
   const rng = GE.rng(1000 + n * 77);
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
-    hearts: 3, inv: 2, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false });
+    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false });
   scene.background = skyTexture(st.sky[0], st.sky[1]);
   scene.fog = new THREE.Fog(st.fog, 90, 430);
   seaCol.setHex(st.sea); seaDeep.setHex(st.deep);

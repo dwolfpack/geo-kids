@@ -79,7 +79,8 @@ async function stitch(page, frames, labels, file) {
   }
   let hearts = 3, g = 0;
   while (hearts === 3 && g++ < 60) hearts = await page.evaluate(() => { window.__heli.step(1 / 30); return window.__heli.state.hearts; });
-  hit.push(await png(page)); hitL.push("impact");
+  hit.push(await png(page)); hitL.push(`impact (hearts ${hearts})`);
+  if (hearts === 3) console.log("WARNING: collision did not register");
   for (const [dt, l] of [[0.1, "+0.1s"], [0.25, "+0.35s"], [0.5, "+0.85s"]]) {
     await page.evaluate((dt) => window.__heli.step(dt), dt);
     hit.push(await png(page)); hitL.push(l);
