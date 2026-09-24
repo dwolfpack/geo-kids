@@ -1,0 +1,15 @@
+{
+  "name": "Pirate Trader — סוחר הים",
+  "short_name": "Pirate Trader",
+  "description": "Sail between real ports, buy low, sell high. A geography trading game for kids.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E4EFEE",
+  "theme_color": "#2E7D96",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
