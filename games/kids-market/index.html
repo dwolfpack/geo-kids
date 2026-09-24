@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#7E57C2">
+<meta name="description" content="Kids Market — a pretend stock market. Read the news, spread your money, be patient.">
+<title>שוק הילדים 📈</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="ge-hud">
+  <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+  <div class="ge-wallet" id="wallet" aria-live="polite">🪙 0</div>
+  <div class="spacer"></div>
+  <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+  <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+</header>
+
+<main class="ge-main">
+  <div class="ge-card news" id="news" aria-live="polite"></div>
+
+  <div class="ge-card port">
+    <div class="port-row">
+      <div><div class="lbl" id="lbl-total"></div><div class="big" id="total"></div></div>
+      <div class="today" id="today"></div>
+    </div>
+    <div class="port-split">
+      <span class="chip" id="chip-cash"></span>
+      <span class="chip" id="chip-invested"></span>
+      <span class="chip" id="chip-day"></span>
+    </div>
+    <div class="ge-progress">
+      <div class="ge-progress-label"><span id="rank-label"></span><span id="goal-label"></span></div>
+      <div class="ge-progress-track"><div class="ge-progress-fill" id="goal-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="market-head">
+    <h2 id="market-title"></h2>
+    <div class="qty" role="group" id="qty-group">
+      <button type="button" data-qty="1" id="qty-1">×1</button>
+      <button type="button" data-qty="5" id="qty-5">×5</button>
+      <button type="button" data-qty="max" id="qty-max">Max</button>
+    </div>
+  </div>
+  <p class="fee-note" id="fee-note"></p>
+  <div id="companies"></div>
+</main>
+
+<nav class="ge-bar" id="bar">
+  <button class="ge-btn ge-btn-ghost" id="btn-tips" type="button"></button>
+  <button class="ge-btn ge-btn-primary" id="btn-next" type="button"></button>
+  <button class="ge-btn ge-btn-ghost" id="btn-badges" type="button"></button>
+</nav>
+
+<script src="engine/engine.js"></script>
+<script src="logic.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>
