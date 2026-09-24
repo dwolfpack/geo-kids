@@ -315,7 +315,7 @@ const bursts = [];
 function burst(x, y, z, color, flat) {
   let b = bursts.find((q) => !q.alive);
   if (!b) {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.22, 6, 32), new THREE.MeshBasicMaterial({ color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }));
+    const m = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.22, 6, 32), new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
     scene.add(m); b = { m, alive: false }; bursts.push(b);
   }
   b.alive = true; b.t = 0; b.m.visible = true; b.m.material.color.setHex(color);
@@ -325,7 +325,7 @@ function updateBursts(dt) {
   for (const b of bursts) {
     if (!b.alive) continue;
     b.t += dt;
-    const k = b.t / 0.45;
+    const k = b.t / 0.3;
     if (k >= 1) { b.alive = false; b.m.visible = false; continue; }
     b.m.scale.setScalar(1 + k * 1.6);
     b.m.material.opacity = 0.9 * (1 - k);
@@ -597,7 +597,7 @@ function step(dt) {
     if (!g.hit && Math.abs(g.z - hz) < 1.5 + S.speed * dt && Math.hypot(g.x - S.x, g.y - S.y) < 3.6) {
       g.hit = true; S.ringsHit++; S.score += 50;
       g.obj.visible = false;
-      burst(g.x, g.y, g.z - 6, 0xFFD34D);
+      burst(g.x, g.y, g.z - 3, 0xFFC928);
       for (let i = 0; i < 10; i++) spawn(mat.spark, V(g.x, g.y, g.z), V((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, 4), 0.5, 0.22);
       GE.sfx("coin", { streak: S.ringsHit });
     }
