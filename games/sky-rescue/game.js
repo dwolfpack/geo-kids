@@ -110,7 +110,7 @@ const mat = {
   shadow: new THREE.MeshBasicMaterial({ color: 0x06384A, transparent: true, opacity: 0.22, depthWrite: false }),
   reticle: new THREE.MeshBasicMaterial({ color: 0xBDF3FF, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
-  flare: new THREE.MeshBasicMaterial({ color: 0xFF7A1A, transparent: true, opacity: 0.75, depthWrite: false, fog: false }),
+  flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
   mountain: M(0xA7B9C2)
 };
@@ -553,7 +553,7 @@ function step(dt) {
   if (drop && S.dropCd <= 0) {
     if (S.tank >= 1) {
       S.tank -= 1; S.dropCd = 0.32;
-      const m = new THREE.Mesh(geo.sphere, mat.water); m.scale.setScalar(0.7);
+      const m = new THREE.Mesh(geo.sphere, mat.water); m.scale.set(1.1, 1.4, 1.1);
       m.position.set(S.x, S.y - 1.2, hz - 2); scene.add(m);
       S.bombs.push({ m, vx: S.vx, vy: -4, vz: -S.speed * 0.92 });
       GE.sfx("tap");
@@ -642,7 +642,7 @@ function step(dt) {
   }
   for (const r of S.rafts) if (!r.saved) {
     r.obj.userData.flag.rotation.y = Math.sin(S.time * 6 + r.x) * 0.3;
-    if (Math.abs(r.z + S.dist) < 380 && Math.random() < dt * 10) spawn(mat.flare, V(r.x + 3.4, 9, r.z), V(0.6, 9, 0), 2.2, 1.1, 1.6);
+    if (Math.abs(r.z + S.dist) < 380 && Math.random() < dt * 10) spawn(mat.flare, V(r.x + 3.4, 9, r.z), V(0.4, 10, 0), 1.8, 0.6, 0.8);
     r.obj.userData.arm.rotation.z = Math.sin(S.time * 8) * 0.8; r.obj.userData.beacon.visible = Math.sin(S.time * 10) > 0; r.obj.position.y = Math.sin(S.time * 2 + r.x) * 0.25; }
   for (const g of S.rings) g.obj.rotation.z += dt * 1.5;
   for (const b of S.birds) { b.obj.userData.wings.forEach(([l, r], i) => { const a = Math.sin(S.time * 14 + i) * 0.7; l.rotation.z = a; r.rotation.z = -a; }); b.obj.position.x = b.x + Math.sin(S.time + b.phase) * 2; b.x = b.obj.position.x; }
@@ -658,7 +658,7 @@ function step(dt) {
 
 /* ---------------- chase camera ---------------- */
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
-const CAM = { back: 10, up: 4.6, side: 3.4, lookAhead: 22, lookDown: 3.6 };
+const CAM = { back: 8.6, up: 4.2, side: 1.1, lookAhead: 22, lookDown: 3.6 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
 function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
@@ -829,7 +829,7 @@ function resize() {
   const portrait = w < h;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 13, up: 5, side: 1.2, lookDown: 3.4 } : { back: 10, up: 4.6, side: 3.4, lookDown: 3.6 });
+  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 8.6, up: 4.2, side: 1.1, lookDown: 3.6 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);

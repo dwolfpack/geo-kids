@@ -56,3 +56,8 @@ body { touch-action: none; -webkit-user-select: none; user-select: none; }
 
 .flash { position: fixed; inset: 0; background: #fff; opacity: 0; pointer-events: none; z-index: 9; }
 @keyframes hintfade { 0%, 80% { opacity: .85; } 100% { opacity: 0; } }
+@media (max-width: 420px) {
+  .pill { font-size: .8rem; padding: 4px 9px; }
+  .hearts { font-size: 1rem; }
+  .tank { width: 86px; height: 20px; }
+}
