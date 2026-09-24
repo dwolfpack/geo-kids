@@ -140,10 +140,10 @@ function buildHeli() {
   const body = new THREE.Mesh(geo.sphere, mat.red); body.scale.set(1.35, 1.15, 2.1); g.add(body);
   const belly = new THREE.Mesh(geo.sphere, mat.white); belly.scale.set(1.25, 0.6, 1.9); belly.position.y = -0.55; g.add(belly);
   const glass = new THREE.Mesh(geo.sphere, mat.glass); glass.scale.set(1.05, 0.8, 1.0); glass.position.set(0, 0.25, -1.35); g.add(glass);
-  const boom = new THREE.Mesh(geo.cyl, mat.red); boom.scale.set(0.32, 3.6, 0.32); boom.rotation.x = Math.PI / 2; boom.position.set(0, 0.35, 3.2); g.add(boom);
-  const stripe = new THREE.Mesh(geo.cyl, mat.white); stripe.scale.set(0.34, 0.5, 0.34); stripe.rotation.x = Math.PI / 2; stripe.position.set(0, 0.35, 3.6); g.add(stripe);
-  const fin = new THREE.Mesh(geo.box, mat.red); fin.scale.set(0.12, 1.3, 0.8); fin.position.set(0, 0.95, 4.9); g.add(fin);
-  const tail = new THREE.Group(); tail.position.set(0.25, 1.05, 4.95);
+  const boom = new THREE.Mesh(geo.cyl, mat.red); boom.scale.set(0.32, 2.7, 0.32); boom.rotation.x = Math.PI / 2; boom.position.set(0, 0.35, 2.75); g.add(boom);
+  const stripe = new THREE.Mesh(geo.cyl, mat.white); stripe.scale.set(0.34, 0.5, 0.34); stripe.rotation.x = Math.PI / 2; stripe.position.set(0, 0.35, 3.1); g.add(stripe);
+  const fin = new THREE.Mesh(geo.box, mat.red); fin.scale.set(0.12, 1.3, 0.8); fin.position.set(0, 0.95, 4.05); g.add(fin);
+  const tail = new THREE.Group(); tail.position.set(0.25, 1.05, 4.1);
   for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, mat.white); b.scale.set(0.06, 1.3, 0.16); b.rotation.x = i * Math.PI / 2; tail.add(b); }
   g.add(tail);
   for (const s of [-1, 1]) {
@@ -533,7 +533,7 @@ function step(dt) {
   S.y = Math.max(BOX.yMin, Math.min(BOX.yMax, S.y + S.vy * dt));
   if (S.stage === 2) S.x += Math.sin(S.time * 0.7) * 1.4 * dt; // storm wind
   S.bank += (-S.vx / 17 * 0.85 - S.bank) * Math.min(1, dt * 9);
-  S.pitch += (S.vy / 11 * 0.22 - 0.2 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward
+  S.pitch += (S.vy / 11 * 0.18 - 0.07 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward
   S.dist += S.speed * dt;
   const hz = -S.dist;
   S.inv = Math.max(0, S.inv - dt);
@@ -658,7 +658,7 @@ function step(dt) {
 
 /* ---------------- chase camera ---------------- */
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
-const CAM = { back: 8.6, up: 4.2, side: 1.1, lookAhead: 22, lookDown: 3.6 };
+const CAM = { back: 8.6, up: 5, side: 1.1, lookAhead: 22, lookDown: 4.2 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
 function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
@@ -829,7 +829,7 @@ function resize() {
   const portrait = w < h;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 8.6, up: 4.2, side: 1.1, lookDown: 3.6 });
+  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 8.6, up: 5, side: 1.1, lookDown: 4.2 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
