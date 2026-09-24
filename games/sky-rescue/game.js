@@ -142,9 +142,9 @@ function buildHeli() {
   const glass = new THREE.Mesh(geo.sphere, mat.glass); glass.scale.set(1.05, 0.8, 1.0); glass.position.set(0, 0.25, -1.35); g.add(glass);
   const boom = new THREE.Mesh(geo.cyl, mat.red); boom.scale.set(0.32, 2.7, 0.32); boom.rotation.x = Math.PI / 2; boom.position.set(0, 0.35, 2.75); g.add(boom);
   const stripe = new THREE.Mesh(geo.cyl, mat.white); stripe.scale.set(0.34, 0.5, 0.34); stripe.rotation.x = Math.PI / 2; stripe.position.set(0, 0.35, 3.1); g.add(stripe);
-  const fin = new THREE.Mesh(geo.box, mat.red); fin.scale.set(0.12, 1.3, 0.8); fin.position.set(0, 0.95, 4.05); g.add(fin);
-  const tail = new THREE.Group(); tail.position.set(0.25, 1.05, 4.1);
-  for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, mat.white); b.scale.set(0.06, 1.3, 0.16); b.rotation.x = i * Math.PI / 2; tail.add(b); }
+  const fin = new THREE.Mesh(geo.box, mat.red); fin.scale.set(0.1, 0.85, 0.65); fin.position.set(0, 0.8, 4.05); g.add(fin);
+  const tail = new THREE.Group(); tail.position.set(0.22, 0.85, 4.1);
+  for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, mat.white); b.scale.set(0.05, 0.9, 0.12); b.rotation.x = i * Math.PI / 2; tail.add(b); }
   g.add(tail);
   for (const s of [-1, 1]) {
     const skid = new THREE.Mesh(geo.cyl, mat.dark); skid.scale.set(0.12, 3.2, 0.12); skid.rotation.x = Math.PI / 2; skid.position.set(0.95 * s, -1.35, -0.1); g.add(skid);
@@ -829,7 +829,7 @@ function resize() {
   const portrait = w < h;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 10.5, up: 6.2, side: 1.4, lookDown: 3.6 } : { back: 8.2, up: 5.6, side: 2.4, lookDown: 3.2 });
+  Object.assign(CAM, portrait ? { back: 10, up: 6.2, side: 2.6, lookDown: 3.6 } : { back: 8.2, up: 5.6, side: 2.4, lookDown: 3.2 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
