@@ -1,0 +1,15 @@
+{
+  "name": "Sky Rescue — מסוק ההצלה",
+  "short_name": "Sky Rescue",
+  "description": "Fly a rescue helicopter: put out wildfires with water bombs and rescue people at sea.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0E5E73",
+  "theme_color": "#1FA3B5",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
