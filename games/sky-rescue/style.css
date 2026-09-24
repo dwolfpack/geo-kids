@@ -32,7 +32,7 @@ body { touch-action: none; -webkit-user-select: none; user-select: none; }
 @media (pointer: fine) { .stick { display: none; } .drop { width: 76px; height: 76px; font-size: 1.9rem; } }
 @media (pointer: coarse) { .hint { display: none; } }
 
-.screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: linear-gradient(180deg, rgba(14,94,115,.35), rgba(14,94,115,.75)); }
+.screen { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: linear-gradient(180deg, rgba(255,255,255,0), rgba(14,94,115,.35)); }
 .card { width: min(420px, 100%); max-height: 92vh; overflow-y: auto; background: var(--card); border-radius: 24px; padding: 20px 18px; text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,.3); color: var(--ink); }
 .logo { font-size: 3.4rem; animation: float 2.4s ease-in-out infinite; }
 @keyframes float { 50% { transform: translateY(-8px) rotate(-4deg); } }

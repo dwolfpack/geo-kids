@@ -112,7 +112,7 @@ const mat = {
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
-  mountain: M(0xA7B9C2)
+  mountain: M(0x86A7B4)
 };
 const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
@@ -131,7 +131,7 @@ function rotorBlurTex() {
   const c = document.createElement("canvas"); c.width = c.height = 128;
   const g = c.getContext("2d");
   const grd = g.createRadialGradient(64, 64, 6, 64, 64, 64);
-  grd.addColorStop(0, "rgba(60,64,70,0.18)"); grd.addColorStop(0.75, "rgba(210,220,228,0.1)"); grd.addColorStop(0.95, "rgba(255,255,255,0.2)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  grd.addColorStop(0, "rgba(60,64,70,0.3)"); grd.addColorStop(0.7, "rgba(190,200,210,0.22)"); grd.addColorStop(0.93, "rgba(255,255,255,0.42)"); grd.addColorStop(1, "rgba(255,255,255,0)");
   g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
@@ -160,7 +160,7 @@ function buildHeli() {
   blur.scale.setScalar(4.8); blur.rotation.x = -Math.PI / 2; rotor.add(blur);
   g.add(rotor);
   g.userData = { rotor, tail };
-  g.scale.setScalar(1.45);
+  g.scale.setScalar(1.8);
   return g;
 }
 
@@ -224,7 +224,7 @@ function buildRaft() {
   const pole = new THREE.Mesh(geo.cyl, mat.white); pole.scale.set(0.08, 3.2, 0.08); pole.position.set(1.3, 2.1, 0); g.add(pole);
   const flag = new THREE.Mesh(geo.box, new THREE.MeshBasicMaterial({ color: 0xFF7A00 })); flag.scale.set(1.3, 0.8, 0.06); flag.position.set(1.95, 3.3, 0); g.add(flag);
   g.userData = { arm, beacon, flag };
-  g.scale.setScalar(2.6);
+  g.scale.setScalar(1.9);
   return g;
 }
 function buildBirds() {
@@ -315,7 +315,7 @@ const bursts = [];
 function burst(x, y, z, color, flat) {
   let b = bursts.find((q) => !q.alive);
   if (!b) {
-    const m = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.22, 6, 32), new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false }));
+    const m = new THREE.Mesh(new THREE.TorusGeometry(2.5, 0.22, 6, 32), new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, fog: false }));
     scene.add(m); b = { m, alive: false }; bursts.push(b);
   }
   b.alive = true; b.t = 0; b.m.visible = true; b.m.material.color.setHex(color);
@@ -658,7 +658,7 @@ function step(dt) {
 
 /* ---------------- chase camera ---------------- */
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
-const CAM = { back: 6.6, up: 3.9, side: 0.8, lookAhead: 22, lookDown: 4.4 };
+const CAM = { back: 8.2, up: 5.6, side: 2.4, lookAhead: 12, lookDown: 3.2 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
 function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
@@ -829,7 +829,7 @@ function resize() {
   const portrait = w < h;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 11.5, up: 4.8, side: 0.5, lookDown: 3.4 } : { back: 6.6, up: 3.9, side: 0.8, lookDown: 4.4 });
+  Object.assign(CAM, portrait ? { back: 10.5, up: 6.2, side: 1.4, lookDown: 3.6 } : { back: 8.2, up: 5.6, side: 2.4, lookDown: 3.2 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
