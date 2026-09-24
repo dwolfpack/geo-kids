@@ -12,6 +12,7 @@ This is the resume point. When a session resumes, it fetches `games/foundation`,
 | Lemonade Empire | `game/lemonade-empire` | ✅ gauntlet passed | [#8](https://github.com/dwolfpack/geo-kids/pull/8) |
 | Island Shop | `game/island-shop` | ✅ gauntlet passed | [#9](https://github.com/dwolfpack/geo-kids/pull/9) |
 | Kids Market | `game/kids-market` | ✅ gauntlet passed | [#10](https://github.com/dwolfpack/geo-kids/pull/10) |
+| Sky Rescue (3D) | `game/sky-rescue` | ✅ Gauntlet Loop: critic said YES in round 8 | _PR pending_ |
 
 ## Next step
 **All five games are done.** What's left is review and merging:
@@ -34,6 +35,25 @@ All games share these properties:
 - No ads, purchases, tracking or network calls. Everything keeps working when storage is blocked.
 - Each economy sim runs 1,000 playthroughs and checks no arbitrage or churn profit, no dead ends and no poverty traps.
 - Screenshots are in each game's `tests/screens/`.
+
+## Sky Rescue: Gauntlet Loop log
+- The visual bar is `games/sky-rescue/ref/REFERENCE.md`: a Canva-generated reference plus an After Burner II motion spec.
+- `tests/capture.js` records real pixels for every round:
+  - 16:9 and phone stills;
+  - bank, hit and bomb filmstrips;
+  - full autopilot playthroughs of all 3 stages.
+- Each round went to a fresh critic subagent with clean context, never shown builder notes. The critic judged the pixels
+  and ran blind A/B tests against the previous round, then named the single biggest gap:
+  - r1: flat, low camera; tiny dark helicopter
+  - r2: camera too steep
+  - r3: collected rings blocking the view
+  - r4: camera clipping into sea stacks on a hit
+  - r5: hits not registering during start invulnerability (a real bug)
+  - r6: helicopter too small and turned wrong
+  - r7: helicopter reads as a blob
+  - r8: **YES**, all 5 win criteria pass
+- Round 9 applied r8's top note: the helicopter now sits lower so targets stay in view.
+- Snapshots of every round are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game
 ```
