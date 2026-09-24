@@ -53,7 +53,7 @@ All games share these properties:
   - r7: helicopter reads as a blob
   - r8: **YES**, all 5 win criteria pass
 - Round 9 applied r8's top note: the helicopter now sits lower so targets stay in view.
-- Snapshots of every round are in `games/sky-rescue/tests/rounds/`.
+- Snapshots of rounds r1, r8 and r9 (JPEG) are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game
 ```
