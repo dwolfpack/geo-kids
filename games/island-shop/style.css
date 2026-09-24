@@ -1,0 +1,103 @@
+/* Island Shop — tropical theme on top of engine/engine.css */
+:root {
+  --accent: #2FA39A;
+  --accent-ink: #fff;
+  --bg: #E8F6F2;
+  --line: #CFE7DF;
+  --card: #FCFFFD;
+  --sea: #3BB3C3;
+  --sand: #F4E2B4;
+  --good: #3F8558;
+}
+body { background: linear-gradient(180deg, #D5F1F4 0%, var(--bg) 45%); }
+
+/* ---------- scene ---------- */
+.scene { position: relative; height: 120px; border-radius: var(--radius); overflow: hidden; border: 2px solid var(--line); margin-bottom: 10px; box-shadow: var(--shadow);
+  background: linear-gradient(180deg, #A9E2F2, #E8F8FC 55%); }
+.scene .sun { position: absolute; top: 10px; inset-inline-end: 22px; width: 36px; height: 36px; border-radius: 50%; background: #FFD34D; box-shadow: 0 0 0 9px rgba(255, 211, 77, .35); }
+.scene .sea { position: absolute; left: 0; right: 0; bottom: 0; height: 52px; background: var(--sea); overflow: hidden; }
+.scene .wave { position: absolute; left: 0; top: -6px; width: 200%; height: 14px; background: radial-gradient(circle at 10px 14px, transparent 9px, var(--sea) 10px) 0 0 / 20px 14px repeat-x; animation: waves 7s linear infinite; }
+@keyframes waves { to { transform: translateX(-20px); } }
+.scene .beach { position: absolute; bottom: 0; inset-inline-start: 0; width: 46%; height: 40px; background: var(--sand); border-start-end-radius: 60px; }
+.scene .palm { position: absolute; bottom: 26px; inset-inline-start: 12px; font-size: 2.1rem; }
+.scene .hut { position: absolute; bottom: 22px; inset-inline-start: 56px; font-size: 2.6rem; }
+.scene .ship { position: absolute; bottom: 20px; inset-inline-end: 22px; font-size: 2.4rem; animation: bob 2.8s ease-in-out infinite; }
+.scene .ship-flag { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); font-size: 1.1rem; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-4px) rotate(2deg); } }
+
+/* ---------- head ---------- */
+.head h1 { font-size: 1.35rem; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; }
+.chip { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border-radius: 999px; background: #fff; border: 2px solid var(--line); font-weight: 700; font-size: .86rem; }
+
+/* ---------- ship ---------- */
+.ship-card { border-color: #9FD9D2; background: #F1FBF9; }
+.ship-head { display: flex; align-items: center; gap: 10px; }
+.ship-head .flag { font-size: 2.2rem; line-height: 1; }
+.ship-head h2 { margin: 0; font-size: 1.15rem; }
+.ship-fact { font-size: .88rem; color: var(--ink-soft); margin: 6px 0 8px; }
+.qty { display: inline-flex; background: #fff; border: 2px solid var(--line); border-radius: 14px; padding: 3px; gap: 3px; margin-bottom: 6px; }
+.qty button { min-width: 52px; min-height: 44px; border: none; border-radius: 10px; background: transparent; font-weight: 800; cursor: pointer; }
+.qty button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.offer { display: grid; grid-template-columns: 40px 1fr 96px; align-items: center; gap: 8px; padding: 8px 0; border-top: 2px dashed var(--line); }
+.offer:first-of-type { border-top: none; }
+.offer .ico { font-size: 1.8rem; text-align: center; }
+.offer .nm { font-weight: 800; }
+.offer .meta { font-size: .8rem; color: var(--ink-soft); }
+.offer .ge-btn { min-height: 56px; flex-direction: column; gap: 0; font-size: .8rem; line-height: 1.15; padding: 4px 6px; }
+.offer .ge-btn b { font-size: 1rem; }
+.tag-fresh { display: inline-block; padding: 1px 7px; border-radius: 999px; font-weight: 800; font-size: .72rem; background: #E1F1E6; color: var(--good); }
+
+/* ---------- shelves ---------- */
+.card-h { font-size: 1.1rem; margin-bottom: 4px; }
+.muted { color: var(--ink-soft); font-size: .88rem; }
+.shelf { padding: 10px 0; border-top: 2px dashed var(--line); }
+.shelf:first-of-type { border-top: none; }
+.shelf-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.shelf-top .ico { font-size: 1.8rem; }
+.shelf-top .nm { font-weight: 800; }
+.shelf-top .meta { font-size: .8rem; color: var(--ink-soft); display: flex; gap: 6px; flex-wrap: wrap; }
+.spoil { color: #9A5A00; font-weight: 800; }
+.tags { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.tags button { min-height: 48px; border-radius: 12px; border: 2px solid var(--line); background: #fff; font-weight: 800; cursor: pointer; font-size: .9rem; }
+.tags button[aria-pressed="true"] { border-color: var(--accent); background: #E3F6F3; }
+.empty-shelf { color: var(--ink-soft); font-size: .9rem; padding: 6px 0; }
+
+/* ---------- yesterday ---------- */
+.yesterday .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 6px 0; }
+.yesterday .stats div { background: #fff; border: 2px solid var(--line); border-radius: 12px; padding: 6px; text-align: center; font-weight: 800; }
+.yesterday .stats small { display: block; font-size: .72rem; color: var(--ink-soft); font-weight: 700; }
+.tip { font-size: .9rem; color: var(--ink); }
+
+/* ---------- day overlay ---------- */
+.day { position: fixed; inset: 0; z-index: 40; background: linear-gradient(180deg, #A9E2F2, #F4E2B4 70%); display: flex; flex-direction: column;
+  padding: calc(16px + var(--safe-top)) calc(16px + var(--safe-right)) calc(16px + var(--safe-bottom)) calc(16px + var(--safe-left)); }
+.day-top { text-align: center; }
+.day-title { font-weight: 900; font-size: 1.3rem; }
+.day-track { height: 12px; background: #fff; border-radius: 999px; overflow: hidden; margin-top: 8px; border: 2px solid var(--line); }
+.day-fill { height: 100%; background: var(--sun); transform-origin: 0 50%; transform: scaleX(0); }
+[dir="rtl"] .day-fill { transform-origin: 100% 50%; }
+.day-stage { flex: 1; position: relative; display: flex; align-items: center; justify-content: center; gap: 12px; }
+.day-customer { font-size: 4rem; }
+.day-customer.enter { animation: enter .35s ease-out; }
+@keyframes enter { from { transform: translateY(20px) scale(.8); opacity: 0; } }
+.day-bubble { position: absolute; top: 12%; left: 50%; transform: translateX(-50%); background: #fff; border-radius: 18px; padding: 10px 14px; font-weight: 800; font-size: 1.05rem; box-shadow: var(--shadow); max-width: 92%; text-align: center; }
+.day-counter { font-size: 4rem; }
+.day-tally { display: flex; justify-content: center; gap: 10px; font-weight: 800; font-size: 1.05rem; margin-bottom: 10px; flex-wrap: wrap; }
+.day-tally span { background: #fff; border-radius: 999px; padding: 6px 12px; border: 2px solid var(--line); }
+.day-skip { align-self: center; min-width: 160px; }
+
+.ups { display: flex; flex-direction: column; gap: 8px; text-align: start; }
+.up { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px; border: 2px solid var(--line); border-radius: 14px; background: #fff; }
+.up .ico { font-size: 1.7rem; text-align: center; }
+.up .uname { font-weight: 800; color: var(--ink); }
+.up .udesc { font-size: .82rem; }
+.up .lvl { font-size: .78rem; font-weight: 700; color: var(--accent); }
+.up .ge-btn { min-width: 96px; }
+.reset-link { margin-top: 12px; background: none; border: none; color: var(--ink-soft); text-decoration: underline; min-height: 44px; cursor: pointer; }
+.event-big { font-size: 1.1rem; color: var(--ink); }
+.eve { text-align: start; }
+.eve p { display: flex; justify-content: space-between; gap: 10px; font-weight: 700; color: var(--ink); padding: 4px 0; border-bottom: 1px dashed var(--line); }
+.eve p span:last-child { direction: ltr; unicode-bidi: isolate; }
+
+@media (prefers-reduced-motion: reduce) { .scene .wave, .scene .ship { animation: none; } .day-customer.enter { animation: none; } }

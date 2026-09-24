@@ -1,0 +1,15 @@
+{
+  "name": "Island Shop — החנות באי",
+  "short_name": "Island Shop",
+  "description": "Buy goods from ships that visit your island, price them and keep customers happy. A shop game for kids.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#E8F6F2",
+  "theme_color": "#2FA39A",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
