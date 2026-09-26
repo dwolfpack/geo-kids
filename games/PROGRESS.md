@@ -57,6 +57,12 @@ All games share these properties:
 - **New worlds, stages 4–7:** a snowy Himalaya canyon, the Egyptian Nile with camel caravans, Amazon jungle ruins and the Canadian Arctic, built from the user's concept art (`ref/user-ref-*.webp`).
   A fresh critic said NO at first: turquoise sea everywhere erased the sense of place. The fix added sand, snow and jungle ground, so each world's water becomes a river; warmed the desert light; guaranteed an early jungle ruin; and made the people waiting on the ice bigger.
   The autopilot finishes all 7 stages with no errors. Snapshots are in `tests/rounds/worlds-s*.jpg`.
+- **Hits, hangar and visuals:**
+  - **Hits:** the hitbox now matches the visible airframe, and every obstacle hit costs exactly one heart (a second crash straight after also counts). The loop no longer protects you.
+  - **Hangar:** paint the helicopter (body colour, stripe style and colour, 2–5 blades, blade-tip colour). The choice is saved.
+  - **Visuals:** the helicopter casts a real-time shadow, the sky has cumulus clouds, and particles are soft sprites (smoke plumes, spray, snow, flares). Fires glow, the rotor blades are fainter in flight, speed lines are subtler, and the camera sits a little further back.
+  - A blind A/B critic preferred the new build in 4/4 pairs.
+  - The service worker cache is bumped to v3.
 - Snapshots of rounds r1, r8 and r9 (JPEG) are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game

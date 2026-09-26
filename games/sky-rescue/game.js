@@ -78,7 +78,7 @@ const STAGES = [
     fires: 7, rafts: 5, rings: 10, stacks: 9, birds: 3, clouds: 5, islandTint: 0x93A94E },
   { key: "s6", theme: "jungle", code: "br", icon: "🌿", length: 3000, speed: 40, sea: 0x4FB39A, deep: 0x2E7A66, sky: ["#8FC0B6", "#E3EEE2"], fog: 0xC7DBC9, sun: 0xFFF0D0,
     fires: 8, rafts: 6, rings: 10, stacks: 12, birds: 4, clouds: 0, islandTint: 0x2E7A3A },
-  { key: "s7", theme: "arctic", code: "ca", icon: "🧊", length: 3000, speed: 41, sea: 0x2C6E9C, deep: 0x163C5E, sky: ["#86A9C9", "#E8EFF6"], fog: 0xD5E0EA, sun: 0xF3F8FF,
+  { key: "s7", theme: "arctic", code: "ca", icon: "🧊", length: 3000, speed: 41, sea: 0x3B8FB8, deep: 0x1F5E86, sky: ["#86A9C9", "#E8EFF6"], fog: 0xD5E0EA, sun: 0xF3F8FF,
     fires: 4, rafts: 7, rings: 10, stacks: 12, birds: 2, clouds: 4, islandTint: 0xE6F1F7 }
 ];
 
@@ -101,7 +101,17 @@ const hemi = new THREE.HemisphereLight(0xFFF4E2, 0x3C6E4E, 1.15);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xFFF1D6, 2.1);
 sun.position.set(-40, 80, 30);
-scene.add(sun);
+scene.add(sun); scene.add(sun.target);
+// Real-time shadow, cast by the helicopter only: a tight box that follows it, so it's cheap on phones.
+const SUN_OFF = new THREE.Vector3(-8, 40, 5);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 120 });
+sun.shadow.bias = -0.0015;
+sun.shadow.radius = 3;
+sun.shadow.intensity = 0.55;
 
 function skyTexture(top, bottom) {
   const c = document.createElement("canvas");
@@ -133,7 +143,7 @@ const mat = {
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
   spray: new THREE.MeshBasicMaterial({ color: 0xE9FCFF, transparent: true, opacity: 0.7, depthWrite: false }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
-  streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
+  streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.16, depthWrite: false }),
   mountain: M(0x86A7B4)
 };
 const geo = {
@@ -146,6 +156,27 @@ const geo = {
   disc: new THREE.CircleGeometry(1, 24),
   reticle: new THREE.RingGeometry(1.1, 1.45, 24)
 };
+
+/* ---------------- soft particles (sprites) ---------------- */
+// Round, soft-edged camera-facing puffs: smoke, spray, steam, flares, snow and dust.
+function softTex(rgb, core = 1) {
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grd.addColorStop(0, `rgba(${rgb},${core})`); grd.addColorStop(0.45, `rgba(${rgb},${core * 0.7})`); grd.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = grd; g.fillRect(0, 0, 64, 64);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
+}
+const SP = (rgb, core, extra = {}) => new THREE.SpriteMaterial({ map: softTex(rgb, core), depthWrite: false, ...extra });
+Object.assign(mat, {
+  smoke: SP("62,58,56", 0.55),
+  steam: SP("255,255,255", 0.8),
+  spray: SP("235,252,255", 0.85),
+  drop: SP("150,225,250", 0.95),
+  flare: SP("255,70,90", 0.9, { blending: THREE.AdditiveBlending, fog: false }),
+  flakeP: SP("255,255,255", 1),
+  dustP: SP("227,192,138", 0.5),
+  glowF: SP("255,150,40", 0.9, { blending: THREE.AdditiveBlending })
+});
 
 /* ---------------- helicopter ---------------- */
 // Radial motion-blur disc for the spinning rotor (light, see-through).
@@ -225,6 +256,7 @@ function buildHeli(look = DEFAULT_LOOK, g = new THREE.Group()) {
   blur.scale.setScalar(5.2); blur.rotation.x = -R; rotor.add(blur);
   g.add(rotor);
   g.userData = { rotor, tail };
+  g.traverse((o) => { if (o.isMesh && o.material !== heliMat.blur && o.material !== heliMat.blade && o.material !== heliMat.tip) o.castShadow = true; });
   g.scale.setScalar(1.8);
   return g;
 }
@@ -272,9 +304,10 @@ function buildFire() {
   for (let i = 0; i < 5; i++) {
     const f = new THREE.Mesh(geo.cone, i % 2 ? mat.flame2 : mat.flame);
     f.position.set((i - 2) * 1.5, 3, (i % 2 ? 1 : -0.9));
-    f.scale.set(2.1, 6, 2.1);
+    f.scale.set(2.5, 7, 2.5);
     g.add(f); flames.push(f);
   }
+  const halo = new THREE.Sprite(mat.glowF); halo.scale.set(16, 12, 1); halo.position.y = 4; g.add(halo); flames.push(halo);
   const glow = new THREE.PointLight(0xFF7A1A, 30, 40, 2); glow.position.y = 3; g.add(glow);
   g.userData = { flames, glow, smoke: [] };
   return g;
@@ -463,9 +496,38 @@ function weather(theme, dt) {
   const hz = -S.dist;
   if (theme === "canyon" || theme === "arctic") {
     const n = theme === "canyon" ? 3 : 1;
-    for (let i = 0; i < n; i++) if (Math.random() < dt * 40) spawn(W.flake, V(S.x + (Math.random() - 0.5) * 50, S.y + 12 + Math.random() * 8, hz - 60 - Math.random() * 80), V((Math.random() - 0.5) * 2, -6, 3), 1.4, 0.06);
+    for (let i = 0; i < n; i++) if (Math.random() < dt * 40) spawn(mat.flakeP, V(S.x + (Math.random() - 0.5) * 50, S.y + 12 + Math.random() * 8, hz - 60 - Math.random() * 80), V((Math.random() - 0.5) * 2, -6, 3), 1.4, 0.06);
   } else if (theme === "desert") {
-    if (Math.random() < dt * 6) spawn(W.dust, V(S.x + (Math.random() - 0.5) * 60, 1 + Math.random() * 3, hz - 20 - Math.random() * 60), V(6 + Math.random() * 4, 0.5, 0), 3, 1.6, 2);
+    if (Math.random() < dt * 6) spawn(mat.dustP, V(S.x + (Math.random() - 0.5) * 60, 1 + Math.random() * 3, hz - 20 - Math.random() * 60), V(6 + Math.random() * 4, 0.5, 0), 3, 1.6, 2);
+  }
+}
+
+/* ---------------- sky: distant cumulus clouds ---------------- */
+// Far, fog-free puffs that ride along with the camera (so they sit at the horizon, like real sky).
+const skyDecor = new THREE.Group(); scene.add(skyDecor);
+const skyCloudMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, fog: false, emissive: 0xC9D6E3, emissiveIntensity: 0.7 });
+function buildSkyDecor(rng, theme, storm) {
+  for (const c of [...skyDecor.children]) skyDecor.remove(c);
+  skyCloudMat.color.setHex(storm ? 0xC9D2DB : theme === "desert" ? 0xFFF4E4 : 0xFFFFFF);
+  skyCloudMat.emissive.setHex(storm ? 0x55606B : theme === "desert" ? 0xC9A77A : 0x9FB4C8);
+  const n = storm ? 16 : theme === "desert" ? 5 : 11;
+  for (let i = 0; i < n; i++) {
+    const g = new THREE.Group();
+    // a cumulus: a row of round puffs, biggest in the middle, flat-ish bottom
+    const puffs = 5 + Math.floor(rng() * 4), w = 18 + rng() * 26;
+    for (let k = 0; k < puffs; k++) {
+      const p = new THREE.Mesh(geo.sphere, skyCloudMat);
+      const mid = 1 - Math.abs(k / (puffs - 1) - 0.5) * 1.2;
+      const r = w * (0.22 + mid * 0.32 + rng() * 0.08);
+      p.scale.set(r * 1.2, r * 0.85, r);
+      p.position.set((k - (puffs - 1) / 2) * w * 0.3, r * 0.45, (rng() - 0.5) * 8);
+      g.add(p);
+    }
+    g.scale.y = 0.8;
+    const a = (rng() - 0.5) * 2.6;          // spread across the view ahead
+    const d = 560 + rng() * 200;
+    g.position.set(Math.sin(a) * d, 30 + rng() * 55, -Math.cos(a) * d);
+    skyDecor.add(g);
   }
 }
 
@@ -478,6 +540,7 @@ const waterMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, vertexColors:
 waterGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(waterGeo.attributes.position.count * 3), 3));
 const seaCol = new THREE.Color(0x1FB5C7), seaDeep = new THREE.Color(0x118CA6), seaCrest = new THREE.Color(0xB5F4F7), tmpCol = new THREE.Color();
 const water = new THREE.Mesh(waterGeo, waterMat);
+water.receiveShadow = true;
 scene.add(water);
 function updateWater(time, cx, cz) {
   // Snap to a grid so facets don't swim, then displace.
@@ -504,13 +567,14 @@ function spawn(material, pos, vel, life, size, grow = 0) {
   let p = parts.find((q) => !q.alive && q.mat === material);
   if (!p) {
     if (parts.length > 260) return;
-    const mesh = new THREE.Mesh(material === mat.smoke || material === mat.steam || material === mat.flare ? geo.sphere : geo.sphereLo, material);
+    const sprite = !!material.isSpriteMaterial;
+    const mesh = sprite ? new THREE.Sprite(material) : new THREE.Mesh(geo.sphereLo, material);
     scene.add(mesh);
-    p = { mesh, mat: material, alive: false };
+    p = { mesh, mat: material, alive: false, k: sprite ? 2.4 : 1 };  // sprites are sized by diameter
     parts.push(p);
   }
   p.alive = true; p.t = 0; p.life = life; p.size = size; p.grow = grow;
-  p.mesh.visible = true; p.mesh.position.copy(pos); p.vel = vel.clone(); p.mesh.scale.setScalar(size);
+  p.mesh.visible = true; p.mesh.position.copy(pos); p.vel = vel.clone(); p.mesh.scale.setScalar(size * p.k);
 }
 function updateParts(dt) {
   for (const p of parts) {
@@ -519,7 +583,7 @@ function updateParts(dt) {
     if (p.t >= p.life) { p.alive = false; p.mesh.visible = false; continue; }
     p.mesh.position.addScaledVector(p.vel, dt);
     const k = p.t / p.life;
-    p.mesh.scale.setScalar(Math.max(0.01, p.size * (1 + p.grow * k) * (1 - k * 0.6)));
+    p.mesh.scale.setScalar(Math.max(0.01, p.k * p.size * (1 + p.grow * k) * (1 - k * 0.6)));
   }
 }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
@@ -588,11 +652,12 @@ function startStage(n) {
   const rng = GE.rng(1000 + n * 77);
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
     hearts: 3, hits: 0, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
-    bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
+    hitLog: [], bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
   scene.background = skyTexture(st.sky[0], st.sky[1]);
   scene.fog = new THREE.Fog(st.fog, 90, 430);
   seaCol.setHex(st.sea); seaDeep.setHex(st.deep);
   sun.color.setHex(st.sun);
+  buildSkyDecor(GE.rng(500 + n), st.theme || "island", n === 2);
   sun.intensity = n === 2 ? 1.7 : 2.1;
   hemi.intensity = n === 2 ? 1.0 : 1.1;
 
@@ -665,6 +730,7 @@ function startStage(n) {
   const bridge = new THREE.Mesh(geo.box, mat.red); bridge.scale.set(10, 7, 8); bridge.position.set(0, 6.5, -10); ship.add(bridge);
   ship.position.set(0, 0, -L - 30); world.add(ship);
   S.totals = { f: S.fires.length, r: S.rafts.length, g: S.rings.length };
+  world.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
   snapCamera();
   showBanner(t("stage", { n: n + 1 }) + " · " + t(st.key), t("go"));
   setScreen(null);
@@ -718,12 +784,16 @@ function botInput() {
   let goal = cands[0];
   if (S.tank < 2 && (!goal || goal.k !== "r")) goal = { x: S.x, y: 3, z: -S.dist - 50, k: "w" };
   if (goal) { tx = goal.x; ty = goal.y; }
-  for (const h of S.stacks.concat(S.birds, S.clouds)) {
-    if (h.z < -S.dist && h.z > -S.dist - 60) {
-      if (h.hit) continue;
-      const hr = (h.r || 5) + HITBOX.half + 1.4;
-      if (Math.abs(tx - h.x) < hr) tx = h.x + (tx >= h.x ? hr : -hr);
-      if (h.y != null && Math.abs(ty - h.y) < 5) ty = h.y > 10 ? 4 : h.y + 7;
+  // Dodge hazards nearest-first, always to a side that stays inside the flight box.
+  const reach = Math.max(60, S.speed * 1.6);
+  const hazards = S.stacks.concat(S.birds, S.clouds).filter((h) => !h.hit && h.z < -S.dist + 3 && h.z > -S.dist - reach).sort((a, b) => b.z - a.z);
+  for (const h of hazards) {
+    const hr = (h.r || 5) + HITBOX.half + 1.4;
+    if (h.y != null && Math.abs(ty - h.y) >= 5) continue;       // passing over/under it already
+    if (Math.abs(tx - h.x) < hr) {
+      const sides = [h.x - hr, h.x + hr].filter((v) => Math.abs(v) <= BOX.x - 0.5);
+      tx = sides.length ? sides.sort((p, q) => Math.abs(p - S.x) - Math.abs(q - S.x))[0] : (h.x > 0 ? -BOX.x : BOX.x);
+      if (h.y != null) ty = h.y > 10 ? 4 : h.y + 7;
     }
   }
   let drop = false;
@@ -802,7 +872,7 @@ function step(dt) {
   S.refilling = S.y < 4.2 && !overIsland && S.tank < TANK_MAX;
   if (S.refilling) {
     S.tank = Math.min(TANK_MAX, S.tank + dt * 3.2);
-    if (Math.random() < 0.7) spawn(mat.water, V(S.x + (Math.random() - 0.5) * 3, 0.4, hz + 1.5), V((Math.random() - 0.5) * 6, 5 + Math.random() * 4, 10), 0.6, 0.35);
+    if (Math.random() < 0.7) spawn(mat.drop, V(S.x + (Math.random() - 0.5) * 3, 0.4, hz + 1.5), V((Math.random() - 0.5) * 6, 5 + Math.random() * 4, 10), 0.6, 0.35);
   }
 
   // Rotor downwash: spray and ripples on the water when flying low
@@ -834,7 +904,7 @@ function step(dt) {
     if (b.m.position.y < 2.5) {
       b.dead = true;
       const p = b.m.position;
-      for (let i = 0; i < 18; i++) spawn(mat.water, p.clone(), V((Math.random() - 0.5) * 12, 6 + Math.random() * 9, (Math.random() - 0.5) * 12), 0.7, 0.6);
+      for (let i = 0; i < 18; i++) spawn(mat.drop, p.clone(), V((Math.random() - 0.5) * 12, 6 + Math.random() * 9, (Math.random() - 0.5) * 12), 0.7, 0.6);
       burst(p.x, 2.8, p.z, 0x8FE3FF, true);
       for (const f of S.fires) {
         if (!f.out && Math.hypot(f.x - p.x, f.z - p.z) < 6.5) {
@@ -875,10 +945,11 @@ function step(dt) {
   // Every obstacle you touch costs exactly one heart. The only grace is a
   // blink-length window so one crash into overlapping objects counts once.
   const hy = S.y + S.lift;
-  const hit = (h) => {
+  const hit = (h, kind) => {
     if (h.hit) return;
     h.hit = true;
     if (S.inv > 0) return;
+    S.hitLog.push({ kind, dist: Math.round(S.dist), dx: +(h.x - S.x).toFixed(1), y: +hy.toFixed(1) });
     S.hearts--; S.hits = (S.hits || 0) + 1; S.inv = HIT_GRACE; S.shake = 1; S.flash = 1; S.slow = 0.3;
     for (let i = 0; i < 28; i++) spawn(mat.spark, V(S.x, S.y, hz), V((Math.random() - 0.5) * 18, (Math.random() - 0.2) * 14, (Math.random() - 0.5) * 10), 0.8, 0.45);
     for (let i = 0; i < 6; i++) spawn(mat.smoke, V(S.x, S.y, hz + 1), V((Math.random() - 0.5) * 4, 3, 6), 1.2, 0.9, 1.5);
@@ -893,34 +964,34 @@ function step(dt) {
         // The stack shatters so the camera never ends up inside rock.
         s.obj.visible = false;
         for (let i = 0; i < 26; i++) spawn(mat.rock, V(s.x + (Math.random() - 0.5) * s.r * 2, 2 + Math.random() * Math.min(s.h, 18), s.z), V((Math.random() - 0.5) * 18, 4 + Math.random() * 10, 6 + Math.random() * 10), 1.1, 0.7 + Math.random() * 0.6);
-        for (let i = 0; i < 14; i++) spawn(mat.water, V(s.x, 0.5, s.z), V((Math.random() - 0.5) * 14, 8 + Math.random() * 8, (Math.random() - 0.5) * 8), 0.9, 0.7);
+        for (let i = 0; i < 14; i++) spawn(mat.drop, V(s.x, 0.5, s.z), V((Math.random() - 0.5) * 14, 8 + Math.random() * 8, (Math.random() - 0.5) * 8), 0.9, 0.7);
         S.vx = (S.x >= s.x ? 1 : -1) * 22; // knocked sideways
       }
-      hit(s);
+      hit(s, "stack");
     }
   }
   for (const b of S.birds) if (!b.hit && Math.abs(b.z - hz) < 4 && Math.abs(b.x - S.x) < HITBOX.half + 1.5 && Math.abs(b.y - hy) < 3) {
-    hit(b);
+    hit(b, "bird");
     // the flock scatters so the hit reads
     b.obj.visible = false;
     for (let i = 0; i < 14; i++) spawn(mat.bird, V(b.x, b.y, b.z), V((Math.random() - 0.5) * 16, Math.random() * 10, (Math.random() - 0.5) * 10), 0.9, 0.3);
   }
-  for (const c of S.clouds) if (Math.abs(c.z - hz) < 5 && Math.hypot(c.x - S.x, c.y - hy) < 5) hit(c);
+  for (const c of S.clouds) if (Math.abs(c.z - hz) < 5 && Math.hypot(c.x - S.x, c.y - hy) < 5) hit(c, "cloud");
 
   // Fires: flicker + smoke
   for (const f of S.fires) {
     if (f.out) continue;
-    f.obj.userData.flames.forEach((fl, i) => { fl.scale.y = 5.6 + Math.sin(S.time * 12 + i * 1.7) * 1.6; fl.position.y = fl.scale.y / 2 + 0.2; });
+    f.obj.userData.flames.forEach((fl, i) => { if (fl.isSprite) { fl.scale.x = 15 + Math.sin(S.time * 9) * 1.5; return; } fl.scale.y = 6.6 + Math.sin(S.time * 12 + i * 1.7) * 1.8; fl.position.y = fl.scale.y / 2 + 0.2; });
     f.obj.userData.glow.intensity = 26 + Math.sin(S.time * 17) * 8;
     f.smokeT -= dt;
     if (f.smokeT <= 0 && Math.abs(f.z - hz) < 380) {
       f.smokeT = 0.1;
-      spawn(mat.smoke, V(f.x + (Math.random() - 0.5) * 2, 9, f.z + (Math.random() - 0.5) * 2), V(1.6 + Math.random(), 11 + Math.random() * 4, 0.5), 3.4, 1.4, 2.2);
+      spawn(mat.smoke, V(f.x + (Math.random() - 0.5) * 2, 9, f.z + (Math.random() - 0.5) * 2), V(1.6 + Math.random(), 11 + Math.random() * 4, 0.5), 3.4, 1.6, 2.6);
     }
   }
   for (const r of S.rafts) if (!r.saved) {
     r.obj.userData.flag.rotation.y = Math.sin(S.time * 6 + r.x) * 0.3;
-    if (Math.abs(r.z + S.dist) < 380 && Math.random() < dt * 10) spawn(mat.flare, V(r.x + 3.4, 9, r.z), V(0.4, 10, 0), 1.8, 0.6, 0.8);
+    if (Math.abs(r.z + S.dist) < 380 && Math.random() < dt * 5) spawn(mat.flare, V(r.x + 3.4, 9, r.z), V(0.4, 10, 0), 1.8, 0.6, 0.8);
     r.obj.userData.arm.rotation.z = Math.sin(S.time * 8) * 0.8; r.obj.userData.beacon.visible = Math.sin(S.time * 10) > 0; r.obj.position.y = Math.sin(S.time * 2 + r.x) * 0.25; }
   for (const g of S.rings) g.obj.rotation.z += dt * 1.5;
   for (const b of S.birds) { b.obj.userData.wings.forEach(([l, r], i) => { const a = Math.sin(S.time * 14 + i) * 0.7; l.rotation.z = a; r.rotation.z = -a; }); b.obj.position.x = b.x + Math.sin(S.time + b.phase) * 2; b.x = b.obj.position.x; }
@@ -938,7 +1009,7 @@ function step(dt) {
 
 /* ---------------- chase camera ---------------- */
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
-const CAM = { back: 8.2, up: 6.4, side: 2.4, lookAhead: 16, lookDown: 0.8 };
+const CAM = { back: 9.2, up: 7, side: 2.4, lookAhead: 16, lookDown: 0.8 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
 function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + S.lift * 0.55 + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
@@ -956,14 +1027,17 @@ function render(realDt) {
   heli.rotation.set(S.pitch + S.loopPitch + vib * 0.4, S.yaw, S.bank, "YXZ");
   const ud = heli.userData;
   ud.rotor.rotation.y += realDt * 44;
+  heliMat.blade.opacity = S.mode === "hangar" ? 0.45 : 0.14; heliMat.tip.opacity = S.mode === "hangar" ? 0.7 : 0.3;
   ud.rotor.rotation.x = -0.06 - (S.speed - 30) * 0.002;   // rotor disc tips forward with speed
   ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
   ud.tail.rotation.x += realDt * 62;
   heli.visible = true;
+  skyDecor.position.set(camera.position.x, 0, camera.position.z);
+  sun.position.copy(heli.position).add(SUN_OFF); sun.target.position.copy(heli.position);
   shadow.position.set(S.x, 0.3, hz);
   shadow.visible = S.lift < 6;
   shadow.scale.set(2.4, 3.4, 1);
-  mat.shadow.opacity = Math.max(0, 0.26 - S.y * 0.016);
+  mat.shadow.opacity = Math.max(0, 0.12 - S.y * 0.008); // soft contact darkening under the real shadow
   const land = predictLanding();
   reticle.visible = S.mode === "play" && S.tank >= 1;
   reticle.position.set(land.x, 3, land.z);
@@ -1152,7 +1226,7 @@ function resize() {
   portraitView = portrait;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
-  Object.assign(CAM, portrait ? { back: 10, up: 7, side: 2.6, lookDown: 1.6 } : { back: 8.2, up: 6.4, side: 2.4, lookDown: 0.8 });
+  Object.assign(CAM, portrait ? { back: 10, up: 7, side: 2.6, lookDown: 1.6 } : { back: 9.2, up: 7, side: 2.4, lookDown: 0.8 });
   camera.updateProjectionMatrix();
 }
 addEventListener("resize", resize);
@@ -1183,6 +1257,8 @@ window.__heli = {
   get motion() { return { speed: S.speed, loopT: S.loopT, lift: S.lift, loopPitch: S.loopPitch, loops: S.loops, yaw: S.yaw, bank: S.bank, inv: S.inv }; },
   manual(on) { manual = !!on; },
   get look() { return { ...look }; },
+  get hitLog() { return S.hitLog.slice(); },
+  hazardsNear(z, w = 40) { return S.stacks.concat(S.birds, S.clouds).filter((h) => Math.abs(h.z - z) < w).map((h) => ({ x: +h.x.toFixed(1), z: Math.round(h.z), r: +(h.r || 0).toFixed(1), y: h.y, h: h.h && +h.h.toFixed(0) })); },
   // Deterministic stepping for tests: n frames of dt, rendering the last one.
   step(seconds, dt = 1 / 60) { const n = Math.round(seconds / dt); for (let i = 0; i < n; i++) step(dt); render(dt); },
   frame(dt = 1 / 60) { step(dt); render(dt); },
