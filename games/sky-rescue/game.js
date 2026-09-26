@@ -192,7 +192,7 @@ const mat = {
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
   spray: new THREE.MeshBasicMaterial({ color: 0xE9FCFF, transparent: true, opacity: 0.7, depthWrite: false }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
-  streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.16, depthWrite: false }),
+  streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.1, depthWrite: false, fog: false }),
   mountain: M(0x7E9AA8, { snow: 46, detail: 0.5 })
 };
 /* organic shapes: noise-displaced, smooth-shaded geometry (a few variants of each, reused by scale) */
@@ -870,7 +870,7 @@ const shadow = new THREE.Mesh(geo.disc, mat.shadow); shadow.rotation.x = -Math.P
 const reticle = new THREE.Mesh(geo.reticle, mat.reticle); reticle.rotation.x = -Math.PI / 2; scene.add(reticle);
 const world = new THREE.Group(); scene.add(world);
 const streaks = [];
-for (let i = 0; i < 26; i++) { const s = new THREE.Mesh(geo.box, mat.streak); s.scale.set(0.05, 0.05, 6); scene.add(s); streaks.push(s); }
+for (let i = 0; i < 14; i++) { const s = new THREE.Mesh(geo.box, mat.streak); s.scale.set(0.035, 0.035, 3); scene.add(s); streaks.push(s); }
 
 const save = GE.load(SAVE_KEY, { unlocked: 1, stars: [0, 0, 0] });
 const look = Object.assign({}, DEFAULT_LOOK, save.heli || {});
@@ -1327,7 +1327,8 @@ function render(realDt) {
     const s = streaks[i];
     const z = ((i * 37.7 + S.dist * 2.6) % 90);
     s.position.set(S.x + Math.sin(i * 12.9) * 14, S.y + Math.cos(i * 7.3) * 8, hz - 70 + z);
-    s.scale.z = 3 + S.speed * 0.12;
+    s.scale.z = Math.max(0.01, (S.speed - 32) * 0.1);
+    s.position.y = Math.max(s.position.y, 3.5);
   }
   updateWater(S.time, S.x, hz);
   const fl = S.flash;

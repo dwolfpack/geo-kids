@@ -63,6 +63,12 @@ All games share these properties:
   - **Visuals:** the helicopter casts a real-time shadow, the sky has cumulus clouds, and particles are soft sprites (smoke plumes, spray, snow, flares). Fires glow, the rotor blades are fainter in flight, speed lines are subtler, and the camera sits a little further back.
   - A blind A/B critic preferred the new build in 4/4 pairs.
   - The service worker cache is bumped to v3.
+- **Realism pass:**
+  - **Water:** PBR, reflecting the sky, with sun glitter and multi-scale ripples.
+  - **Sky:** a shader dome with an atmosphere, a sun and drifting clouds, baked into an environment map.
+  - **Objects:** organic smooth shapes with baked-noise surface detail, rock strata, shore blending and snow lines. The helicopter has a lathe-turned fuselage with wrap-around livery, and fires are made of flame sprites.
+  - **Critics:** blind A/B critics chose the new water and sky in 6/6 pairs and the new objects in 7/7, scoring realism 6.5 against 4.
+  - **Performance:** noise is baked into textures, materials are single-layer PBR, shaders compile when a stage loads, and dynamic resolution guards phone frame rate.
 - Snapshots of rounds r1, r8 and r9 (JPEG) are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game
