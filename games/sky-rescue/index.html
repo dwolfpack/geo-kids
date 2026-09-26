@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1FA3B5">
+<meta name="description" content="Sky Rescue — fly a rescue helicopter, put out wildfires with water bombs and save people at sea.">
+<title>מסוק ההצלה 🚁</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="engine/engine.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage-wrap"><canvas id="c" aria-label="Sky Rescue game"></canvas></div>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="hud-top">
+    <div class="pill" id="hud-goals"></div>
+    <div class="pill" id="hud-score"></div>
+  </div>
+  <div class="hud-row2">
+    <div class="hearts" id="hud-hearts" aria-label="lives"></div>
+    <div class="tank" id="hud-tank" aria-label="water tank"><div class="tank-fill" id="hud-tank-fill"></div><span id="hud-tank-label">💧</span></div>
+  </div>
+  <div class="progress"><div class="progress-fill" id="hud-progress"></div><span class="progress-heli">🚁</span></div>
+  <div class="hint" id="hud-hint"></div>
+  <div class="banner" id="banner" hidden></div>
+  <div class="stick" id="stick" aria-hidden="true"><div class="stick-knob" id="stick-knob"></div></div>
+  <button class="drop" id="btn-drop" type="button" aria-label="Water bomb">💧</button>
+  <button class="pause ge-icon-btn" id="btn-pause" type="button" aria-label="Pause">⏸</button>
+</div>
+
+<!-- Screens -->
+<div class="screen" id="scr-title">
+  <div class="card">
+    <div class="logo">🚁</div>
+    <h1 id="t-title"></h1>
+    <p id="t-sub"></p>
+    <div class="stages" id="t-stages"></div>
+    <div class="row">
+      <a class="ge-icon-btn" id="btn-home" href="../" aria-label="Home">🏠</a>
+      <button class="ge-icon-btn" id="btn-sound" type="button" aria-label="Sound">🔊</button>
+      <button class="ge-icon-btn" id="btn-lang" type="button">EN</button>
+    </div>
+    <p class="controls" id="t-controls"></p>
+  </div>
+</div>
+<div class="screen" id="scr-end" hidden><div class="card" id="end-card"></div></div>
+<div class="screen" id="scr-pause" hidden><div class="card" id="pause-card"></div></div>
+
+<script src="../../geo-kids/js/countries-data.js"></script>
+<script src="engine/engine.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>
