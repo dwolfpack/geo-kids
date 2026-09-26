@@ -51,7 +51,7 @@ async function stitch(page, frames, labels, file) {
   await page.evaluate(() => { const h = window.__heli; h.manual(true); });
 
   // Stills: one per stage, mid-flight with a fire and a ring ahead (bot flying).
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 7; n++) {
     await page.evaluate((n) => { const h = window.__heli; h.start(n); h.bot(true); h.step(7.5); }, n);
     await page.waitForTimeout(80);
     fs.writeFileSync(path.join(OUT, `still-16x9-s${n + 1}.png`), await page.screenshot({ type: "png" }));
@@ -67,6 +67,15 @@ async function stitch(page, frames, labels, file) {
   }
   await page.evaluate(() => window.__heli.setInput(0, 0, false));
   await stitch(page, bank, bankL, "strip-bank.png");
+
+  // Loop strip: a full loop-the-loop.
+  await page.evaluate(() => { const h = window.__heli; h.start(0); h.bot(false); h.setInput(0, 0, false); h.step(2); h.loop(); h.step(1 / 60); });
+  const lp = [], lpL = [];
+  for (const [dt, l] of [[0, "loop start"], [0.25, "+0.25s"], [0.35, "+0.6s (top)"], [0.3, "+0.9s"], [0.3, "+1.2s"], [0.4, "+1.6s done"]]) {
+    const m = await page.evaluate((dt) => { const h = window.__heli; if (dt) h.step(dt); return h.motion; }, dt);
+    lp.push(await png(page)); lpL.push(`${l}  pitch ${Math.round(m.loopPitch * 57.3)}° lift ${m.lift.toFixed(1)}`);
+  }
+  await stitch(page, lp, lpL, "strip-loop.png");
 
   // Hit strip
   // Fly straight at the first sea stack of stage 2 and film the real collision.
@@ -88,7 +97,7 @@ async function stitch(page, frames, labels, file) {
   await stitch(page, hit, hitL, "strip-hit.png");
 
   // Full playthroughs: the autopilot flies every stage start to finish.
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 7; n++) {
     await page.evaluate((n) => { const h = window.__heli; h.start(n); h.bot(true); }, n);
     let res, guard = 0;
     do { res = await page.evaluate(() => { const h = window.__heli; h.step(0.5); return h.state; }); } while (res.mode === "play" && guard++ < 400);

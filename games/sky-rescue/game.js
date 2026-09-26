@@ -25,13 +25,17 @@ GE.setDict({
     goals: "🔥 {f}/{ft}  🙋 {r}/{rt}", score: "⭐ {s}",
     stage: "שלב {n}", locked: "🔒 סיימו את השלב הקודם",
     s1: "איי יוון", s1d: "ים שקט, שריפות ראשונות", s2: "הפיורדים של נורווגיה", s2d: "צוקים גבוהים — להתחמק!", s3: "סופה בקריביים", s3d: "עננים, ברקים ורוח",
+    s4: "קניון בהימלאיה", s4d: "נהר קרחוני, צוקים מושלגים ושלג", s5: "הנילוס במצרים", s5d: "דיונות, פירמידות ושיירות גמלים",
+    s6: "האמזונס בברזיל", s6d: "ג'ונגל סבוך, מקדשים עתיקים וערפל", s7: "הקוטב בקנדה", s7d: "גושי קרח, קרחונים ואנשים על הקרח",
     go: "יוצאים! 🚁", refill: "ממלאים מים! 💦", empty: "המיכל ריק — טוסו נמוך מעל הים 🌊",
     out: "כל הכבוד! 🔥➜💨", saved: "הצלתם! 🙋", ring: "טבעת! ✨", ouch: "אאוץ'! 💥",
     clear: "השלב הושלם! 🎉", fires: "שריפות", people: "הצלות", rings: "טבעות",
     next: "לשלב הבא ➜", again: "לשחק שוב 🔁", menu: "לתפריט 🏠",
     tryTitle: "אופס! המסוק צריך תיקון 🔧", tryBody: "לא נורא — כל טייס מתאמן. ננסה שוב?", tryBtn: "לנסות שוב 🚁",
     winTitle: "טייס הצלה אגדי! 👑", winBody: "סיימתם את כל השלבים!",
-    paused: "הפסקה ⏸", resume: "ממשיכים ▶", factAbout: "💡 על {c}:"
+    paused: "הפסקה ⏸", resume: "ממשיכים ▶", factAbout: "💡 על {c}:",
+    faster: "מהר יותר! ⚡", loop: "לולאה! 🔄", loops: "לולאות", speed: "💨 {v} קמ״ש",
+    controls2: "L או Shift = לולאה 🔄"
   },
   en: {
     title: "Sky Rescue", sub: "Fly over the sea, put out wildfires and rescue people!",
@@ -40,13 +44,17 @@ GE.setDict({
     goals: "🔥 {f}/{ft}  🙋 {r}/{rt}", score: "⭐ {s}",
     stage: "Stage {n}", locked: "🔒 Finish the previous stage",
     s1: "Greek Islands", s1d: "Calm sea, first fires", s2: "Norway's Fjords", s2d: "Tall cliffs — dodge!", s3: "Caribbean Storm", s3d: "Clouds, lightning and wind",
+    s4: "Himalaya Canyon", s4d: "Glacier river, snowy cliffs and snowfall", s5: "Egypt's Nile", s5d: "Dunes, pyramids and camel caravans",
+    s6: "Brazil's Amazon", s6d: "Thick jungle, ancient temples and mist", s7: "Canada's Arctic", s7d: "Ice floes, icebergs and people on the ice",
     go: "Let's fly! 🚁", refill: "Refilling! 💦", empty: "Tank empty — fly low over the sea 🌊",
     out: "Fire's out! 🔥➜💨", saved: "Rescued! 🙋", ring: "Ring! ✨", ouch: "Ouch! 💥",
     clear: "Stage clear! 🎉", fires: "fires", people: "rescues", rings: "rings",
     next: "Next stage ➜", again: "Play again 🔁", menu: "Menu 🏠",
     tryTitle: "Oops! The chopper needs a fix 🔧", tryBody: "No worries — every pilot practises. Try again?", tryBtn: "Try again 🚁",
     winTitle: "Legendary rescue pilot! 👑", winBody: "You finished every stage!",
-    paused: "Paused ⏸", resume: "Resume ▶", factAbout: "💡 About {c}:"
+    paused: "Paused ⏸", resume: "Resume ▶", factAbout: "💡 About {c}:",
+    faster: "Faster! ⚡", loop: "Loop! 🔄", loops: "loops", speed: "💨 {v} km/h",
+    controls2: "L or Shift = loop-the-loop 🔄"
   }
 });
 const t = GE.t;
@@ -58,7 +66,16 @@ const STAGES = [
   { key: "s2", code: "no", icon: "🏔️", length: 2600, speed: 34, sea: 0x21A9BF, deep: 0x13809C, sky: ["#7FBDE3", "#FCEFDC"], fog: 0xE6E8E2, sun: 0xFFE6C0,
     fires: 7, rafts: 5, rings: 10, stacks: 14, birds: 4, clouds: 0, islandTint: 0x5FA85E },
   { key: "s3", code: "jm", icon: "⛈️", length: 2800, speed: 37, sea: 0x1AA2B8, deep: 0x0A4F66, sky: ["#7D9FBC", "#DCE6ED"], fog: 0xB4C4D0, sun: 0xFFF3E0,
-    fires: 8, rafts: 6, rings: 10, stacks: 10, birds: 3, clouds: 8, islandTint: 0x5E9C57 }
+    fires: 8, rafts: 6, rings: 10, stacks: 10, birds: 3, clouds: 8, islandTint: 0x5E9C57 },
+  // New worlds (from the user's concept art): each keeps water to refill from.
+  { key: "s4", theme: "canyon", code: "np", icon: "🏔️", length: 2800, speed: 38, sea: 0x86CADB, deep: 0x4A8FA6, sky: ["#9DBBD3", "#EEF3F7"], fog: 0xDDE6EE, sun: 0xFFFFFF,
+    fires: 6, rafts: 5, rings: 10, stacks: 12, birds: 2, clouds: 0, islandTint: 0x44704F },
+  { key: "s5", theme: "desert", code: "eg", icon: "🐪", length: 2900, speed: 39, sea: 0x25A3B6, deep: 0x157489, sky: ["#98C4DC", "#F3D6A2"], fog: 0xF0D2A0, sun: 0xFFDDA6,
+    fires: 7, rafts: 5, rings: 10, stacks: 9, birds: 3, clouds: 5, islandTint: 0x93A94E },
+  { key: "s6", theme: "jungle", code: "br", icon: "🌿", length: 3000, speed: 40, sea: 0x4FB39A, deep: 0x2E7A66, sky: ["#8FC0B6", "#E3EEE2"], fog: 0xC7DBC9, sun: 0xFFF0D0,
+    fires: 8, rafts: 6, rings: 10, stacks: 12, birds: 4, clouds: 0, islandTint: 0x2E7A3A },
+  { key: "s7", theme: "arctic", code: "ca", icon: "🧊", length: 3000, speed: 41, sea: 0x2C6E9C, deep: 0x163C5E, sky: ["#86A9C9", "#E8EFF6"], fog: 0xD5E0EA, sun: 0xF3F8FF,
+    fires: 4, rafts: 7, rings: 10, stacks: 12, birds: 2, clouds: 4, islandTint: 0xE6F1F7 }
 ];
 
 const BOX = { x: 16, yMin: 2.4, yMax: 20 };
@@ -110,6 +127,7 @@ const mat = {
   shadow: new THREE.MeshBasicMaterial({ color: 0x06384A, transparent: true, opacity: 0.22, depthWrite: false }),
   reticle: new THREE.MeshBasicMaterial({ color: 0xBDF3FF, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
+  spray: new THREE.MeshBasicMaterial({ color: 0xE9FCFF, transparent: true, opacity: 0.7, depthWrite: false }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
   mountain: M(0x86A7B4)
@@ -227,13 +245,14 @@ function buildRaft() {
   g.scale.setScalar(1.9);
   return g;
 }
-function buildBirds() {
+function buildBirds(theme) {
+  const bm = theme === "jungle" ? M(0x2ECC71) : theme === "desert" ? M(0x5D4037) : mat.bird;
   const g = new THREE.Group();
   const wings = [];
   for (let i = 0; i < 4; i++) {
     const b = new THREE.Group();
-    const l = new THREE.Mesh(geo.box, mat.bird); l.scale.set(1.3, 0.08, 0.45); l.position.x = -0.6;
-    const r = new THREE.Mesh(geo.box, mat.bird); r.scale.set(1.3, 0.08, 0.45); r.position.x = 0.6;
+    const l = new THREE.Mesh(geo.box, bm); l.scale.set(1.3, 0.08, 0.45); l.position.x = -0.6;
+    const r = new THREE.Mesh(geo.box, bm); r.scale.set(1.3, 0.08, 0.45); r.position.x = 0.6;
     const lp = new THREE.Group(); lp.add(l); const rp = new THREE.Group(); rp.add(r);
     b.add(lp); b.add(rp);
     b.position.set((i % 2 ? 1 : -1) * (1 + i), -i * 0.5, i * 1.6);
@@ -242,10 +261,10 @@ function buildBirds() {
   g.userData = { wings, r: 4.5 };
   return g;
 }
-function buildCloud(rng) {
+function buildCloud(rng, cmat) {
   const g = new THREE.Group();
   for (let i = 0; i < 5; i++) {
-    const p = new THREE.Mesh(geo.sphereLo, mat.cloud);
+    const p = new THREE.Mesh(geo.sphereLo, cmat || mat.cloud);
     const s = 3 + rng() * 3;
     p.scale.set(s * 1.3, s * 0.8, s);
     p.position.set((rng() - 0.5) * 8, (rng() - 0.5) * 2, (rng() - 0.5) * 6);
@@ -253,6 +272,154 @@ function buildCloud(rng) {
   }
   g.userData = { r: 6.5 };
   return g;
+}
+
+/* ---------------- worlds (stages 4–7) ---------------- */
+const W = {
+  snow: M(0xF4F8FB), ice: M(0xCFE8F3, { roughness: 0.35 }), iceDeep: M(0x9FCBE0, { roughness: 0.3 }),
+  granite: M(0x98A3AE), graniteDark: M(0x7A8591), pine: M(0x2F5D40), sandstone: M(0xD9A45E), sandDark: M(0xC98F48),
+  dune: M(0xEDC98A), stone: M(0xB8A98A), moss: M(0x6E8B55), jungle1: M(0x2E7A3A), jungle2: M(0x3F9447), jungle3: M(0x25612F),
+  bark: M(0x6B4A2E), camel: M(0xC9975B), cloth: M(0x2E6FD0), sail: M(0xFBF6E9), parka: M(0xE53935), barrel: M(0xC62828),
+  canoe: M(0x8D5A34), helmet: M(0xFF8F00), dust: new THREE.MeshStandardMaterial({ color: 0xE3C08A, transparent: true, opacity: 0.55, depthWrite: false }),
+  flake: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }), mist: new THREE.MeshBasicMaterial({ color: 0xF2F7F2, transparent: true, opacity: 0.22, depthWrite: false })
+};
+const mesh = (g, m, sx, sy, sz, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); return o; };
+function pineTree(h) {
+  const g = new THREE.Group();
+  g.add(mesh(geo.cyl, W.bark, 0.25, h * 0.3, 0.25, 0, h * 0.15, 0));
+  for (let i = 0; i < 3; i++) g.add(mesh(geo.cone, W.pine, h * 0.28 - i * 0.4, h * 0.4, h * 0.28 - i * 0.4, 0, h * (0.35 + i * 0.2), 0));
+  g.add(mesh(geo.cone, W.snow, h * 0.12, h * 0.14, h * 0.12, 0, h * 0.9, 0));
+  return g;
+}
+function jungleTree(rng, h) {
+  const g = new THREE.Group();
+  g.add(mesh(geo.cyl, W.bark, 0.5, h, 0.5, 0, h / 2, 0));
+  const mats = [W.jungle1, W.jungle2, W.jungle3];
+  for (let i = 0; i < 3; i++) g.add(mesh(geo.sphereLo, mats[i % 3], 3 + rng() * 2.5, 2 + rng() * 1.5, 3 + rng() * 2.5, (rng() - 0.5) * 3, h + (rng() - 0.3) * 2, (rng() - 0.5) * 3));
+  return g;
+}
+function camel() {
+  const g = new THREE.Group();
+  g.add(mesh(geo.box, W.camel, 0.7, 0.6, 1.5, 0, 1.5, 0));
+  g.add(mesh(geo.sphereLo, W.camel, 0.4, 0.45, 0.45, 0, 2, 0));
+  const neck = mesh(geo.cyl, W.camel, 0.15, 0.9, 0.15, 0, 2, -0.9); neck.rotation.x = -0.6; g.add(neck);
+  g.add(mesh(geo.box, W.camel, 0.25, 0.25, 0.5, 0, 2.4, -1.25));
+  for (const [x, z] of [[-0.25, -0.55], [0.25, -0.55], [-0.25, 0.55], [0.25, 0.55]]) g.add(mesh(geo.cyl, W.camel, 0.09, 1.2, 0.09, x, 0.6, z));
+  return g;
+}
+function person(shirtMat) {
+  const g = new THREE.Group();
+  g.add(mesh(geo.cyl, shirtMat, 0.45, 1.1, 0.45, 0, 1.2, 0));
+  g.add(mesh(geo.sphere, mat.person, 0.42, 0.42, 0.42, 0, 2.05, 0));
+  return g;
+}
+// Scenery along both sides of the flight corridor.
+function buildSides(theme, rng, L) {
+  // Solid ground either side so the water reads as a river, not the open sea.
+  const ground = { desert: W.dune, canyon: W.snow, jungle: W.jungle3 }[theme];
+  if (ground) for (const side of [-1, 1]) world.add(mesh(geo.box, ground, 260, 1, L + 700, side * (23 + 130), 0.45, -(L + 700) / 2 + 150));
+  for (let z = -40; z > -L - 260; z -= theme === "canyon" ? 26 : 40) {
+    for (const side of [-1, 1]) {
+      const x0 = side * (30 + rng() * 8);
+      if (theme === "canyon") {
+        const h = 45 + rng() * 45, w = 18 + rng() * 10;
+        const cliff = mesh(new THREE.CylinderGeometry(w * 0.55, w, h, 6), rng() < 0.5 ? W.granite : W.graniteDark, 1, 1, 1, x0 + side * w * 0.6, h / 2 - 2, z);
+        cliff.rotation.y = rng() * 3; world.add(cliff);
+        world.add(mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.57, h * 0.42, 6), W.snow, 1, 1, 1, cliff.position.x, h - 2 + h * 0.19, z));
+        for (let i = 0; i < 3; i++) if (rng() < 0.7) { const t = pineTree(5 + rng() * 3); t.position.set(x0 - side * (1 + rng() * 5), 0.9, z + rng() * 22); world.add(t); }
+      } else if (theme === "desert") {
+        world.add(mesh(geo.box, W.dune, 26, 2.4, 44, x0 + side * 12, 0.6, z));
+        if (rng() < 0.7) world.add(mesh(geo.sphereLo, rng() < 0.5 ? W.dune : W.sandDark, 14 + rng() * 10, 5 + rng() * 5, 16, x0 + side * (24 + rng() * 20), 1, z + rng() * 20));
+        if (rng() < 0.35) { for (let i = 0; i < 3; i++) { const p = new THREE.Group(); p.add(mesh(geo.cyl, mat.trunk, 0.25, 5, 0.25, 0, 2.5, 0)); for (let k = 0; k < 5; k++) { const lf = mesh(geo.cone, mat.leaf, 0.5, 2.6, 0.2, 0, 5, 0); lf.rotation.set(1.2, k * 1.26, 0, "YXZ"); p.add(lf); } p.position.set(x0 + side * (3 + i * 2.5), 1.8, z + i * 3); world.add(p); } }
+        if (rng() < 0.28) {
+          const c = new THREE.Group();
+          for (let i = 0; i < 5; i++) { const cm = camel(); cm.position.set(0, 0, i * 3.4); c.add(cm); }
+          const guide = person(W.cloth); guide.position.set(0.9, 0, -2.4); c.add(guide);
+          c.position.set(x0 - side * 2, 1.8, z); c.scale.setScalar(1.5); world.add(c); S.anim.push({ obj: c, kind: "caravan", z0: z });
+        }
+      } else if (theme === "jungle") {
+        for (let i = 0; i < 3; i++) { const t = jungleTree(rng, 9 + rng() * 12); t.position.set(x0 + side * (i * 7 + rng() * 4), 0, z + rng() * 30); world.add(t); }
+        world.add(mesh(geo.box, W.jungle3, 30, 3, 42, x0 + side * 18, 0.5, z));
+        if (rng() < 0.08 || (z === -120 && side === 1)) {
+          const r = new THREE.Group();
+          for (let i = 0; i < 5; i++) r.add(mesh(geo.box, i % 2 ? W.stone : W.moss, 16 - i * 3, 2.6, 16 - i * 3, 0, 1.3 + i * 2.6, 0));
+          r.add(mesh(geo.box, W.stone, 2.6, 2.4, 2.6, 0, 14.4, 0));
+          r.position.set(x0 + side * 6, 0, z); r.rotation.y = rng(); world.add(r);
+        }
+      } else if (theme === "arctic") {
+        if (rng() < 0.6) { const b = mesh(geo.sphereLo, rng() < 0.5 ? W.snow : W.ice, 10 + rng() * 12, 12 + rng() * 18, 10 + rng() * 10, x0 + side * (20 + rng() * 30), 3, z); b.rotation.y = rng() * 3; world.add(b); }
+      }
+    }
+    if (theme === "arctic") {
+      // flat ice floes drifting across the whole sea (decoration)
+      for (let i = 0; i < 2; i++) { const f = mesh(new THREE.CylinderGeometry(1, 1, 1, 6), rng() < 0.5 ? W.snow : W.ice, 3 + rng() * 6, 0.6, 3 + rng() * 5, (rng() < 0.5 ? -1 : 1) * (18 + rng() * 45), 0.25, z + rng() * 30); f.rotation.y = rng() * 3; world.add(f); }
+    }
+    if (theme === "jungle" && rng() < 0.4) { const m = mesh(geo.sphere, W.mist, 16, 3, 10, (rng() * 2 - 1) * 14, 2 + rng() * 2, z); world.add(m); }
+  }
+  // far horizon
+  for (let i = 0; i < 14; i++) {
+    const zf = -rng() * L - 200, sx = (rng() < 0.5 ? -1 : 1) * (150 + rng() * 120);
+    if (theme === "desert") { const h = 30 + rng() * 40; const py = mesh(new THREE.ConeGeometry(1, 1, 4), W.sandstone, h * 1.1, h, h * 1.1, sx, h / 2 - 1, zf); py.rotation.y = Math.PI / 4; world.add(py); }
+    else if (theme === "jungle") world.add(mesh(geo.sphereLo, W.jungle3, 70 + rng() * 40, 30 + rng() * 30, 60, sx, 0, zf));
+    else { const h = 60 + rng() * 70; world.add(mesh(geo.cone, mat.mountain, 55 + rng() * 40, h, 45, sx, h / 2 - 2, zf)); world.add(mesh(geo.cone, W.snow, 20, h * 0.35, 16, sx, h * 0.83, zf)); }
+  }
+}
+// Little patch of land in the corridor that holds a fire.
+function buildFireHost(theme, rng, tint) {
+  if (theme === "island" || !theme) return buildIsland(rng, tint, false, true);
+  const g = new THREE.Group(), r = 7 + rng() * 3;
+  const base = { canyon: W.granite, desert: W.dune, jungle: W.jungle3, arctic: W.snow }[theme];
+  g.add(mesh(new THREE.CylinderGeometry(1, 1.15, 1, 7), base, r, 1.6, r * 0.9, 0, 0.2, 0));
+  if (theme !== "arctic") { const sh = mesh(geo.disc, mat.shallow, r * 1.5, r * 1.5, 1, 0, 0.15, 0); sh.rotation.x = -Math.PI / 2; g.add(sh); }
+  for (let i = 0; i < 3; i++) {
+    const a = rng() * 6.3, d = r * 0.7;
+    let t;
+    if (theme === "canyon") t = pineTree(4 + rng() * 2);
+    else if (theme === "jungle") t = jungleTree(rng, 5 + rng() * 3);
+    else if (theme === "desert") { t = new THREE.Group(); t.add(mesh(geo.sphereLo, M(0x8E8A3A), 1.4, 1, 1.4, 0, 0.8, 0)); }
+    else { t = new THREE.Group(); t.add(mesh(geo.cyl, W.barrel, 0.6, 1.3, 0.6, 0, 0.65, 0)); }
+    t.position.set(Math.cos(a) * d, 0.9, Math.sin(a) * d); g.add(t);
+  }
+  g.userData = { r, top: 2 };
+  return g;
+}
+// People to rescue: a raft, a climber on a rock, a felucca, a canoe or an ice floe.
+function buildRescue(theme) {
+  if (!theme || theme === "island") return buildRaft();
+  const g = new THREE.Group(), people = [];
+  if (theme === "canyon") { g.add(mesh(geo.sphereLo, W.granite, 3, 1.6, 2.6, 0, 0.4, 0)); const p = person(W.parka); p.scale.setScalar(1.6); p.position.set(0, 1.3, 0); p.add(mesh(geo.sphere, W.helmet, 0.46, 0.3, 0.46, 0, 2.3, 0)); g.add(p); people.push(p); }
+  else if (theme === "desert") { g.add(mesh(geo.box, W.canoe, 1.8, 0.8, 5, 0, 0.3, 0)); const sail = mesh(new THREE.ConeGeometry(1, 1, 3), W.sail, 2.2, 6, 0.1, 0, 4, 0.3); sail.rotation.z = 0.15; g.add(sail); const p = person(W.cloth); p.position.set(0, 0.5, -1.4); g.add(p); people.push(p); }
+  else if (theme === "jungle") { g.add(mesh(geo.box, W.canoe, 1.3, 0.6, 6, 0, 0.25, 0)); for (const z of [-1.4, 1.2]) { const p = person(z < 0 ? W.cloth : mat.shirt); p.position.set(0, 0.2, z); g.add(p); people.push(p); } }
+  else { g.add(mesh(new THREE.CylinderGeometry(1, 1, 1, 6), W.snow, 4.5, 0.8, 4, 0, 0.3, 0)); for (const x of [-1.2, 1.2]) { const p = person(W.parka); p.scale.setScalar(1.8); p.position.set(x, 0.6, 0); g.add(p); people.push(p); } }
+  const arm = mesh(geo.cyl, mat.person, 0.13, 1, 0.13, 0.5, 2.1, 0); people[0].add(arm);
+  const beacon = mesh(geo.sphere, new THREE.MeshBasicMaterial({ color: 0xFF3B30 }), 0.3, 0.3, 0.3, -1.4, 1.2, 0); g.add(beacon);
+  const pole = mesh(geo.cyl, mat.white, 0.08, 3.2, 0.08, 1.6, 2.2, 0); g.add(pole);
+  const flag = mesh(geo.box, new THREE.MeshBasicMaterial({ color: 0xFF7A00 }), 1.3, 0.8, 0.06, 2.25, 3.4, 0); g.add(flag);
+  g.userData = { arm, beacon, flag, people };
+  g.scale.setScalar(1.9);
+  return g;
+}
+// Obstacles: ice pillars, sandstone hoodoos, giant trees, icebergs.
+function buildObstacle(theme, rng) {
+  if (!theme || theme === "island") return buildStack(rng);
+  const g = new THREE.Group();
+  const h = 20 + rng() * 14, r = 2.6 + rng() * 1.6;
+  if (theme === "canyon") { g.add(mesh(new THREE.CylinderGeometry(r * 0.7, r * 1.2, h, 6), W.iceDeep, 1, 1, 1, 0, h / 2 - 1, 0)); g.add(mesh(geo.cone, W.snow, r, 2.5, r, 0, h, 0)); }
+  else if (theme === "desert") { for (let i = 0; i < 3; i++) g.add(mesh(geo.sphereLo, i % 2 ? W.sandstone : W.sandDark, r * (1.1 - i * 0.15), h / 5, r * (1.1 - i * 0.15), 0, h * (0.18 + i * 0.3), 0)); g.add(mesh(geo.cyl, W.sandDark, r * 0.6, h, r * 0.6, 0, h / 2 - 1, 0)); }
+  else if (theme === "jungle") { g.add(mesh(geo.cyl, W.bark, r * 0.6, h, r * 0.6, 0, h / 2 - 1, 0)); g.add(mesh(geo.sphereLo, W.jungle2, r * 3, r * 1.6, r * 3, 0, h, 0)); }
+  else { const b = mesh(geo.sphereLo, W.snow, r * 1.6, h * 0.6, r * 1.4, 0, h * 0.25, 0); b.rotation.y = rng() * 3; g.add(b); g.add(mesh(geo.sphereLo, W.ice, r * 1.2, h * 0.3, r, 0.5, h * 0.55, 0)); }
+  g.userData = { r: r * 1.05, h };
+  return g;
+}
+// Weather drifting around the camera: snow, desert dust, jungle mist.
+function weather(theme, dt) {
+  const hz = -S.dist;
+  if (theme === "canyon" || theme === "arctic") {
+    const n = theme === "canyon" ? 3 : 1;
+    for (let i = 0; i < n; i++) if (Math.random() < dt * 40) spawn(W.flake, V(S.x + (Math.random() - 0.5) * 50, S.y + 12 + Math.random() * 8, hz - 60 - Math.random() * 80), V((Math.random() - 0.5) * 2, -6, 3), 1.4, 0.06);
+  } else if (theme === "desert") {
+    if (Math.random() < dt * 6) spawn(W.dust, V(S.x + (Math.random() - 0.5) * 60, 1 + Math.random() * 3, hz - 20 - Math.random() * 60), V(6 + Math.random() * 4, 0.5, 0), 3, 1.6, 2);
+  }
 }
 
 /* ---------------- water ---------------- */
@@ -348,7 +515,7 @@ const S = {
   mode: "title", stage: 0, time: 0, dist: 0, speed: 30,
   x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
   hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0,
-  fires: [], rafts: [], rings: [], stacks: [], birds: [], clouds: [], islands: [], bombs: [],
+  fires: [], rafts: [], rings: [], stacks: [], birds: [], clouds: [], islands: [], bombs: [], anim: [],
   put: 0, saved: 0, ringsHit: 0, totals: { f: 0, r: 0, g: 0 },
   shake: 0, flash: 0, slow: 0, refilling: false, bannerT: 0, lightning: 0, ended: false
 };
@@ -356,18 +523,21 @@ const input = { x: 0, y: 0, drop: false, stickX: 0, stickY: 0, keys: {} };
 let bot = false;
 let bannerTimer = 0;
 
+const LOOP_DUR = 1.25;
+
 /* ---------------- stage generation ---------------- */
 function clearWorld() {
   for (const c of [...world.children]) world.remove(c);
   for (const p of parts) { p.alive = false; p.mesh.visible = false; }
-  S.fires = []; S.rafts = []; S.rings = []; S.stacks = []; S.birds = []; S.clouds = []; S.islands = []; S.bombs = [];
+  S.fires = []; S.rafts = []; S.rings = []; S.stacks = []; S.birds = []; S.clouds = []; S.islands = []; S.bombs = []; S.anim = [];
 }
 function startStage(n) {
   const st = STAGES[n];
   clearWorld();
   const rng = GE.rng(1000 + n * 77);
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
-    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false });
+    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
+    bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
   scene.background = skyTexture(st.sky[0], st.sky[1]);
   scene.fog = new THREE.Fog(st.fog, 90, 430);
   seaCol.setHex(st.sea); seaDeep.setHex(st.deep);
@@ -376,8 +546,10 @@ function startStage(n) {
   hemi.intensity = n === 2 ? 1.0 : 1.1;
 
   const L = st.length;
+  const theme = st.theme || "island";
+  if (theme !== "island") buildSides(theme, rng, L);
   // Distant mountains on the horizon (decoration)
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < (theme === "island" ? 18 : 0); i++) {
     const m = new THREE.Mesh(geo.cone, mat.mountain);
     const h = 40 + rng() * 60;
     m.scale.set(50 + rng() * 40, h, 40);
@@ -385,7 +557,7 @@ function startStage(n) {
     world.add(m);
   }
   // Decorative islands on both sides
-  for (let z = -120; z > -L - 200; z -= 70 + rng() * 60) {
+  for (let z = -120; theme === "island" && z > -L - 200; z -= 70 + rng() * 60) {
     for (const side of [-1, 1]) {
       if (rng() < 0.7) {
         const isl = buildIsland(rng, st.islandTint, true);
@@ -398,7 +570,7 @@ function startStage(n) {
   const slots = (count, from, to) => Array.from({ length: count }, (_, i) => from + (to - from) * ((i + 0.3 + rng() * 0.4) / count));
   // Fires on small islands inside the flight corridor
   for (const z of slots(st.fires, -260, -L + 150)) {
-    const isl = buildIsland(rng, st.islandTint, false, true);
+    const isl = buildFireHost(theme, rng, st.islandTint);
     const x = lane();
     isl.position.set(x, 0, z);
     world.add(isl); S.islands.push(isl);
@@ -408,7 +580,7 @@ function startStage(n) {
     S.fires.push({ obj: f, x, z, out: false, smokeT: 0 });
   }
   for (const z of slots(st.rafts, -190, -L + 120)) {
-    const r = buildRaft(); const x = lane();
+    const r = buildRescue(theme); const x = lane();
     r.position.set(x, 0, z); world.add(r);
     S.rafts.push({ obj: r, x, z, saved: false });
   }
@@ -418,19 +590,19 @@ function startStage(n) {
     S.rings.push({ obj: r, x, y, z, hit: false });
   }
   for (const z of slots(st.stacks, -400, -L + 200)) {
-    const s = buildStack(rng); const x = lane();
+    const s = buildObstacle(theme, rng); const x = lane();
     // keep stacks away from fires/rafts so every target stays reachable
     const tooClose = S.fires.concat(S.rafts).some((o) => Math.abs(o.z - z) < 40 && Math.abs(o.x - x) < 10);
     s.position.set(tooClose ? -x : x, 0, z); world.add(s);
     S.stacks.push({ obj: s, x: s.position.x, z, r: s.userData.r, h: s.userData.h, hit: false });
   }
   for (const z of slots(st.birds, -500, -L + 250)) {
-    const b = buildBirds(); const x = lane(), y = 7 + rng() * 8;
+    const b = buildBirds(theme); const x = lane(), y = 7 + rng() * 8;
     b.position.set(x, y, z); world.add(b);
     S.birds.push({ obj: b, x, y, z, hit: false, phase: rng() * 6 });
   }
   for (const z of slots(st.clouds, -450, -L + 200)) {
-    const c = buildCloud(rng); const x = lane(), y = 8 + rng() * 9;
+    const c = buildCloud(rng, theme === "desert" ? W.dust : null); const x = lane(), y = 8 + rng() * 9;
     c.position.set(x, y, z); world.add(c);
     S.clouds.push({ obj: c, x, y, z, hit: false });
   }
@@ -454,6 +626,7 @@ const KEYMAP = { ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r", ArrowUp:
 addEventListener("keydown", (e) => {
   if (KEYMAP[e.code]) { input.keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code === "Space") { input.drop = true; e.preventDefault(); }
+  if (e.code === "KeyL" || e.code === "ShiftLeft" || e.code === "ShiftRight") { input.loop = true; e.preventDefault(); }
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
 });
 addEventListener("keyup", (e) => {
@@ -472,6 +645,10 @@ function moveStick(e) {
   input.stickX = dx; input.stickY = -dy;
   knob.style.transform = `translate(${dx * 36}px, ${-input.stickY * 36}px)`;
 }
+const loopBtn = $("btn-loop");
+loopBtn.addEventListener("pointerdown", (e) => { input.loop = true; loopBtn.classList.add("on"); e.preventDefault(); });
+const loopUp = () => loopBtn.classList.remove("on");
+loopBtn.addEventListener("pointerup", loopUp); loopBtn.addEventListener("pointercancel", loopUp); loopBtn.addEventListener("pointerleave", loopUp);
 const dropBtn = $("btn-drop");
 dropBtn.addEventListener("pointerdown", (e) => { input.drop = true; dropBtn.classList.add("on"); e.preventDefault(); });
 const dropUp = () => { input.drop = false; dropBtn.classList.remove("on"); };
@@ -532,8 +709,35 @@ function step(dt) {
   S.x = Math.max(-BOX.x, Math.min(BOX.x, S.x + S.vx * dt));
   S.y = Math.max(BOX.yMin, Math.min(BOX.yMax, S.y + S.vy * dt));
   if (S.stage === 2) S.x += Math.sin(S.time * 0.7) * 1.4 * dt; // storm wind
-  S.bank += (-S.vx / 17 * 0.85 - S.bank) * Math.min(1, dt * 9);
-  S.pitch += (S.vy / 11 * 0.18 - 0.07 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward
+  // Bank on a spring (slight overshoot, then settles) — feels like a real airframe.
+  const bankTarget = -S.vx / 17 * 0.85;
+  S.bankV += ((bankTarget - S.bank) * 70 - S.bankV * 11) * dt;
+  S.bank += S.bankV * dt;
+  S.yaw += (-S.vx * 0.013 - S.yaw) * Math.min(1, dt * 5); // nose turns into the turn
+  // Speed ramps up through the stage (+55% by the end).
+  const prog = Math.min(1, S.dist / st.length);
+  const target = st.speed * (1 + 0.55 * prog);
+  const accel = target - S.speed;
+  S.speed += accel * Math.min(1, dt * 1.5);
+  S.pitch += (S.vy / 11 * 0.18 - 0.07 - accel * 0.02 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward, dips more when speeding up
+  const stepNow = Math.floor(prog * 3);
+  if (stepNow > S.speedStep && stepNow < 3) { S.speedStep = stepNow; showBanner(t("faster")); GE.sfx("upgrade"); }
+  // Loop-the-loop stunt
+  S.loopCd = Math.max(0, S.loopCd - dt);
+  if (input.loop && S.loopT < 0 && S.loopCd <= 0 && !bot) { S.loopT = 0; S.inv = Math.max(S.inv, LOOP_DUR + 0.2); GE.sfx("sail"); }
+  input.loop = false;
+  if (S.loopT >= 0) {
+    S.loopT += dt;
+    const k = Math.min(1, S.loopT / LOOP_DUR);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+    S.loopPitch = e * Math.PI * 2;                 // nose up, over the top, back level
+    S.lift = Math.sin(Math.PI * k) * 9;            // climbs over the top of the loop
+    if (k >= 1) {
+      S.loopT = -1; S.loopPitch = 0; S.lift = 0; S.loopCd = 1.2; S.loops++; S.score += 100;
+      showBanner(t("loop"), "+100"); GE.sfx("win");
+      burst(S.x, S.y, -S.dist - 4, 0xFFFFFF);
+    }
+  }
   S.dist += S.speed * dt;
   const hz = -S.dist;
   S.inv = Math.max(0, S.inv - dt);
@@ -547,6 +751,18 @@ function step(dt) {
   if (S.refilling) {
     S.tank = Math.min(TANK_MAX, S.tank + dt * 3.2);
     if (Math.random() < 0.7) spawn(mat.water, V(S.x + (Math.random() - 0.5) * 3, 0.4, hz + 1.5), V((Math.random() - 0.5) * 6, 5 + Math.random() * 4, 10), 0.6, 0.35);
+  }
+
+  // Rotor downwash: spray and ripples on the water when flying low
+  const washK = Math.max(0, (8.5 - S.y) / 6);
+  if (washK > 0 && !overIsland && S.lift < 1) {
+    const n = Math.random() < washK ? 2 : 0;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = 2.5 + Math.random() * 1.5;
+      spawn(mat.spray, V(S.x + Math.cos(a) * r, 0.35, hz + Math.sin(a) * r), V(Math.cos(a) * 9 * washK, 1.5 + Math.random() * 2, Math.sin(a) * 9 * washK + S.speed * 0.2), 0.55, 0.28, 0.5);
+    }
+    S.washT -= dt;
+    if (S.washT <= 0) { S.washT = 0.28; burst(S.x, 0.35, hz, 0xE6FBFF, true); }
   }
 
   // Drop water bombs
@@ -587,14 +803,15 @@ function step(dt) {
   for (const r of S.rafts) {
     if (!r.saved && Math.abs(r.z - hz) < 5 && Math.abs(r.x - S.x) < 5.5 && S.y < 8) {
       r.saved = true; S.saved++; S.score += 200;
-      r.obj.userData.arm.visible = false; r.obj.children[1].visible = false; r.obj.children[2].visible = false;
+      if (r.obj.userData.people) r.obj.userData.people.forEach((q) => (q.visible = false));
+      else { r.obj.userData.arm.visible = false; r.obj.children[1].visible = false; r.obj.children[2].visible = false; }
       for (let i = 0; i < 12; i++) spawn(mat.spark, V(r.x, 2, r.z), V((Math.random() - 0.5) * 8, 6 + Math.random() * 6, (Math.random() - 0.5) * 8), 0.8, 0.25);
       showBanner(t("saved"), "+200"); GE.sfx("coin", { streak: 4 });
     }
   }
   // Rings
   for (const g of S.rings) {
-    if (!g.hit && Math.abs(g.z - hz) < 1.5 + S.speed * dt && Math.hypot(g.x - S.x, g.y - S.y) < 3.6) {
+    if (!g.hit && Math.abs(g.z - hz) < 1.5 + S.speed * dt && Math.hypot(g.x - S.x, g.y - (S.y + S.lift)) < 3.6) {
       g.hit = true; S.ringsHit++; S.score += 50;
       g.obj.visible = false;
       burst(g.x, g.y, g.z - 3, 0xFFC928);
@@ -646,6 +863,8 @@ function step(dt) {
     r.obj.userData.arm.rotation.z = Math.sin(S.time * 8) * 0.8; r.obj.userData.beacon.visible = Math.sin(S.time * 10) > 0; r.obj.position.y = Math.sin(S.time * 2 + r.x) * 0.25; }
   for (const g of S.rings) g.obj.rotation.z += dt * 1.5;
   for (const b of S.birds) { b.obj.userData.wings.forEach(([l, r], i) => { const a = Math.sin(S.time * 14 + i) * 0.7; l.rotation.z = a; r.rotation.z = -a; }); b.obj.position.x = b.x + Math.sin(S.time + b.phase) * 2; b.x = b.obj.position.x; }
+  weather(st.theme, dt);
+  for (const a of S.anim) if (a.kind === "caravan") { a.obj.position.z = a.z0 + Math.sin(S.time * 0.3) * 4; a.obj.children.forEach((c, i) => { c.position.y = Math.abs(Math.sin(S.time * 3 + i)) * 0.15; }); }
   if (S.stage === 2) { S.lightning -= dt; if (S.lightning <= 0) { S.lightning = 3 + Math.random() * 4; S.flash = Math.max(S.flash, 0.6); } }
 
   updateParts(dt);
@@ -660,25 +879,31 @@ function step(dt) {
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
 const CAM = { back: 8.2, up: 6.4, side: 2.4, lookAhead: 16, lookDown: 0.8 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
-function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
+function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + S.lift * 0.55 + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
 function updateCamera(dt) {
   camPos.lerp(camTarget(), Math.min(1, dt * 5));
-  camLook.lerp(V(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead), Math.min(1, dt * 7));
+  camLook.lerp(V(S.x * 0.92, S.y + S.lift * 0.6 - CAM.lookDown, -S.dist - CAM.lookAhead), Math.min(1, dt * 7));
 }
 
 /* ---------------- render ---------------- */
 function render(realDt) {
   const hz = -S.dist;
-  heli.position.set(S.x, S.y + Math.sin(S.time * 2.2) * 0.12, hz);
-  heli.rotation.set(S.pitch, 0, S.bank, "YXZ");
-  heli.userData.rotor.rotation.y += realDt * 40;
-  heli.userData.tail.rotation.x += realDt * 50;
+  // Gentle hover bob + fine engine vibration
+  const vib = Math.sin(S.time * 53) * 0.018 + Math.sin(S.time * 37) * 0.012;
+  heli.position.set(S.x, S.y + S.lift + Math.sin(S.time * 2.2) * 0.1 + vib, hz);
+  heli.rotation.set(S.pitch + S.loopPitch + vib * 0.4, S.yaw, S.bank, "YXZ");
+  const ud = heli.userData;
+  ud.rotor.rotation.y += realDt * 44;
+  ud.rotor.rotation.x = -0.06 - (S.speed - 30) * 0.002;   // rotor disc tips forward with speed
+  ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
+  ud.tail.rotation.x += realDt * 62;
   heli.visible = true;
   shield.visible = S.mode === "play" && S.inv > 0 && S.stage != null && S.hearts < 3;
   shield.position.copy(heli.position);
   shield.material.opacity = 0.12 + Math.abs(Math.sin(S.time * 10)) * 0.18;
   shadow.position.set(S.x, 0.3, hz);
+  shadow.visible = S.lift < 6;
   shadow.scale.set(2.4, 3.4, 1);
   mat.shadow.opacity = Math.max(0, 0.26 - S.y * 0.016);
   const land = predictLanding();
@@ -690,13 +915,14 @@ function render(realDt) {
   camera.lookAt(camLook);
   camera.rotation.z += S.bank * 0.55 + (S.shake > 0 ? (Math.random() - 0.5) * S.shake * 0.12 : 0);
   flashEl.style.opacity = String(Math.max(0, S.flash * S.flash * 0.55 - 0.03));
-  camera.fov = 62 + Math.min(8, S.speed * 0.12);
+  camera.fov = 58 + Math.min(16, S.speed * 0.22);
   camera.updateProjectionMatrix();
   // Speed streaks
   for (let i = 0; i < streaks.length; i++) {
     const s = streaks[i];
     const z = ((i * 37.7 + S.dist * 2.6) % 90);
     s.position.set(S.x + Math.sin(i * 12.9) * 14, S.y + Math.cos(i * 7.3) * 8, hz - 70 + z);
+    s.scale.z = 3 + S.speed * 0.12;
   }
   updateWater(S.time, S.x, hz);
   const fl = S.flash;
@@ -716,7 +942,8 @@ function showBanner(text, sub) {
 function updateHud() {
   if (S.mode !== "play") return;
   $("hud-goals").textContent = t("goals", { f: S.put, ft: S.totals.f, r: S.saved, rt: S.totals.r });
-  $("hud-score").textContent = t("score", { s: GE.num(S.score) });
+  $("hud-score").textContent = t("score", { s: GE.num(S.score) }) + "  " + t("speed", { v: Math.round(S.speed * 5.4) });
+  loopBtn.classList.toggle("empty", S.loopT >= 0 || S.loopCd > 0);
   $("hud-hearts").textContent = "❤️".repeat(Math.max(0, S.hearts)) + "🤍".repeat(Math.max(0, 3 - S.hearts));
   $("hud-tank-fill").style.transform = `scaleX(${(S.tank / TANK_MAX).toFixed(3)})`;
   $("hud-tank-label").textContent = S.refilling ? "💦" : "💧 " + Math.floor(S.tank);
@@ -734,7 +961,7 @@ function renderTitle() {
   document.title = t("title") + " 🚁";
   $("t-title").textContent = t("title");
   $("t-sub").textContent = t("sub");
-  $("t-controls").textContent = t("controls");
+  $("t-controls").textContent = t("controls") + " · " + t("controls2");
   $("t-stages").innerHTML = STAGES.map((st, i) => {
     const open = i < save.unlocked;
     return `<button type="button" class="stage-btn" data-stage="${i}" ${open ? "" : "disabled"}><span class="ico">${st.icon}</span>` +
@@ -764,6 +991,7 @@ function endStage(won) {
       (last ? `<p>${GE.esc(t("winBody"))}</p>` : "") +
       `<div class="big-stars">${stars(n)}</div>` +
       `<div class="stats"><div>${S.put}/${S.totals.f}<small>🔥 ${t("fires")}</small></div><div>${S.saved}/${S.totals.r}<small>🙋 ${t("people")}</small></div><div>${S.ringsHit}/${S.totals.g}<small>✨ ${t("rings")}</small></div></div>` +
+      (S.loops ? `<p>🔄 ${S.loops} ${GE.esc(t("loops"))}</p>` : "") +
       (c ? `<p class="fact">${GE.esc(t("factAbout", { c: GE.L(c.name) }))} ${GE.esc(GE.L(c.fact))}</p>` : "") +
       `<div class="btns">${last ? "" : `<button class="ge-btn ge-btn-primary" id="btn-next" type="button">${t("next")}</button>`}` +
       `<button class="ge-btn ge-btn-ghost" id="btn-again" type="button">${t("again")}</button><button class="ge-btn ge-btn-ghost" id="btn-menu" type="button">${t("menu")}</button></div>`;
@@ -856,6 +1084,8 @@ window.__heli = {
   start(n) { startStage(n); },
   bot(on) { bot = !!on; },
   setInput(x, y, drop) { input.x = x; input.y = y; input.drop = !!drop; },
+  loop() { input.loop = true; },
+  get motion() { return { speed: S.speed, loopT: S.loopT, lift: S.lift, loopPitch: S.loopPitch, loops: S.loops, yaw: S.yaw, bank: S.bank, inv: S.inv }; },
   manual(on) { manual = !!on; },
   // Deterministic stepping for tests: n frames of dt, rendering the last one.
   step(seconds, dt = 1 / 60) { const n = Math.round(seconds / dt); for (let i = 0; i < n; i++) step(dt); render(dt); },

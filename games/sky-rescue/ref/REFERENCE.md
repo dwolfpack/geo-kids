@@ -53,3 +53,15 @@ There's no game over. Running out of hearts means a friendly "try the stage agai
 3. A filmstrip of a hit shows shake, a flash and particles.
 4. A bot and a critic both play **all three stages from start to finish**.
 5. It runs at 30+ fps on a mid-range phone profile, with no console errors and a mobile layout at 375px.
+
+## New worlds (stages 4–7): user references
+The user supplied two concept images, stored in this folder:
+- `user-ref-four-worlds.webp` shows four stages.
+  - **Snowy canyon:** tall cliffs with snow caps and pines, and a stretcher winch rescue.
+  - **Desert:** dunes, palms, a camel caravan, pyramids on the horizon, and a warm dusty light.
+  - **Jungle:** a dense canopy, stepped stone ruins, mist and a river.
+  - **Arctic:** icebergs, floes, and people waiting on the ice.
+- `user-ref-islands-cockpit.webp` shows lush islands with a cockpit view. It's mood only; the chase camera stays.
+
+Each world must read as its place in a single still, keep the flight path clear, and keep targets (fire, rescue,
+rings) as readable as on stages 1–3.

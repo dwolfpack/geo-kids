@@ -66,6 +66,19 @@ async function noOverflow(page, label) {
   s = await st(page);
   check(s.x > x0 + 3, `joystick right steers right (x ${x0.toFixed(1)} → ${s.x.toFixed(1)})`);
 
+  // Loop-the-loop button: a full loop, invulnerable, +100
+  const sc0 = (await st(page)).score;
+  await page.evaluate(() => {
+    const b = document.getElementById("btn-loop");
+    b.dispatchEvent(new PointerEvent("pointerdown", { pointerId: 9, bubbles: true, pointerType: "touch" }));
+    window.__heli.step(1 / 60);
+    b.dispatchEvent(new PointerEvent("pointerup", { pointerId: 9, bubbles: true, pointerType: "touch" }));
+  });
+  const mid = await page.evaluate(() => { window.__heli.step(0.6); return window.__heli.motion; });
+  check(mid.loopT > 0 && mid.lift > 5 && mid.inv > 0, `🔄 starts a loop-the-loop (lift ${mid.lift.toFixed(1)}, pitch ${Math.round(mid.loopPitch * 57.3)}°, protected)`);
+  const done = await page.evaluate(() => { window.__heli.step(1); return { m: window.__heli.motion, s: window.__heli.state }; });
+  check(done.m.loops === 1 && done.m.loopT < 0 && done.s.score >= sc0 + 100, "the loop completes, returns to level and scores +100");
+
   // Water bomb button uses a tank drop
   const tank0 = s.tank;
   await page.evaluate(() => {
@@ -95,6 +108,8 @@ async function noOverflow(page, label) {
   await page.evaluate(() => window.__heli.bot(true));
   let guard = 0;
   do { s = await page.evaluate(() => { window.__heli.step(0.5); return window.__heli.state; }); } while (s.mode === "play" && guard++ < 300);
+  const sp = await page.evaluate(() => window.__heli.motion.speed);
+  check(sp > 30 * 1.45, `the helicopter speeds up through the stage (ends at ${sp.toFixed(1)} vs start 30)`);
   check(s.mode === "end" && s.hearts > 0 && s.unlocked >= 2, `stage 1 can be finished start to finish (fires ${s.put}/${s.totals.f}, rescues ${s.saved}/${s.totals.r}, rings ${s.rings}/${s.totals.g})`);
   await tapBoxesOK(page, "stage clear");
 

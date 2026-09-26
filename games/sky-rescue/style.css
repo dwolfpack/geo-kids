@@ -61,3 +61,8 @@ body { touch-action: none; -webkit-user-select: none; user-select: none; }
   .hearts { font-size: 1rem; }
   .tank { width: 86px; height: 20px; }
 }
+
+.loopbtn { position: absolute; right: calc(34px + var(--safe-right)); bottom: calc(136px + var(--safe-bottom)); width: 64px; height: 64px; border-radius: 50%; border: 3px solid #fff; background: radial-gradient(circle at 35% 30%, #FFE082, #FF8F00); font-size: 1.7rem; pointer-events: auto; touch-action: none; box-shadow: 0 5px 12px rgba(0,0,0,.28); cursor: pointer; }
+.loopbtn.on { transform: scale(.92); }
+.loopbtn.empty { filter: grayscale(.7); opacity: .7; }
+@media (pointer: fine) { .loopbtn { bottom: calc(112px + var(--safe-bottom)); right: calc(24px + var(--safe-right)); width: 56px; height: 56px; font-size: 1.4rem; } }
