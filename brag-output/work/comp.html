@@ -1,0 +1,561 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="node_modules/@fontsource/rubik/700.css">
+<link rel="stylesheet" href="node_modules/@fontsource/rubik/800.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/400.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/600.css">
+<link rel="stylesheet" href="node_modules/@fontsource/heebo/800.css">
+<style>
+  :root {
+    --bg: #E4EFEE; --card: #FFFCF3; --ink: #1E2C2A; --ink-soft: #5B6D69;
+    --coral: #D6553B; --coral-dark: #B8442E; --sky: #2E7D96; --leaf: #4C9166;
+    --sun: #E0A83E; --berry: #A6567D; --line: #D7E3DE;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1920px; height: 1080px; overflow: hidden; }
+  body {
+    background-color: var(--bg);
+    background-image: radial-gradient(circle at 1.5px 1.5px, rgba(30,44,42,.08) 1.5px, transparent 0);
+    background-size: 30px 30px;
+    font-family: 'Heebo', sans-serif; color: var(--ink);
+    position: relative;
+  }
+  #stage { position: absolute; inset: 0; }
+
+  /* app window */
+  #win {
+    position: absolute; left: 0; top: 0; width: 880px; height: 1004px;
+    transform-origin: 0 0; border-radius: 30px; overflow: hidden;
+    background: var(--bg);
+    box-shadow: 0 30px 70px rgba(20,35,33,.18), 0 4px 14px rgba(20,35,33,.08);
+    border: 2px solid var(--line);
+  }
+  #chrome {
+    height: 44px; background: var(--card); border-bottom: 2px solid var(--line);
+    display: flex; align-items: center; gap: 8px; padding: 0 18px;
+  }
+  #chrome .dot { width: 12px; height: 12px; border-radius: 50%; }
+  #chrome .url {
+    margin-left: 18px; flex: 1; height: 28px; border-radius: 999px; background: var(--bg);
+    border: 2px solid var(--line); display: flex; align-items: center; padding: 0 14px;
+    font: 600 15px 'Heebo'; color: var(--ink-soft);
+  }
+  #screens { position: relative; width: 880px; height: 960px; }
+  #screens iframe {
+    position: absolute; inset: 0; width: 880px; height: 960px; border: 0;
+    opacity: 0; background: var(--bg);
+  }
+
+  /* finger */
+  #finger {
+    position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+    border-radius: 50%; background: rgba(255,252,243,.55);
+    border: 4px solid rgba(30,44,42,.85); box-shadow: 0 8px 20px rgba(20,35,33,.25);
+    opacity: 0; pointer-events: none; z-index: 20;
+  }
+  #ripple {
+    position: absolute; left: 0; top: 0; width: 64px; height: 64px; margin: -32px 0 0 -32px;
+    border-radius: 50%; border: 4px solid var(--coral); opacity: 0; z-index: 19; pointer-events: none;
+  }
+
+  /* captions */
+  .cap {
+    position: absolute; left: 110px; top: 0; width: 740px; height: 1080px;
+    display: flex; flex-direction: column; justify-content: center; gap: 26px;
+    opacity: 0;
+  }
+  .kicker {
+    align-self: flex-start;
+    font: 800 30px 'Rubik'; color: #fff; background: var(--k, var(--coral));
+    padding: 10px 24px 12px; border-radius: 999px; box-shadow: 0 4px 14px rgba(20,35,33,.09);
+  }
+  .line { font: 800 94px/1.02 'Rubik'; letter-spacing: -1.5px; }
+  .line .w { display: inline-block; }
+  .line em { font-style: normal; color: var(--k, var(--coral)); }
+
+  /* end card */
+  #end { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 22px; opacity: 0; }
+  #end .globe { font-size: 130px; line-height: 1; }
+  #end h1 { font: 800 120px/1 'Rubik'; letter-spacing: -2px; text-align: center; }
+  #end .he { font: 800 76px/1 'Rubik'; color: var(--coral); direction: rtl; }
+  #end .url {
+    margin-top: 14px; font: 800 44px 'Rubik'; color: #fff; background: var(--sky);
+    padding: 14px 40px 18px; border-radius: 999px; box-shadow: 0 6px 18px rgba(20,35,33,.14);
+  }
+  #rail { position: absolute; left: 0; width: 100%; height: 96px; overflow: visible; }
+  #rail img {
+    position: absolute; top: 0; height: 66px; border-radius: 8px; border: 5px solid #fff;
+    box-shadow: 0 6px 16px rgba(20,35,33,.16);
+  }
+  #rail.top { top: 70px; } #rail2 { position: absolute; left: 0; width: 100%; top: 944px; height: 96px; }
+  #rail2 img { position: absolute; top: 0; height: 66px; border-radius: 8px; border: 5px solid #fff; box-shadow: 0 6px 16px rgba(20,35,33,.16); }
+
+  #confetti { position: absolute; inset: 0; pointer-events: none; }
+  #confetti i { position: absolute; top: 0; left: 0; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="cap-home" class="cap" style="--k: var(--coral)">
+    <div class="kicker">🌍 Around the World Adventure</div>
+    <div class="line">Geography games and adventures <em>for kids.</em></div>
+  </div>
+  <div id="cap-levels" class="cap" style="--k: var(--leaf)">
+    <div class="kicker">🟢 🟡 🟠 🔴 🟣 5 levels</div>
+    <div class="line">From 39 countries <em>to all 195.</em></div>
+  </div>
+  <div id="cap-explorer" class="cap" style="--k: var(--sun)">
+    <div class="kicker">🔎 Discover a Country</div>
+    <div class="line">Type a name. <em>Discover everything</em> about it.</div>
+  </div>
+  <div id="cap-memory" class="cap" style="--k: var(--berry)">
+    <div class="kicker">🧠 Memory Game</div>
+    <div class="line">Match each flag to <em>its country.</em></div>
+  </div>
+  <div id="cap-result" class="cap" style="--k: var(--sky)">
+    <div class="kicker">⭐ Stars &amp; records</div>
+    <div class="line">Stars and records <em>for every player.</em></div>
+  </div>
+
+  <div id="win">
+    <div id="chrome">
+      <span class="dot" style="background:var(--coral)"></span>
+      <span class="dot" style="background:var(--sun)"></span>
+      <span class="dot" style="background:var(--leaf)"></span>
+      <div class="url">🔒 dwolfpack.github.io/geo-kids</div>
+    </div>
+    <div id="screens">
+      <iframe id="f-quiz" src="/geo-kids/index.html?s=quiz"></iframe>
+      <iframe id="f-home" src="/geo-kids/index.html?s=home"></iframe>
+      <iframe id="f-levels" src="/geo-kids/index.html?s=levels"></iframe>
+      <iframe id="f-explorer" src="/geo-kids/index.html?s=explorer"></iframe>
+      <iframe id="f-memory" src="/geo-kids/index.html?s=memory"></iframe>
+      <iframe id="f-result" src="/geo-kids/index.html?s=result"></iframe>
+    </div>
+    <div id="ripple"></div>
+    <div id="finger"></div>
+  </div>
+
+  <div id="confetti"></div>
+  <div id="end">
+    <div id="rail" class="top"></div>
+    <div class="globe">🌍</div>
+    <h1>Around the World Adventure</h1>
+    <div class="he">מסע סביב העולם</div>
+    <div class="url">dwolfpack.github.io/geo-kids</div>
+    <div id="rail2"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- timeline (seconds) ---------- */
+const T = {
+  hookTap: 1.5, hookEnd: 4.0, camEnd: 4.55,
+  homeTap: 7.0, levels: 7.5, expert: 9.25,
+  explorer: 11.0, typeStart: 11.4, chipTap: 12.5,
+  memory: 15.0, result: 18.0, end: 20.0, total: 22.7,
+};
+const $ = id => document.getElementById(id);
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const lerp = (a, b, k) => a + (b - a) * k;
+const easeInOut = k => k < .5 ? 4*k*k*k : 1 - Math.pow(-2*k + 2, 3) / 2;
+const easeOut = k => 1 - Math.pow(1 - k, 3);
+const backOut = k => { const c = 1.70158; return 1 + (c+1)*Math.pow(k-1,3) + c*Math.pow(k-1,2); };
+const prog = (t, a, d) => clamp((t - a) / d);
+
+/* ---------- deterministic rng ---------- */
+function rng(seed) { let s = seed >>> 0; return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; }
+
+/* ---------- frames ---------- */
+const F = {};
+function W(name) { return $("f-" + name).contentWindow; }
+function D(name) { return $("f-" + name).contentDocument; }
+
+/* ---------- animation clock: every CSS animation/transition inside the app is
+   paused and advanced by the video timeline, keyed to the frame it first appeared ---------- */
+const born = new WeakMap();
+function syncAnims(doc, t) {
+  for (const a of doc.getAnimations()) {
+    if (!born.has(a)) born.set(a, t);
+    a.pause();
+    a.currentTime = Math.max(0, (t - born.get(a)) * 1000);
+  }
+}
+
+/* ---------- setup ---------- */
+function whenLoaded(f) {
+  return new Promise(res => {
+    const done = () => res();
+    if (f.contentDocument && f.contentDocument.readyState === "complete" && f.contentWindow.renderHome) done();
+    else f.addEventListener("load", done, { once: true });
+  });
+}
+async function waitImages(doc) {
+  const imgs = [...doc.images];
+  await Promise.all(imgs.map(i => i.complete ? i.decode().catch(() => {}) : new Promise(r => { i.onload = i.onerror = r; })));
+}
+function noTransition(el) { el.style.transition = "none"; }
+
+const S = {}; // per-scene state
+window.setup = async function () {
+  await Promise.all([...document.querySelectorAll("iframe")].map(whenLoaded));
+  await document.fonts.ready;
+  for (const f of document.querySelectorAll("iframe")) await f.contentDocument.fonts.ready;
+
+  // shared: a player profile with some stars (so the home screen shows a lived-in state)
+  const h = W("home");
+  h.eval(`setActiveProfile("Noa"); store.set("flags",3); store.set("capitals",2); store.set("continents",2); store.set("memory",1);`);
+
+  // keep the app's own confetti on screen for its full fall (it normally self-removes on a wall-clock timer)
+  for (const f of document.querySelectorAll("iframe")) {
+    const w = f.contentWindow;
+    w.eval(`burstConfetti = function(n){ for (let i=0;i<n;i++){ const el=document.createElement("div"); el.className="confetti";
+      el.style.left=Math.random()*100+"vw"; el.style.width=el.style.height=(6+Math.random()*8)+"px";
+      el.style.background=CONFETTI_COLORS[i%CONFETTI_COLORS.length]; el.style.animationDuration=(1.2+Math.random()*1.6)+"s";
+      document.body.appendChild(el);} }`);
+    w.eval(`renderHome(); renderProfileBar();`);
+  }
+
+  /* quiz: Mongolia */
+  {
+    const w = W("quiz"), d = D("quiz");
+    w.eval(`startQuiz("flags", 3);
+      const mn = COUNTRIES.find(c => c.code === "mn");
+      game.countries[0] = mn; renderQuestion();`);
+    const opts = ["Kazakhstan", "Mongolia", "Bhutan", "Nepal"];
+    const btns = [...d.querySelectorAll(".opt")];
+    btns.forEach((b, i) => {
+      b.textContent = opts[i];
+      const right = opts[i] === "Mongolia";
+      b.onclick = () => w.pick(b, right, w.eval(`COUNTRIES.find(c => c.code === "mn")`));
+      noTransition(b);
+    });
+    S.quiz = { btns, tapped: false };
+  }
+  /* home */
+  { const w = W("home"); w.eval(`goHome();`); S.home = { cards: [...D("home").querySelectorAll(".game-card")] }; S.home.cards.forEach(noTransition); }
+  /* levels */
+  { const w = W("levels"); w.eval(`goHome(); startGame("flags");`); S.levels = { btns: [...D("levels").querySelectorAll(".diff-btn")] }; S.levels.btns.forEach(noTransition); }
+  /* explorer */
+  { const w = W("explorer"); w.Element.prototype.scrollIntoView = function () {}; w.eval(`goHome(); startExplorer();`); D("explorer").activeElement && D("explorer").activeElement.blur(); S.explorer = { typed: -1, picked: false }; }
+  /* memory */
+  {
+    const w = W("memory"), d = D("memory");
+    w.eval(`goHome(); startMemory();`);
+    const cards = [...d.querySelectorAll(".mem-card")];
+    // group by country
+    const byKey = {};
+    cards.forEach((c, i) => (byKey[c.dataset.key] = byKey[c.dataset.key] || []).push(i));
+    const keys = Object.keys(byKey);
+    S.memory = { cards, byKey, keys };
+    keys.slice(0, 3).forEach(k => byKey[k].forEach(i => cards[i].classList.add("flipped", "matched")));
+  }
+  /* result */
+  { const w = W("result"); w.eval(`goHome(); showResult("memory", 3, t("memoryResultText")(10));`); }
+
+  const ZOOM = { levels: 1.3, explorer: 1.12, result: 1.3 };
+  for (const [n, z] of Object.entries(ZOOM)) D(n).documentElement.style.zoom = z;
+  D("result").querySelector(".wrap").style.paddingTop = "150px";
+  for (const f of document.querySelectorAll("iframe")) await waitImages(f.contentDocument);
+
+  // flag rails for the end card, from the app's own country list
+  const codes = W("home").eval(`COUNTRIES.map(c => c.code)`);
+  const r = rng(7);
+  const pick = n => Array.from({ length: n }, () => codes[Math.floor(r() * codes.length)]);
+  const mk = (el, list) => { el.innerHTML = list.map(c => `<img src="https://flagcdn.com/w320/${c}.png">`).join(""); };
+  mk($("rail"), "br jp ca za in kr mx se gr ke jm np ch tr ar it fr gb us au ng pt ie cu pk vn".split(" "));
+  mk($("rail2"), "de es no fi dk nl eg sa th id ph co cl pe ma is hr gh et lk kz mn bt sc ua il".split(" "));
+  await waitImages(document);
+  // lay the rail flags out by their natural widths
+  for (const rail of [$("rail"), $("rail2")]) {
+    let x = 0; S[rail.id] = [];
+    for (const img of rail.querySelectorAll("img")) {
+      const w = 66 * img.naturalWidth / img.naturalHeight + 10;
+      S[rail.id].push({ img, x }); x += w + 26;
+    }
+    S[rail.id + "W"] = x;
+  }
+  return true;
+};
+
+/* ---------- helpers ---------- */
+function showFrame(name, op) { $("f-" + name).style.opacity = op; }
+function elCenter(doc, el) { const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
+function capAt(id, t, tin, tout) {
+  const el = $(id);
+  const kin = easeOut(prog(t, tin, .45));
+  const kout = easeInOut(prog(t, tout - .3, .3));
+  el.style.opacity = kin * (1 - kout);
+  el.style.transform = `translateY(${(1 - kin) * 40 - kout * 30}px)`;
+  const kick = el.querySelector(".kicker");
+  const kk = backOut(prog(t, tin, .4));
+  kick.style.transform = `scale(${lerp(.6, 1, kk)})`;
+  kick.style.transformOrigin = "0 50%";
+}
+function fingerAt(x, y, op, press) {
+  const f = $("finger");
+  f.style.left = x + "px"; f.style.top = (y + 44) + "px";
+  f.style.opacity = op; f.style.transform = `scale(${1 - .22 * press})`;
+}
+function rippleAt(x, y, k) {
+  const r = $("ripple");
+  r.style.left = x + "px"; r.style.top = (y + 44) + "px";
+  r.style.opacity = k > 0 && k < 1 ? (1 - k) : 0;
+  r.style.transform = `scale(${.6 + k * 1.6})`;
+}
+// finger path: arrive at target, press at tap, lift and fade
+function tapPath(t, tap, from, to) {
+  const kMove = easeInOut(prog(t, tap - .6, .5));
+  const x = lerp(from.x, to.x, kMove), y = lerp(from.y, to.y, kMove);
+  const op = prog(t, tap - .6, .15) * (1 - prog(t, tap + .35, .2));
+  const press = t < tap - .08 ? 0 : t < tap + .12 ? 1 - Math.abs(t - tap - .02) / .1 : 0;
+  return { x, y, op, press: clamp(press), rip: prog(t, tap, .45) };
+}
+
+/* ---------- camera ---------- */
+function rectIn(doc, el) { const r = el.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, cx: r.left + r.width / 2, cy: r.top + r.height / 2 }; }
+function camera(t) {
+  // focus point (window coords, incl. 44px chrome) placed at stage anchor, with scale
+  const d = D("quiz");
+  const flag = rectIn(d, d.querySelector(".flag-img"));
+  const qc = rectIn(d, d.getElementById("question-card"));
+  const opts = rectIn(d, d.getElementById("options"));
+  const fa = d.querySelector(".fact-bubble") ? rectIn(d, d.querySelector(".fact-bubble")) : { bottom: opts.bottom + 200 };
+  let ax = 960, ay = 540;
+  let s = 1.75, fx = 440, fy = flag.cy + 44 - 30;
+  const k1 = easeInOut(prog(t, .1, .9));
+  s = lerp(s, 1.4, k1); fy = lerp(fy, (qc.top + opts.bottom) / 2 + 44, k1);
+  const k2 = easeInOut(prog(t, 1.65, .6));
+  s = lerp(s, 1.6, k2); fy = lerp(fy, (opts.top + fa.bottom) / 2 + 44, k2);
+  // pull back into the layout
+  const k3 = easeInOut(prog(t, T.hookEnd, T.camEnd - T.hookEnd));
+  s = lerp(s, 1, k3); fx = lerp(fx, 440, k3); fy = lerp(fy, 502, k3);
+  ax = lerp(ax, 930 + 440, k3); ay = lerp(ay, 38 + 502, k3);
+  // exit to end card
+  const k4 = easeInOut(prog(t, T.end, .4));
+  ax += k4 * 1300;
+  const win = $("win");
+  win.style.transform = `translate(${ax - fx * s}px, ${ay - fy * s}px) scale(${s})`;
+  win.style.opacity = 1 - prog(t, T.end + .2, .2);
+}
+
+/* ---------- scenes ---------- */
+function sceneQuiz(t) {
+  const d = D("quiz");
+  const { btns } = S.quiz;
+  btns.forEach((b, i) => {
+    const k = backOut(prog(t, .25 + i * .15, .35));
+    if (!b.classList.contains("correct") && !b.classList.contains("wrong")) {
+      b.style.opacity = clamp(prog(t, .25 + i * .15, .2));
+      b.style.transform = `translateY(${(1 - k) * 30}px)`;
+    } else { b.style.opacity = 1; b.style.transform = ""; }
+  });
+  const target = btns[1];
+  if (t >= T.hookTap && !S.quiz.tapped) { S.quiz.tapped = true; target.click(); }
+  const c0 = elCenter(d, target), c = { x: c0.x + 125, y: c0.y + 6 };
+  const p = tapPath(t, T.hookTap, { x: c.x + 120, y: c.y + 220 }, c);
+  return p;
+}
+function sceneHome(t) {
+  const { cards } = S.home;
+  cards.forEach((c, i) => {
+    const a = 4.75 + i * .12;
+    const k = backOut(prog(t, a, .4));
+    c.style.opacity = clamp(prog(t, a, .2));
+    c.style.transform = `translateY(${(1 - k) * 40}px) scale(${lerp(.92, 1, k)})`;
+  });
+  const hdr = D("home").querySelector("header");
+  const kh = easeOut(prog(t, 4.3, .35));
+  hdr.style.opacity = kh; hdr.style.transform = `translateY(${(1 - kh) * -20}px)`;
+  const target = cards[0];
+  const c = elCenter(D("home"), target);
+  const p = tapPath(t, T.homeTap, { x: c.x + 120, y: c.y + 260 }, c);
+  // press feedback on the card
+  if (t > T.homeTap - .05 && t < T.homeTap + .25) cards[0].style.transform = `scale(${1 - .04 * (1 - Math.abs(t - T.homeTap - .1) / .15)})`;
+  return p;
+}
+function sceneLevels(t) {
+  const { btns } = S.levels;
+  btns.forEach((b, i) => {
+    const a = T.levels + .25 + i * .25;
+    const k = backOut(prog(t, a, .35));
+    b.style.opacity = clamp(prog(t, a, .12));
+    b.style.transform = `scale(${lerp(.5, 1, k)}) rotate(${(1 - k) * -6}deg)`;
+  });
+  const ex = btns[4];
+  const k = prog(t, T.expert, .35);
+  if (t >= T.expert) {
+    ex.style.borderStyle = "solid"; ex.style.borderColor = "var(--berry)";
+    ex.style.background = "#F3E6EC";
+    const pulse = 1 + .06 * Math.sin(Math.PI * clamp(k));
+    ex.style.transform = `scale(${pulse}) rotate(${-1.5 * clamp(k)}deg)`;
+  } else { ex.style.borderStyle = ""; ex.style.borderColor = ""; ex.style.background = ""; }
+  const card = D("levels").querySelector(".diff-card");
+  const kc = easeOut(prog(t, T.levels, .35));
+  card.style.opacity = kc; card.style.transform = `translateY(${(1 - kc) * 24}px)`;
+  return null;
+}
+function sceneExplorer(t) {
+  const w = W("explorer"), d = D("explorer");
+  const input = d.getElementById("explorer-search");
+  const word = "Japan";
+  const n = clamp(Math.floor((t - T.typeStart) / .14) + 1, 0, word.length);
+  if (!S.explorer.picked && n !== S.explorer.typed) {
+    S.explorer.typed = n; input.value = word.slice(0, n);
+    input.dispatchEvent(new w.Event("input"));
+  }
+  input.style.borderColor = t > T.typeStart - .2 ? "var(--sky)" : "";
+  const card = d.querySelector(".explorer-card");
+  const kc = easeOut(prog(t, T.explorer, .35));
+  card.style.opacity = kc; card.style.transform = `translateY(${(1 - kc) * 24}px)`;
+  const panel = d.getElementById("explorer-panel");
+  panel.style.opacity = kc;
+  // caret
+  input.style.caretColor = "transparent";
+  const chip = d.querySelector(".explorer-suggestion");
+  let p = null;
+  if (chip || S.explorer.chipPos) {
+    if (chip && !S.explorer.chipPos) S.explorer.chipPos = elCenter(d, chip);
+    const c = S.explorer.chipPos;
+    p = tapPath(t, T.chipTap, { x: c.x + 200, y: c.y + 240 }, c);
+    if (t >= T.chipTap && !S.explorer.picked) { S.explorer.picked = true; chip.click(); }
+  }
+  return p;
+}
+function sceneMemory(t) {
+  const { cards, byKey, keys } = S.memory;
+  const d = D("memory");
+  // pre-matched pairs, then a sequence of flips
+  const pre = keys.slice(0, 3);
+  const seq = [
+    // [time, cardIndex, matchTime|null, unflipTime|null]
+  ];
+  const b = T.memory;
+  const pairA = byKey[keys[3]], pairB = byKey[keys[4]], pairC = byKey[keys[5]], miss = byKey[keys[6]];
+  const flips = [
+    { i: miss[0],  on: b + .45, off: b + 1.35 },
+    { i: pairA[0], on: b + .75, off: b + 1.35 },
+    { i: pairA[0], on: b + 1.6 },
+    { i: pairA[1], on: b + 1.85, match: b + 2.05 },
+    { i: pairB[0], on: b + 2.25 },
+    { i: pairB[1], on: b + 2.5, match: b + 2.7 },
+  ];
+  const want = new Map();
+  const matchedKeys = new Set(pre);
+  for (const f of flips) if (f.match && t >= f.match) matchedKeys.add(keys.find(k => byKey[k].includes(f.i)));
+  const matched = matchedKeys.size;
+  cards.forEach((c, i) => {
+    const isM = matchedKeys.has(c.dataset.key);
+    const up = flips.some(f => f.i === i && t >= f.on && !(f.off && t >= f.off));
+    want.set(i, { flipped: isM || up, matched: isM });
+  });
+  cards.forEach((c, i) => {
+    const s = want.get(i) || { flipped: false, matched: false };
+    c.classList.toggle("flipped", s.flipped);
+    c.classList.toggle("matched", s.matched);
+  });
+  d.getElementById("pairs-found").textContent = matched;
+  const grid = d.getElementById("memory-grid");
+  const kc = easeOut(prog(t, T.memory, .35));
+  grid.style.opacity = kc; grid.style.transform = `translateY(${(1 - kc) * 24}px)`;
+  // finger follows taps
+  const taps = flips.filter(f => f.on);
+  let cur = null;
+  for (const f of taps) if (t >= f.on - .3) cur = f;
+  if (!cur) return null;
+  const idx = taps.indexOf(cur);
+  const prev = idx > 0 ? elCenter(d, cards[taps[idx - 1].i]) : null;
+  const c = elCenter(d, cards[cur.i]);
+  const km = easeInOut(prog(t, cur.on - .25, .2));
+  const x = prev ? lerp(prev.x, c.x, km) : c.x + 60, y = prev ? lerp(prev.y, c.y, km) : c.y + 80;
+  const op = prog(t, b + .2, .15) * (1 - prog(t, b + 2.75, .2));
+  const press = Math.abs(t - cur.on) < .08 ? 1 - Math.abs(t - cur.on) / .08 : 0;
+  return { x: prev ? x : lerp(c.x + 60, c.x, km), y: prev ? y : lerp(c.y + 80, c.y, km), op, press, rip: prog(t, cur.on, .4) };
+}
+
+/* ---------- my own confetti for the end card (pure function of time) ---------- */
+const CC = ["#D6553B","#2E7D96","#4C9166","#E0A83E","#A6567D"];
+const confetti = (() => { const r = rng(42); return Array.from({ length: 90 }, (_, i) => ({
+  x: r() * 1920, delay: r() * .5, size: 10 + r() * 14, speed: 700 + r() * 600, rot: r() * 720, drift: (r() - .5) * 200, c: CC[i % 5] })); })();
+function drawConfetti(t0, t) {
+  const box = $("confetti");
+  if (!box.children.length) box.innerHTML = confetti.map(() => "<i></i>").join("");
+  [...box.children].forEach((el, i) => {
+    const c = confetti[i]; const dt = t - t0 - c.delay;
+    if (dt < 0 || dt > 2.6) { el.style.opacity = 0; return; }
+    el.style.opacity = 1 - clamp((dt - 2) / .6);
+    el.style.width = el.style.height = c.size + "px"; el.style.background = c.c;
+    el.style.transform = `translate(${c.x + c.drift * Math.sin(dt * 2)}px, ${-40 + dt * c.speed}px) rotate(${c.rot + dt * 400}deg)`;
+  });
+}
+
+/* ---------- master ---------- */
+window.renderAt = async function (t) {
+  camera(t);
+  const scene =
+    t < T.hookEnd + .25 ? "quiz" :
+    t < T.levels ? "home" :
+    t < T.explorer ? "levels" :
+    t < T.memory ? "explorer" :
+    t < T.result ? "memory" : "result";
+  // content: dip through bg between screens
+  const starts = { quiz: 0, home: T.hookEnd + .25, levels: T.levels, explorer: T.explorer, memory: T.memory, result: T.result };
+  const ends = { quiz: T.hookEnd + .25, home: T.levels, levels: T.explorer, explorer: T.memory, memory: T.result, result: 99 };
+  for (const name of Object.keys(starts)) {
+    let op = 0;
+    if (name === scene) op = name === "quiz" ? 1 - prog(t, T.hookEnd + .12, .12) : prog(t, starts[name], .12);
+    if (name !== scene && name === "quiz" && t < T.hookEnd + .25) op = 1;
+    showFrame(name, op);
+  }
+  let p = null;
+  if (scene === "quiz") p = sceneQuiz(t);
+  if (scene === "home") p = sceneHome(t);
+  if (scene === "levels") p = sceneLevels(t);
+  if (scene === "explorer") p = sceneExplorer(t);
+  if (scene === "memory") p = sceneMemory(t);
+  if (scene === "result") {
+    const card = D("result").querySelector(".result-card");
+    const k = backOut(prog(t, T.result, .45));
+    card.style.transform = `scale(${lerp(.85, 1, k)})`;
+  }
+  syncAnims(D(scene), t);
+  if (p) { fingerAt(p.x, p.y, p.op, p.press); rippleAt(p.x, p.y, p.rip); }
+  else { fingerAt(0, 0, 0, 0); rippleAt(0, 0, 0); }
+
+  capAt("cap-home", t, T.hookEnd + .6, T.levels);
+  capAt("cap-levels", t, T.levels + .15, T.explorer);
+  capAt("cap-explorer", t, T.explorer + .15, T.memory);
+  capAt("cap-memory", t, T.memory + .15, T.result);
+  capAt("cap-result", t, T.result + .15, T.end + .1);
+
+  // end card
+  const e = $("end");
+  const ke = easeOut(prog(t, T.end + .2, .5));
+  e.style.opacity = prog(t, T.end + .2, .25);
+  const kids = [e.querySelector(".globe"), e.querySelector("h1"), e.querySelector(".he"), e.querySelector(".url")];
+  kids.forEach((el, i) => {
+    const k = backOut(prog(t, T.end + .2 + i * .1, .45));
+    el.style.opacity = prog(t, T.end + .2 + i * .1, .2);
+    el.style.transform = `translateY(${(1 - k) * 50}px)` + (i === 0 ? ` rotate(${Math.sin((t - T.end) * 2.2) * 8}deg)` : "");
+  });
+  for (const [id, dir] of [["rail", -1], ["rail2", 1]]) {
+    const items = S[id]; if (!items) continue;
+    const off = ((t - T.end) * 60 * dir) % S[id + "W"];
+    items.forEach(({ img, x }) => {
+      let X = x + off; if (X < -200) X += S[id + "W"]; if (X > S[id + "W"] - 200) X -= S[id + "W"];
+      img.style.transform = `translateX(${X}px) rotate(${(x % 7) - 3}deg)`;
+    });
+  }
+  drawConfetti(T.end + .3, t);
+
+  // images still decoding? wait
+  await waitImages(D(scene));
+  await new Promise(r => requestAnimationFrame(() => r()));
+  return scene;
+};
+window.T = T;
+</script>
+</body>
+</html>
