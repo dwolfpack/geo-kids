@@ -35,7 +35,9 @@ GE.setDict({
     winTitle: "טייס הצלה אגדי! 👑", winBody: "סיימתם את כל השלבים!",
     paused: "הפסקה ⏸", resume: "ממשיכים ▶", factAbout: "💡 על {c}:",
     faster: "מהר יותר! ⚡", loop: "לולאה! 🔄", loops: "לולאות", speed: "💨 {v} קמ״ש",
-    controls2: "L או Shift = לולאה 🔄"
+    controls2: "L או Shift = לולאה 🔄",
+    hangar: "המוסך — עיצוב המסוק 🎨", hBody: "צבע המסוק", hTrim: "צבע הפסים", hStripes: "סוג פסים", hBlades: "מספר להבים", hBlade: "צבע קצות הלהבים", hDone: "מוכן לטיסה! ✔", tBody: "🎨 צבע", tStripes: "〰️ פסים", tRotor: "🌀 להבים",
+    st_bands: "טבעות", st_racing: "מרוץ", st_tail: "זנב", st_none: "חלק"
   },
   en: {
     title: "Sky Rescue", sub: "Fly over the sea, put out wildfires and rescue people!",
@@ -54,7 +56,9 @@ GE.setDict({
     winTitle: "Legendary rescue pilot! 👑", winBody: "You finished every stage!",
     paused: "Paused ⏸", resume: "Resume ▶", factAbout: "💡 About {c}:",
     faster: "Faster! ⚡", loop: "Loop! 🔄", loops: "loops", speed: "💨 {v} km/h",
-    controls2: "L or Shift = loop-the-loop 🔄"
+    controls2: "L or Shift = loop-the-loop 🔄",
+    hangar: "Hangar — paint your chopper 🎨", hBody: "Body colour", hTrim: "Stripe colour", hStripes: "Stripe style", hBlades: "Rotor blades", hBlade: "Blade tip colour", hDone: "Ready to fly! ✔", tBody: "🎨 Colour", tStripes: "〰️ Stripes", tRotor: "🌀 Rotor",
+    st_bands: "Bands", st_racing: "Racing", st_tail: "Tail", st_none: "Plain"
   }
 });
 const t = GE.t;
@@ -153,29 +157,72 @@ function rotorBlurTex() {
   g.fillStyle = grd; g.fillRect(0, 0, 128, 128);
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
-function buildHeli() {
-  const g = new THREE.Group();
-  const body = new THREE.Mesh(geo.sphere, mat.red); body.scale.set(1.35, 1.15, 2.1); g.add(body);
-  const belly = new THREE.Mesh(geo.sphere, mat.white); belly.scale.set(1.25, 0.6, 1.9); belly.position.y = -0.55; g.add(belly);
-  const glass = new THREE.Mesh(geo.sphere, mat.glass); glass.scale.set(1.05, 0.8, 1.0); glass.position.set(0, 0.25, -1.35); g.add(glass);
-  const boom = new THREE.Mesh(geo.cyl, mat.red); boom.scale.set(0.32, 2.7, 0.32); boom.rotation.x = Math.PI / 2; boom.position.set(0, 0.35, 2.75); g.add(boom);
-  const stripe = new THREE.Mesh(geo.cyl, mat.white); stripe.scale.set(0.34, 0.5, 0.34); stripe.rotation.x = Math.PI / 2; stripe.position.set(0, 0.35, 3.1); g.add(stripe);
-  const fin = new THREE.Mesh(geo.box, mat.red); fin.scale.set(0.1, 0.85, 0.65); fin.position.set(0, 0.8, 4.05); g.add(fin);
-  const tail = new THREE.Group(); tail.position.set(0.22, 0.85, 4.1);
-  for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, mat.white); b.scale.set(0.05, 0.9, 0.12); b.rotation.x = i * Math.PI / 2; tail.add(b); }
-  g.add(tail);
-  for (const s of [-1, 1]) {
-    const skid = new THREE.Mesh(geo.cyl, mat.dark); skid.scale.set(0.12, 3.2, 0.12); skid.rotation.x = Math.PI / 2; skid.position.set(0.95 * s, -1.35, -0.1); g.add(skid);
-    for (const z of [-0.9, 0.8]) { const leg = new THREE.Mesh(geo.cyl, mat.dark); leg.scale.set(0.08, 0.6, 0.08); leg.position.set(0.85 * s, -1.05, z); leg.rotation.z = 0.3 * s; g.add(leg); }
+// Paint options for the hangar. Colours are hex; everything else is a key.
+const PAINT = {
+  body: [0xFF5B2E, 0xE53935, 0x1E88E5, 0xFDD835, 0x43A047, 0x8E24AA, 0xEC407A, 0x263238, 0xF5F5F5],
+  trim: [0xF7F7F2, 0x263238, 0xFDD835, 0xE53935, 0x1E88E5, 0xFFB300, 0x43A047],
+  stripes: ["bands", "racing", "tail", "none"],
+  blades: [2, 3, 4, 5],
+  blade: [0x3A3F47, 0xE53935, 0xFDD835, 0xF7F7F2, 0x1E88E5]
+};
+const DEFAULT_LOOK = { body: 0xFF5B2E, trim: 0xF7F7F2, stripes: "bands", blades: 4, blade: 0x3A3F47 };
+const heliMat = {
+  body: M(0xFF5B2E, { roughness: 0.35, metalness: 0.15 }),
+  trim: M(0xF7F7F2, { roughness: 0.45 }),
+  blade: new THREE.MeshBasicMaterial({ color: 0x3A3F47, transparent: true, opacity: 0.4, depthWrite: false }),
+  tip: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.6, depthWrite: false }),
+  blur: new THREE.MeshBasicMaterial({ map: rotorBlurTex(), transparent: true, depthWrite: false, side: THREE.DoubleSide })
+};
+// Builds (or rebuilds) the helicopter into group g from a look {body, trim, stripes, blades, blade}.
+function buildHeli(look = DEFAULT_LOOK, g = new THREE.Group()) {
+  for (const c of [...g.children]) g.remove(c);
+  heliMat.body.color.setHex(look.body);
+  heliMat.trim.color.setHex(look.trim);
+  const dark = look.blade === 0x3A3F47;
+  heliMat.blade.color.setHex(0x3A3F47);
+  heliMat.tip.color.setHex(dark ? 0xF7F7F2 : look.blade);
+  heliMat.blur.color.setHex(dark ? 0xFFFFFF : look.blade);
+  const add = (geom, m, sx, sy, sz, x, y, z, rx = 0, rz = 0) => { const o = new THREE.Mesh(geom, m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); o.rotation.set(rx, 0, rz); g.add(o); return o; };
+  const R = Math.PI / 2;
+  add(geo.sphere, heliMat.body, 1.35, 1.15, 2.1, 0, 0, 0);
+  add(geo.sphere, heliMat.trim, 1.25, 0.6, 1.9, 0, -0.55, 0);                    // belly
+  add(geo.sphere, mat.glass, 1.05, 0.8, 1.0, 0, 0.25, -1.35);                     // canopy
+  add(geo.cyl, heliMat.body, 0.32, 2.7, 0.32, 0, 0.35, 2.75, R);                   // tail boom
+  add(geo.box, heliMat.body, 0.1, 0.85, 0.65, 0, 0.8, 4.05);                       // fin
+  add(geo.box, heliMat.body, 1.3, 0.07, 0.4, 0, 0.45, 3.7);                        // tail plane
+  add(geo.sphere, heliMat.trim, 0.7, 0.45, 0.5, 0, -0.45, -1.85);                  // nose
+  const st = look.stripes;
+  if (st === "bands") {
+    for (const z of [-0.2, 0.9]) add(geo.cyl, heliMat.trim, 1.39, 0.26, 1.19, 0, 0.05, z, R);
+    add(geo.cyl, heliMat.trim, 0.34, 0.5, 0.34, 0, 0.35, 3.1, R);
+  } else if (st === "racing") {
+    // two stripes nose-to-tail over the top (narrow ellipsoids that just break the skin)
+    for (const x of [-0.36, 0.36]) add(geo.sphere, heliMat.trim, 0.2, 1.19, 2.13, x, 0.02, 0.02);
+    add(geo.box, heliMat.trim, 0.36, 0.36, 2.7, 0, 0.47, 2.75);
+  } else if (st === "tail") {
+    for (let i = 0; i < 4; i++) add(geo.cyl, heliMat.trim, 0.34, 0.26, 0.34, 0, 0.35, 1.9 + i * 0.55, R);
+    add(geo.box, heliMat.trim, 0.12, 0.5, 0.66, 0, 1.0, 4.05);
+    add(geo.cyl, heliMat.trim, 1.39, 0.26, 1.19, 0, 0.05, 0.9, R);
   }
-  for (const z of [-0.2, 0.9]) { const band = new THREE.Mesh(geo.cyl, mat.white); band.scale.set(1.37, 0.22, 1.2); band.rotation.x = Math.PI / 2; band.position.set(0, 0.05, z); band.scale.set(1.39, 0.26, 1.19); g.add(band); }
-  const nose = new THREE.Mesh(geo.sphere, mat.white); nose.scale.set(0.7, 0.45, 0.5); nose.position.set(0, -0.45, -1.85); g.add(nose);
-  const mast = new THREE.Mesh(geo.cyl, mat.dark); mast.scale.set(0.16, 0.5, 0.16); mast.position.y = 1.3; g.add(mast);
+  const tail = new THREE.Group(); tail.position.set(0.22, 0.85, 4.1);
+  for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, heliMat.trim); b.scale.set(0.05, 0.9, 0.12); b.rotation.x = i * R; tail.add(b); }
+  g.add(tail);
+  for (const sd of [-1, 1]) {
+    add(geo.cyl, mat.dark, 0.12, 3.2, 0.12, 0.95 * sd, -1.35, -0.1, R);
+    for (const z of [-0.9, 0.8]) add(geo.cyl, mat.dark, 0.08, 0.6, 0.08, 0.85 * sd, -1.05, z, 0, 0.3 * sd);
+  }
+  add(geo.cyl, mat.dark, 0.16, 0.5, 0.16, 0, 1.3, 0);                              // mast
   const rotor = new THREE.Group(); rotor.position.y = 1.6;
-  const bladeMat = new THREE.MeshBasicMaterial({ color: 0x3A3F47, transparent: true, opacity: 0.35, depthWrite: false });
-  for (let i = 0; i < 4; i++) { const b = new THREE.Mesh(geo.box, bladeMat); b.scale.set(0.3, 0.05, 5.2); b.position.z = 2.6; const arm = new THREE.Group(); arm.add(b); arm.rotation.y = i * Math.PI / 2; rotor.add(arm); }
-  const blur = new THREE.Mesh(geo.disc, new THREE.MeshBasicMaterial({ map: rotorBlurTex(), transparent: true, depthWrite: false, side: THREE.DoubleSide }));
-  blur.scale.setScalar(4.8); blur.rotation.x = -Math.PI / 2; rotor.add(blur);
+  const n = look.blades;
+  for (let i = 0; i < n; i++) {
+    const arm = new THREE.Group(); arm.rotation.y = i * Math.PI * 2 / n;
+    const b = new THREE.Mesh(geo.box, heliMat.blade); b.scale.set(0.3, 0.05, 4.4); b.position.z = 2.2; arm.add(b);
+    const tip = new THREE.Mesh(geo.box, heliMat.tip); tip.scale.set(0.32, 0.06, 0.8); tip.position.z = 4.8; arm.add(tip);
+    rotor.add(arm);
+  }
+  const hub = new THREE.Mesh(geo.sphere, heliMat.body); hub.scale.set(0.35, 0.2, 0.35); rotor.add(hub);
+  const blur = new THREE.Mesh(geo.disc, heliMat.blur);
+  blur.scale.setScalar(5.2); blur.rotation.x = -R; rotor.add(blur);
   g.add(rotor);
   g.userData = { rotor, tail };
   g.scale.setScalar(1.8);
@@ -502,8 +549,6 @@ function updateBursts(dt) {
 /* ---------------- game state ---------------- */
 const heli = buildHeli();
 scene.add(heli);
-const shield = new THREE.Mesh(new THREE.IcosahedronGeometry(5.2, 2), new THREE.MeshBasicMaterial({ color: 0x9BE7FF, transparent: true, opacity: 0.2, depthWrite: false }));
-shield.visible = false; scene.add(shield);
 const shadow = new THREE.Mesh(geo.disc, mat.shadow); shadow.rotation.x = -Math.PI / 2; shadow.scale.set(2.2, 3.2, 1); scene.add(shadow);
 const reticle = new THREE.Mesh(geo.reticle, mat.reticle); reticle.rotation.x = -Math.PI / 2; scene.add(reticle);
 const world = new THREE.Group(); scene.add(world);
@@ -511,6 +556,8 @@ const streaks = [];
 for (let i = 0; i < 26; i++) { const s = new THREE.Mesh(geo.box, mat.streak); s.scale.set(0.05, 0.05, 6); scene.add(s); streaks.push(s); }
 
 const save = GE.load(SAVE_KEY, { unlocked: 1, stars: [0, 0, 0] });
+const look = Object.assign({}, DEFAULT_LOOK, save.heli || {});
+buildHeli(look, heli);
 const S = {
   mode: "title", stage: 0, time: 0, dist: 0, speed: 30,
   x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
@@ -522,8 +569,12 @@ const S = {
 const input = { x: 0, y: 0, drop: false, stickX: 0, stickY: 0, keys: {} };
 let bot = false;
 let bannerTimer = 0;
+let hangarT = 0, portraitView = false;
 
 const LOOP_DUR = 1.25;
+// Hitbox matches the visible airframe (body + skids + inner rotor), in world units.
+const HITBOX = { half: 2.6, front: 3.2, back: 4.5, below: 2.2 };
+const HIT_GRACE = 0.15;
 
 /* ---------------- stage generation ---------------- */
 function clearWorld() {
@@ -536,7 +587,7 @@ function startStage(n) {
   clearWorld();
   const rng = GE.rng(1000 + n * 77);
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
-    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
+    hearts: 3, hits: 0, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
     bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
   scene.background = skyTexture(st.sky[0], st.sky[1]);
   scene.fog = new THREE.Fog(st.fog, 90, 430);
@@ -669,7 +720,8 @@ function botInput() {
   if (goal) { tx = goal.x; ty = goal.y; }
   for (const h of S.stacks.concat(S.birds, S.clouds)) {
     if (h.z < -S.dist && h.z > -S.dist - 60) {
-      const hr = (h.r || 5) + 3;
+      if (h.hit) continue;
+      const hr = (h.r || 5) + HITBOX.half + 1.4;
       if (Math.abs(tx - h.x) < hr) tx = h.x + (tx >= h.x ? hr : -hr);
       if (h.y != null && Math.abs(ty - h.y) < 5) ty = h.y > 10 ? 4 : h.y + 7;
     }
@@ -724,7 +776,7 @@ function step(dt) {
   if (stepNow > S.speedStep && stepNow < 3) { S.speedStep = stepNow; showBanner(t("faster")); GE.sfx("upgrade"); }
   // Loop-the-loop stunt
   S.loopCd = Math.max(0, S.loopCd - dt);
-  if (input.loop && S.loopT < 0 && S.loopCd <= 0 && !bot) { S.loopT = 0; S.inv = Math.max(S.inv, LOOP_DUR + 0.2); GE.sfx("sail"); }
+  if (input.loop && S.loopT < 0 && S.loopCd <= 0 && !bot) { S.loopT = 0; GE.sfx("sail"); }
   input.loop = false;
   if (S.loopT >= 0) {
     S.loopT += dt;
@@ -820,9 +872,14 @@ function step(dt) {
     }
   }
   // Hazards
+  // Every obstacle you touch costs exactly one heart. The only grace is a
+  // blink-length window so one crash into overlapping objects counts once.
+  const hy = S.y + S.lift;
   const hit = (h) => {
-    if (S.inv > 0 || h.hit) return;
-    h.hit = true; S.hearts--; S.inv = 1.6; S.shake = 1; S.flash = 1; S.slow = 0.3;
+    if (h.hit) return;
+    h.hit = true;
+    if (S.inv > 0) return;
+    S.hearts--; S.hits = (S.hits || 0) + 1; S.inv = HIT_GRACE; S.shake = 1; S.flash = 1; S.slow = 0.3;
     for (let i = 0; i < 28; i++) spawn(mat.spark, V(S.x, S.y, hz), V((Math.random() - 0.5) * 18, (Math.random() - 0.2) * 14, (Math.random() - 0.5) * 10), 0.8, 0.45);
     for (let i = 0; i < 6; i++) spawn(mat.smoke, V(S.x, S.y, hz + 1), V((Math.random() - 0.5) * 4, 3, 6), 1.2, 0.9, 1.5);
     flashEl.style.opacity = "0.55";
@@ -831,8 +888,7 @@ function step(dt) {
     if (S.hearts <= 0) endStage(false);
   };
   for (const s of S.stacks) {
-    if (!s.hit && Math.abs(s.z - hz) < 3.5 && Math.abs(s.x - S.x) < s.r + 1.2 && S.y < s.h) {
-      const wasInv = S.inv > 0;
+    if (!s.hit && s.z > hz - HITBOX.front - s.r && s.z < hz + HITBOX.back && Math.abs(s.x - S.x) < s.r + HITBOX.half && hy - HITBOX.below < s.h) {
       if (s.obj) {
         // The stack shatters so the camera never ends up inside rock.
         s.obj.visible = false;
@@ -840,11 +896,16 @@ function step(dt) {
         for (let i = 0; i < 14; i++) spawn(mat.water, V(s.x, 0.5, s.z), V((Math.random() - 0.5) * 14, 8 + Math.random() * 8, (Math.random() - 0.5) * 8), 0.9, 0.7);
         S.vx = (S.x >= s.x ? 1 : -1) * 22; // knocked sideways
       }
-      if (!wasInv) hit(s); else s.hit = true;
+      hit(s);
     }
   }
-  for (const b of S.birds) if (Math.abs(b.z - hz) < 3 && Math.hypot(b.x - S.x, b.y - S.y) < 3.2) hit(b);
-  for (const c of S.clouds) if (Math.abs(c.z - hz) < 5 && Math.hypot(c.x - S.x, c.y - S.y) < 5) hit(c);
+  for (const b of S.birds) if (!b.hit && Math.abs(b.z - hz) < 4 && Math.abs(b.x - S.x) < HITBOX.half + 1.5 && Math.abs(b.y - hy) < 3) {
+    hit(b);
+    // the flock scatters so the hit reads
+    b.obj.visible = false;
+    for (let i = 0; i < 14; i++) spawn(mat.bird, V(b.x, b.y, b.z), V((Math.random() - 0.5) * 16, Math.random() * 10, (Math.random() - 0.5) * 10), 0.9, 0.3);
+  }
+  for (const c of S.clouds) if (Math.abs(c.z - hz) < 5 && Math.hypot(c.x - S.x, c.y - hy) < 5) hit(c);
 
   // Fires: flicker + smoke
   for (const f of S.fires) {
@@ -899,9 +960,6 @@ function render(realDt) {
   ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
   ud.tail.rotation.x += realDt * 62;
   heli.visible = true;
-  shield.visible = S.mode === "play" && S.inv > 0 && S.stage != null && S.hearts < 3;
-  shield.position.copy(heli.position);
-  shield.material.opacity = 0.12 + Math.abs(Math.sin(S.time * 10)) * 0.18;
   shadow.position.set(S.x, 0.3, hz);
   shadow.visible = S.lift < 6;
   shadow.scale.set(2.4, 3.4, 1);
@@ -910,6 +968,17 @@ function render(realDt) {
   reticle.visible = S.mode === "play" && S.tank >= 1;
   reticle.position.set(land.x, 3, land.z);
   reticle.material.opacity = 0.4 + Math.sin(S.time * 8) * 0.2;
+  if (S.mode === "hangar") {
+    hangarT += realDt;
+    const a = 0.7 + hangarT * 0.45, R = portraitView ? 24 : 15;
+    heli.rotation.set(0, 0, 0);
+    camera.position.set(heli.position.x + Math.sin(a) * R, heli.position.y + 3.2, heli.position.z + Math.cos(a) * R);
+    camera.lookAt(heli.position.x, heli.position.y - (portraitView ? 4.5 : 3), heli.position.z);
+    camera.fov = 50; camera.updateProjectionMatrix();
+    updateWater(hangarT, heli.position.x, hz);
+    renderer.render(scene, camera);
+    return;
+  }
   camera.position.copy(camPos);
   if (S.shake > 0) camera.position.add(V((Math.random() - 0.5) * S.shake * 4.5, (Math.random() - 0.5) * S.shake * 3.4, 0));
   camera.lookAt(camLook);
@@ -954,8 +1023,28 @@ function updateHud() {
   document.querySelector(".progress-heli").style.left = `calc(${(k * 100).toFixed(1)}% - 8px)`;
 }
 function setScreen(id) {
-  for (const s of ["scr-title", "scr-end", "scr-pause"]) $(s).hidden = s !== id;
+  for (const s of ["scr-title", "scr-end", "scr-pause", "scr-hangar"]) $(s).hidden = s !== id;
 }
+const hex = (c) => "#" + c.toString(16).padStart(6, "0");
+let hangarTab = "body";
+function renderHangar() {
+  const row = (key, label, items, show) => `<div class="paint-row"><b>${GE.esc(t(label))}</b><div class="swatches">` +
+    items.map((v) => `<button type="button" class="sw${look[key] === v ? " on" : ""}" data-paint="${key}" data-v="${v}" aria-label="${key} ${v}"${typeof v === "number" && key !== "blades" ? ` style="background:${hex(v)}"` : ""}>${show ? show(v) : ""}</button>`).join("") + `</div></div>`;
+  const tabs = [["body", "tBody"], ["stripes", "tStripes"], ["rotor", "tRotor"]];
+  const panel = hangarTab === "body" ? row("body", "hBody", PAINT.body)
+    : hangarTab === "stripes" ? row("stripes", "hStripes", PAINT.stripes, (v) => GE.esc(t("st_" + v))) + row("trim", "hTrim", PAINT.trim)
+    : row("blades", "hBlades", PAINT.blades, (v) => v) + row("blade", "hBlade", PAINT.blade);
+  $("hangar-card").innerHTML = `<h1>${GE.esc(t("hangar"))}</h1>` +
+    `<div class="htabs">${tabs.map(([k, l]) => `<button type="button" class="htab${hangarTab === k ? " on" : ""}" data-htab="${k}">${GE.esc(t(l))}</button>`).join("")}</div>` +
+    panel + `<button class="ge-btn ge-btn-primary hdone" id="btn-hangar-done" type="button">${GE.esc(t("hDone"))}</button>`;
+}
+function setLook(key, v) {
+  look[key] = key === "stripes" ? v : +v;
+  buildHeli(look, heli);
+  save.heli = { ...look }; GE.save(SAVE_KEY, save);
+  renderHangar();
+}
+function openHangar() { S.mode = "hangar"; hangarT = 0; renderHangar(); setScreen("scr-hangar"); }
 function stars(n) { return "★".repeat(n) + "☆".repeat(3 - n); }
 function renderTitle() {
   document.title = t("title") + " 🚁";
@@ -968,6 +1057,7 @@ function renderTitle() {
       `<span>${GE.esc(t("stage", { n: i + 1 }))} · ${GE.esc(t(st.key))}<small>${GE.esc(open ? t(st.key + "d") : t("locked"))}</small></span>` +
       `<span class="stars">${stars(save.stars[i] || 0)}</span></button>`;
   }).join("");
+  $("btn-hangar").textContent = t("hangar");
   $("btn-sound").textContent = GE.isMuted() ? "🔇" : "🔊";
   $("btn-lang").textContent = GE.lang === "he" ? "EN" : "עב";
   $("hud-hint").textContent = t("hint");
@@ -1014,7 +1104,11 @@ function toMenu() { S.mode = "title"; $("hud").hidden = true; stopRotor(); rende
 document.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
-  if (b.dataset.stage != null) { GE.sfx("tap"); startRotor(); startStage(+b.dataset.stage); }
+  if (b.dataset.htab) { GE.sfx("tap"); hangarTab = b.dataset.htab; renderHangar(); }
+  else if (b.dataset.paint) { GE.sfx("tap"); setLook(b.dataset.paint, b.dataset.v); }
+  else if (b.id === "btn-hangar") { GE.sfx("tap"); openHangar(); }
+  else if (b.id === "btn-hangar-done") toMenu();
+  else if (b.dataset.stage != null) { GE.sfx("tap"); startRotor(); startStage(+b.dataset.stage); }
   else if (b.id === "btn-next") { startRotor(); startStage(S.stage + 1); }
   else if (b.id === "btn-again") { startRotor(); startStage(S.stage); }
   else if (b.id === "btn-menu" || b.id === "btn-menu2") toMenu();
@@ -1055,6 +1149,7 @@ function resize() {
   camera.aspect = w / h;
   // Portrait phones: widen the view so the heli and targets stay framed.
   const portrait = w < h;
+  portraitView = portrait;
   camera.zoom = portrait ? 0.78 : 1;
   // Portrait: pull back, centre the heli (less side offset), tilt a bit further down.
   Object.assign(CAM, portrait ? { back: 10, up: 7, side: 2.6, lookDown: 1.6 } : { back: 8.2, up: 6.4, side: 2.4, lookDown: 0.8 });
@@ -1080,13 +1175,14 @@ requestAnimationFrame(frame);
 GE.registerSW("sw.js");
 
 window.__heli = {
-  get state() { return { mode: S.mode, stage: S.stage, dist: S.dist, length: STAGES[S.stage].length, x: S.x, y: S.y, bank: S.bank, hearts: S.hearts, tank: S.tank, score: S.score, put: S.put, saved: S.saved, rings: S.ringsHit, totals: S.totals, unlocked: save.unlocked, stars: save.stars.slice() }; },
+  get state() { return { mode: S.mode, stage: S.stage, dist: S.dist, length: STAGES[S.stage].length, x: S.x, y: S.y, bank: S.bank, hearts: S.hearts, hits: S.hits, tank: S.tank, score: S.score, put: S.put, saved: S.saved, rings: S.ringsHit, totals: S.totals, unlocked: save.unlocked, stars: save.stars.slice() }; },
   start(n) { startStage(n); },
   bot(on) { bot = !!on; },
   setInput(x, y, drop) { input.x = x; input.y = y; input.drop = !!drop; },
   loop() { input.loop = true; },
   get motion() { return { speed: S.speed, loopT: S.loopT, lift: S.lift, loopPitch: S.loopPitch, loops: S.loops, yaw: S.yaw, bank: S.bank, inv: S.inv }; },
   manual(on) { manual = !!on; },
+  get look() { return { ...look }; },
   // Deterministic stepping for tests: n frames of dt, rendering the last one.
   step(seconds, dt = 1 / 60) { const n = Math.round(seconds / dt); for (let i = 0; i < n; i++) step(dt); render(dt); },
   frame(dt = 1 / 60) { step(dt); render(dt); },
