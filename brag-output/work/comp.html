@@ -81,9 +81,11 @@
   #end h1 { font: 800 120px/1 'Rubik'; letter-spacing: -2px; text-align: center; }
   #end .he { font: 800 76px/1 'Rubik'; color: var(--coral); direction: rtl; }
   #end .url {
-    margin-top: 14px; font: 800 44px 'Rubik'; color: #fff; background: var(--sky);
+    margin-top: 0; font: 800 54px 'Rubik'; color: #fff; background: var(--sky);
     padding: 14px 40px 18px; border-radius: 999px; box-shadow: 0 6px 18px rgba(20,35,33,.14);
   }
+  #end .cta { margin-top: 10px; font: 800 36px 'Rubik'; color: var(--ink); }
+  .v #end .cta { font-size: 34px; }
   #rail { position: absolute; left: 0; width: 100%; height: 96px; overflow: visible; }
   #rail img {
     position: absolute; top: 0; height: 66px; border-radius: 8px; border: 5px solid #fff;
@@ -102,7 +104,7 @@
   .v #end { gap: 26px; }
   .v #end h1 { font-size: 104px; max-width: 960px; }
   .v #end .he { font-size: 72px; }
-  .v #end .url { font-size: 40px; }
+  .v #end .url { font-size: 48px; padding: 16px 36px 20px; }
   .v #rail.top { top: 250px; }
   .v #rail2 { top: 1560px; }
 
@@ -112,6 +114,10 @@
 </head>
 <body>
 <div id="stage">
+  <div id="cap-hook" class="cap" style="--k: var(--coral)">
+    <div class="kicker">🚩 Flag Quiz</div>
+    <div class="line">Which country does <em>this flag</em> belong to?</div>
+  </div>
   <div id="cap-home" class="cap" style="--k: var(--coral)">
     <div class="kicker">🌍 Around the World Adventure</div>
     <div class="line">Geography games and adventures <em>for kids.</em></div>
@@ -158,6 +164,7 @@
     <div class="globe">🌍</div>
     <h1>Around the World Adventure</h1>
     <div class="he">מסע סביב העולם</div>
+    <div class="cta">▶ Play now, free in your browser</div>
     <div class="url">dwolfpack.github.io/geo-kids</div>
     <div id="rail2"></div>
   </div>
@@ -168,7 +175,7 @@
 const V = new URLSearchParams(location.search).get("format") === "vertical";
 if (V) document.documentElement.classList.add("v");
 const L = V
-  ? { W: 1080, H: 1920, ax: 540, ay: 960, wx: 540, wy: 560 + 904 * 1.1 / 2, wfy: 452, s: 1.1, hook: [1.3, 1.2, 1.22] }
+  ? { W: 1080, H: 1920, ax: 540, ay: 1110, wx: 540, wy: 560 + 904 * 1.1 / 2, wfy: 452, s: 1.1, hook: [1.3, 1.2, 1.22] }
   : { W: 1920, H: 1080, ax: 960, ay: 540, wx: 930 + 440, wy: 38 + 502, wfy: 502, s: 1, hook: [1.75, 1.4, 1.6] };
 
 /* ---------- timeline (seconds) ---------- */
@@ -354,6 +361,7 @@ function camera(t) {
   const k3 = easeInOut(prog(t, T.hookEnd, T.camEnd - T.hookEnd));
   s = lerp(s, L.s, k3); fx = lerp(fx, 440, k3); fy = lerp(fy, L.wfy, k3);
   ax = lerp(ax, L.wx, k3); ay = lerp(ay, L.wy, k3);
+  if (V) { const top = ay - fy * s; if (top < 560) ay += 560 - top; }
   // exit to end card
   const k4 = easeInOut(prog(t, T.end, .4));
   ax += k4 * 1300;
@@ -545,6 +553,7 @@ window.renderAt = async function (t) {
   if (p) { fingerAt(p.x, p.y, p.op, p.press); rippleAt(p.x, p.y, p.rip); }
   else { fingerAt(0, 0, 0, 0); rippleAt(0, 0, 0); }
 
+  if (V) capAt("cap-hook", t, -1, T.hookEnd + .15); else $("cap-hook").style.display = "none";
   capAt("cap-home", t, T.hookEnd + .6, T.levels);
   capAt("cap-levels", t, T.levels + .15, T.explorer);
   capAt("cap-explorer", t, T.explorer + .15, T.memory);
@@ -555,11 +564,12 @@ window.renderAt = async function (t) {
   const e = $("end");
   const ke = easeOut(prog(t, T.end + .2, .5));
   e.style.opacity = prog(t, T.end + .2, .25);
-  const kids = [e.querySelector(".globe"), e.querySelector("h1"), e.querySelector(".he"), e.querySelector(".url")];
+  const kids = [e.querySelector(".globe"), e.querySelector("h1"), e.querySelector(".he"), e.querySelector(".cta"), e.querySelector(".url")];
   kids.forEach((el, i) => {
     const k = backOut(prog(t, T.end + .2 + i * .1, .45));
     el.style.opacity = prog(t, T.end + .2 + i * .1, .2);
-    el.style.transform = `translateY(${(1 - k) * 50}px)` + (i === 0 ? ` rotate(${Math.sin((t - T.end) * 2.2) * 8}deg)` : "");
+    el.style.transform = `translateY(${(1 - k) * 50}px)` + (i === 0 ? ` rotate(${Math.sin((t - T.end) * 2.2) * 8}deg)` : "")
+      + (i === 4 ? ` scale(${1 + .035 * Math.max(0, Math.sin((t - T.end - 1) * Math.PI * 2))})` : "");
   });
   for (const [id, dir] of [["rail", -1], ["rail2", 1]]) {
     const items = S[id]; if (!items) continue;
