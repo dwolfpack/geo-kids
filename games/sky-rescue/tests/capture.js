@@ -51,7 +51,7 @@ async function stitch(page, frames, labels, file) {
   await page.evaluate(() => { const h = window.__heli; h.manual(true); });
 
   // Stills: one per stage, mid-flight with a fire and a ring ahead (bot flying).
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 7; n++) {
     await page.evaluate((n) => { const h = window.__heli; h.start(n); h.bot(true); h.step(7.5); }, n);
     await page.waitForTimeout(80);
     fs.writeFileSync(path.join(OUT, `still-16x9-s${n + 1}.png`), await page.screenshot({ type: "png" }));
@@ -97,7 +97,7 @@ async function stitch(page, frames, labels, file) {
   await stitch(page, hit, hitL, "strip-hit.png");
 
   // Full playthroughs: the autopilot flies every stage start to finish.
-  for (let n = 0; n < 3; n++) {
+  for (let n = 0; n < 7; n++) {
     await page.evaluate((n) => { const h = window.__heli; h.start(n); h.bot(true); }, n);
     let res, guard = 0;
     do { res = await page.evaluate(() => { const h = window.__heli; h.step(0.5); return h.state; }); } while (res.mode === "play" && guard++ < 400);
