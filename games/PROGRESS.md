@@ -53,6 +53,10 @@ All games share these properties:
   - r7: helicopter reads as a blob
   - r8: **YES**, all 5 win criteria pass
 - Round 9 applied r8's top note: the helicopter now sits lower so targets stay in view.
+- **Follow-up:** a speed ramp (+55% by the end of a stage), a loop-the-loop stunt (🔄 / L), and more realistic flight: spring-damped bank, yaw into turns, rotor downwash spray, vibration and a speed-driven FOV.
+- **New worlds, stages 4–7:** a snowy Himalaya canyon, the Egyptian Nile with camel caravans, Amazon jungle ruins and the Canadian Arctic, built from the user's concept art (`ref/user-ref-*.webp`).
+  A fresh critic said NO at first: turquoise sea everywhere erased the sense of place. The fix added sand, snow and jungle ground, so each world's water becomes a river; warmed the desert light; guaranteed an early jungle ruin; and made the people waiting on the ice bigger.
+  The autopilot finishes all 7 stages with no errors. Snapshots are in `tests/rounds/worlds-s*.jpg`.
 - Snapshots of rounds r1, r8 and r9 (JPEG) are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game

@@ -68,9 +68,9 @@ const STAGES = [
   { key: "s3", code: "jm", icon: "⛈️", length: 2800, speed: 37, sea: 0x1AA2B8, deep: 0x0A4F66, sky: ["#7D9FBC", "#DCE6ED"], fog: 0xB4C4D0, sun: 0xFFF3E0,
     fires: 8, rafts: 6, rings: 10, stacks: 10, birds: 3, clouds: 8, islandTint: 0x5E9C57 },
   // New worlds (from the user's concept art): each keeps water to refill from.
-  { key: "s4", theme: "canyon", code: "np", icon: "🏔️", length: 2800, speed: 38, sea: 0x67AFC2, deep: 0x2F6E82, sky: ["#9DBBD3", "#EEF3F7"], fog: 0xDDE6EE, sun: 0xFFFFFF,
+  { key: "s4", theme: "canyon", code: "np", icon: "🏔️", length: 2800, speed: 38, sea: 0x86CADB, deep: 0x4A8FA6, sky: ["#9DBBD3", "#EEF3F7"], fog: 0xDDE6EE, sun: 0xFFFFFF,
     fires: 6, rafts: 5, rings: 10, stacks: 12, birds: 2, clouds: 0, islandTint: 0x44704F },
-  { key: "s5", theme: "desert", code: "eg", icon: "🐪", length: 2900, speed: 39, sea: 0x25A3B6, deep: 0x157489, sky: ["#6FBDE6", "#FCE3BE"], fog: 0xF3DDBB, sun: 0xFFDDA6,
+  { key: "s5", theme: "desert", code: "eg", icon: "🐪", length: 2900, speed: 39, sea: 0x25A3B6, deep: 0x157489, sky: ["#98C4DC", "#F3D6A2"], fog: 0xF0D2A0, sun: 0xFFDDA6,
     fires: 7, rafts: 5, rings: 10, stacks: 9, birds: 3, clouds: 5, islandTint: 0x93A94E },
   { key: "s6", theme: "jungle", code: "br", icon: "🌿", length: 3000, speed: 40, sea: 0x4FB39A, deep: 0x2E7A66, sky: ["#8FC0B6", "#E3EEE2"], fog: 0xC7DBC9, sun: 0xFFF0D0,
     fires: 8, rafts: 6, rings: 10, stacks: 12, birds: 4, clouds: 0, islandTint: 0x2E7A3A },
@@ -277,7 +277,7 @@ function buildCloud(rng, cmat) {
 /* ---------------- worlds (stages 4–7) ---------------- */
 const W = {
   snow: M(0xF4F8FB), ice: M(0xCFE8F3, { roughness: 0.35 }), iceDeep: M(0x9FCBE0, { roughness: 0.3 }),
-  granite: M(0x7D8791), graniteDark: M(0x5C6570), pine: M(0x2F5D40), sandstone: M(0xD9A45E), sandDark: M(0xC98F48),
+  granite: M(0x98A3AE), graniteDark: M(0x7A8591), pine: M(0x2F5D40), sandstone: M(0xD9A45E), sandDark: M(0xC98F48),
   dune: M(0xEDC98A), stone: M(0xB8A98A), moss: M(0x6E8B55), jungle1: M(0x2E7A3A), jungle2: M(0x3F9447), jungle3: M(0x25612F),
   bark: M(0x6B4A2E), camel: M(0xC9975B), cloth: M(0x2E6FD0), sail: M(0xFBF6E9), parka: M(0xE53935), barrel: M(0xC62828),
   canoe: M(0x8D5A34), helmet: M(0xFF8F00), dust: new THREE.MeshStandardMaterial({ color: 0xE3C08A, transparent: true, opacity: 0.55, depthWrite: false }),
@@ -315,6 +315,9 @@ function person(shirtMat) {
 }
 // Scenery along both sides of the flight corridor.
 function buildSides(theme, rng, L) {
+  // Solid ground either side so the water reads as a river, not the open sea.
+  const ground = { desert: W.dune, canyon: W.snow, jungle: W.jungle3 }[theme];
+  if (ground) for (const side of [-1, 1]) world.add(mesh(geo.box, ground, 260, 1, L + 700, side * (23 + 130), 0.45, -(L + 700) / 2 + 150));
   for (let z = -40; z > -L - 260; z -= theme === "canyon" ? 26 : 40) {
     for (const side of [-1, 1]) {
       const x0 = side * (30 + rng() * 8);
@@ -322,8 +325,8 @@ function buildSides(theme, rng, L) {
         const h = 45 + rng() * 45, w = 18 + rng() * 10;
         const cliff = mesh(new THREE.CylinderGeometry(w * 0.55, w, h, 6), rng() < 0.5 ? W.granite : W.graniteDark, 1, 1, 1, x0 + side * w * 0.6, h / 2 - 2, z);
         cliff.rotation.y = rng() * 3; world.add(cliff);
-        world.add(mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.56, h * 0.28, 6), W.snow, 1, 1, 1, cliff.position.x, h - 2 + h * 0.12, z));
-        if (rng() < 0.6) { const t = pineTree(5 + rng() * 3); t.position.set(x0 - side * 2, 0.5, z + rng() * 10); world.add(t); }
+        world.add(mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.57, h * 0.42, 6), W.snow, 1, 1, 1, cliff.position.x, h - 2 + h * 0.19, z));
+        for (let i = 0; i < 3; i++) if (rng() < 0.7) { const t = pineTree(5 + rng() * 3); t.position.set(x0 - side * (1 + rng() * 5), 0.9, z + rng() * 22); world.add(t); }
       } else if (theme === "desert") {
         world.add(mesh(geo.box, W.dune, 26, 2.4, 44, x0 + side * 12, 0.6, z));
         if (rng() < 0.7) world.add(mesh(geo.sphereLo, rng() < 0.5 ? W.dune : W.sandDark, 14 + rng() * 10, 5 + rng() * 5, 16, x0 + side * (24 + rng() * 20), 1, z + rng() * 20));
@@ -332,16 +335,16 @@ function buildSides(theme, rng, L) {
           const c = new THREE.Group();
           for (let i = 0; i < 5; i++) { const cm = camel(); cm.position.set(0, 0, i * 3.4); c.add(cm); }
           const guide = person(W.cloth); guide.position.set(0.9, 0, -2.4); c.add(guide);
-          c.position.set(x0 + side * 4, 1.8, z); world.add(c); S.anim.push({ obj: c, kind: "caravan", z0: z });
+          c.position.set(x0 - side * 2, 1.8, z); c.scale.setScalar(1.5); world.add(c); S.anim.push({ obj: c, kind: "caravan", z0: z });
         }
       } else if (theme === "jungle") {
         for (let i = 0; i < 3; i++) { const t = jungleTree(rng, 9 + rng() * 12); t.position.set(x0 + side * (i * 7 + rng() * 4), 0, z + rng() * 30); world.add(t); }
         world.add(mesh(geo.box, W.jungle3, 30, 3, 42, x0 + side * 18, 0.5, z));
-        if (rng() < 0.08) {
+        if (rng() < 0.08 || (z === -120 && side === 1)) {
           const r = new THREE.Group();
           for (let i = 0; i < 5; i++) r.add(mesh(geo.box, i % 2 ? W.stone : W.moss, 16 - i * 3, 2.6, 16 - i * 3, 0, 1.3 + i * 2.6, 0));
           r.add(mesh(geo.box, W.stone, 2.6, 2.4, 2.6, 0, 14.4, 0));
-          r.position.set(x0 + side * 16, 0, z); r.rotation.y = rng(); world.add(r);
+          r.position.set(x0 + side * 6, 0, z); r.rotation.y = rng(); world.add(r);
         }
       } else if (theme === "arctic") {
         if (rng() < 0.6) { const b = mesh(geo.sphereLo, rng() < 0.5 ? W.snow : W.ice, 10 + rng() * 12, 12 + rng() * 18, 10 + rng() * 10, x0 + side * (20 + rng() * 30), 3, z); b.rotation.y = rng() * 3; world.add(b); }
@@ -384,10 +387,10 @@ function buildFireHost(theme, rng, tint) {
 function buildRescue(theme) {
   if (!theme || theme === "island") return buildRaft();
   const g = new THREE.Group(), people = [];
-  if (theme === "canyon") { g.add(mesh(geo.sphereLo, W.granite, 3, 1.6, 2.6, 0, 0.4, 0)); const p = person(W.parka); p.position.set(0, 1.3, 0); p.add(mesh(geo.sphere, W.helmet, 0.46, 0.3, 0.46, 0, 2.3, 0)); g.add(p); people.push(p); }
+  if (theme === "canyon") { g.add(mesh(geo.sphereLo, W.granite, 3, 1.6, 2.6, 0, 0.4, 0)); const p = person(W.parka); p.scale.setScalar(1.6); p.position.set(0, 1.3, 0); p.add(mesh(geo.sphere, W.helmet, 0.46, 0.3, 0.46, 0, 2.3, 0)); g.add(p); people.push(p); }
   else if (theme === "desert") { g.add(mesh(geo.box, W.canoe, 1.8, 0.8, 5, 0, 0.3, 0)); const sail = mesh(new THREE.ConeGeometry(1, 1, 3), W.sail, 2.2, 6, 0.1, 0, 4, 0.3); sail.rotation.z = 0.15; g.add(sail); const p = person(W.cloth); p.position.set(0, 0.5, -1.4); g.add(p); people.push(p); }
   else if (theme === "jungle") { g.add(mesh(geo.box, W.canoe, 1.3, 0.6, 6, 0, 0.25, 0)); for (const z of [-1.4, 1.2]) { const p = person(z < 0 ? W.cloth : mat.shirt); p.position.set(0, 0.2, z); g.add(p); people.push(p); } }
-  else { g.add(mesh(new THREE.CylinderGeometry(1, 1, 1, 6), W.snow, 4.5, 0.8, 4, 0, 0.3, 0)); for (const x of [-1, 1]) { const p = person(W.parka); p.position.set(x, 0.6, 0); g.add(p); people.push(p); } }
+  else { g.add(mesh(new THREE.CylinderGeometry(1, 1, 1, 6), W.snow, 4.5, 0.8, 4, 0, 0.3, 0)); for (const x of [-1.2, 1.2]) { const p = person(W.parka); p.scale.setScalar(1.8); p.position.set(x, 0.6, 0); g.add(p); people.push(p); } }
   const arm = mesh(geo.cyl, mat.person, 0.13, 1, 0.13, 0.5, 2.1, 0); people[0].add(arm);
   const beacon = mesh(geo.sphere, new THREE.MeshBasicMaterial({ color: 0xFF3B30 }), 0.3, 0.3, 0.3, -1.4, 1.2, 0); g.add(beacon);
   const pole = mesh(geo.cyl, mat.white, 0.08, 3.2, 0.08, 1.6, 2.2, 0); g.add(pole);
