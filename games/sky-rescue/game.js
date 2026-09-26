@@ -31,7 +31,9 @@ GE.setDict({
     next: "לשלב הבא ➜", again: "לשחק שוב 🔁", menu: "לתפריט 🏠",
     tryTitle: "אופס! המסוק צריך תיקון 🔧", tryBody: "לא נורא — כל טייס מתאמן. ננסה שוב?", tryBtn: "לנסות שוב 🚁",
     winTitle: "טייס הצלה אגדי! 👑", winBody: "סיימתם את כל השלבים!",
-    paused: "הפסקה ⏸", resume: "ממשיכים ▶", factAbout: "💡 על {c}:"
+    paused: "הפסקה ⏸", resume: "ממשיכים ▶", factAbout: "💡 על {c}:",
+    faster: "מהר יותר! ⚡", loop: "לולאה! 🔄", loops: "לולאות", speed: "💨 {v} קמ״ש",
+    controls2: "L או Shift = לולאה 🔄"
   },
   en: {
     title: "Sky Rescue", sub: "Fly over the sea, put out wildfires and rescue people!",
@@ -46,7 +48,9 @@ GE.setDict({
     next: "Next stage ➜", again: "Play again 🔁", menu: "Menu 🏠",
     tryTitle: "Oops! The chopper needs a fix 🔧", tryBody: "No worries — every pilot practises. Try again?", tryBtn: "Try again 🚁",
     winTitle: "Legendary rescue pilot! 👑", winBody: "You finished every stage!",
-    paused: "Paused ⏸", resume: "Resume ▶", factAbout: "💡 About {c}:"
+    paused: "Paused ⏸", resume: "Resume ▶", factAbout: "💡 About {c}:",
+    faster: "Faster! ⚡", loop: "Loop! 🔄", loops: "loops", speed: "💨 {v} km/h",
+    controls2: "L or Shift = loop-the-loop 🔄"
   }
 });
 const t = GE.t;
@@ -110,6 +114,7 @@ const mat = {
   shadow: new THREE.MeshBasicMaterial({ color: 0x06384A, transparent: true, opacity: 0.22, depthWrite: false }),
   reticle: new THREE.MeshBasicMaterial({ color: 0xBDF3FF, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
   spark: new THREE.MeshBasicMaterial({ color: 0xFFF3B0 }),
+  spray: new THREE.MeshBasicMaterial({ color: 0xE9FCFF, transparent: true, opacity: 0.7, depthWrite: false }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.35, depthWrite: false }),
   mountain: M(0x86A7B4)
@@ -356,6 +361,8 @@ const input = { x: 0, y: 0, drop: false, stickX: 0, stickY: 0, keys: {} };
 let bot = false;
 let bannerTimer = 0;
 
+const LOOP_DUR = 1.25;
+
 /* ---------------- stage generation ---------------- */
 function clearWorld() {
   for (const c of [...world.children]) world.remove(c);
@@ -367,7 +374,8 @@ function startStage(n) {
   clearWorld();
   const rng = GE.rng(1000 + n * 77);
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
-    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false });
+    hearts: 3, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
+    bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
   scene.background = skyTexture(st.sky[0], st.sky[1]);
   scene.fog = new THREE.Fog(st.fog, 90, 430);
   seaCol.setHex(st.sea); seaDeep.setHex(st.deep);
@@ -454,6 +462,7 @@ const KEYMAP = { ArrowLeft: "l", KeyA: "l", ArrowRight: "r", KeyD: "r", ArrowUp:
 addEventListener("keydown", (e) => {
   if (KEYMAP[e.code]) { input.keys[KEYMAP[e.code]] = true; e.preventDefault(); }
   if (e.code === "Space") { input.drop = true; e.preventDefault(); }
+  if (e.code === "KeyL" || e.code === "ShiftLeft" || e.code === "ShiftRight") { input.loop = true; e.preventDefault(); }
   if (e.code === "Escape" || e.code === "KeyP") togglePause();
 });
 addEventListener("keyup", (e) => {
@@ -472,6 +481,10 @@ function moveStick(e) {
   input.stickX = dx; input.stickY = -dy;
   knob.style.transform = `translate(${dx * 36}px, ${-input.stickY * 36}px)`;
 }
+const loopBtn = $("btn-loop");
+loopBtn.addEventListener("pointerdown", (e) => { input.loop = true; loopBtn.classList.add("on"); e.preventDefault(); });
+const loopUp = () => loopBtn.classList.remove("on");
+loopBtn.addEventListener("pointerup", loopUp); loopBtn.addEventListener("pointercancel", loopUp); loopBtn.addEventListener("pointerleave", loopUp);
 const dropBtn = $("btn-drop");
 dropBtn.addEventListener("pointerdown", (e) => { input.drop = true; dropBtn.classList.add("on"); e.preventDefault(); });
 const dropUp = () => { input.drop = false; dropBtn.classList.remove("on"); };
@@ -532,8 +545,35 @@ function step(dt) {
   S.x = Math.max(-BOX.x, Math.min(BOX.x, S.x + S.vx * dt));
   S.y = Math.max(BOX.yMin, Math.min(BOX.yMax, S.y + S.vy * dt));
   if (S.stage === 2) S.x += Math.sin(S.time * 0.7) * 1.4 * dt; // storm wind
-  S.bank += (-S.vx / 17 * 0.85 - S.bank) * Math.min(1, dt * 9);
-  S.pitch += (S.vy / 11 * 0.18 - 0.07 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward
+  // Bank on a spring (slight overshoot, then settles) — feels like a real airframe.
+  const bankTarget = -S.vx / 17 * 0.85;
+  S.bankV += ((bankTarget - S.bank) * 70 - S.bankV * 11) * dt;
+  S.bank += S.bankV * dt;
+  S.yaw += (-S.vx * 0.013 - S.yaw) * Math.min(1, dt * 5); // nose turns into the turn
+  // Speed ramps up through the stage (+55% by the end).
+  const prog = Math.min(1, S.dist / st.length);
+  const target = st.speed * (1 + 0.55 * prog);
+  const accel = target - S.speed;
+  S.speed += accel * Math.min(1, dt * 1.5);
+  S.pitch += (S.vy / 11 * 0.18 - 0.07 - accel * 0.02 - S.pitch) * Math.min(1, dt * 6); // nose down to fly forward, dips more when speeding up
+  const stepNow = Math.floor(prog * 3);
+  if (stepNow > S.speedStep && stepNow < 3) { S.speedStep = stepNow; showBanner(t("faster")); GE.sfx("upgrade"); }
+  // Loop-the-loop stunt
+  S.loopCd = Math.max(0, S.loopCd - dt);
+  if (input.loop && S.loopT < 0 && S.loopCd <= 0 && !bot) { S.loopT = 0; S.inv = Math.max(S.inv, LOOP_DUR + 0.2); GE.sfx("sail"); }
+  input.loop = false;
+  if (S.loopT >= 0) {
+    S.loopT += dt;
+    const k = Math.min(1, S.loopT / LOOP_DUR);
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+    S.loopPitch = e * Math.PI * 2;                 // nose up, over the top, back level
+    S.lift = Math.sin(Math.PI * k) * 9;            // climbs over the top of the loop
+    if (k >= 1) {
+      S.loopT = -1; S.loopPitch = 0; S.lift = 0; S.loopCd = 1.2; S.loops++; S.score += 100;
+      showBanner(t("loop"), "+100"); GE.sfx("win");
+      burst(S.x, S.y, -S.dist - 4, 0xFFFFFF);
+    }
+  }
   S.dist += S.speed * dt;
   const hz = -S.dist;
   S.inv = Math.max(0, S.inv - dt);
@@ -547,6 +587,18 @@ function step(dt) {
   if (S.refilling) {
     S.tank = Math.min(TANK_MAX, S.tank + dt * 3.2);
     if (Math.random() < 0.7) spawn(mat.water, V(S.x + (Math.random() - 0.5) * 3, 0.4, hz + 1.5), V((Math.random() - 0.5) * 6, 5 + Math.random() * 4, 10), 0.6, 0.35);
+  }
+
+  // Rotor downwash: spray and ripples on the water when flying low
+  const washK = Math.max(0, (8.5 - S.y) / 6);
+  if (washK > 0 && !overIsland && S.lift < 1) {
+    const n = Math.random() < washK ? 2 : 0;
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, r = 2.5 + Math.random() * 1.5;
+      spawn(mat.spray, V(S.x + Math.cos(a) * r, 0.35, hz + Math.sin(a) * r), V(Math.cos(a) * 9 * washK, 1.5 + Math.random() * 2, Math.sin(a) * 9 * washK + S.speed * 0.2), 0.55, 0.28, 0.5);
+    }
+    S.washT -= dt;
+    if (S.washT <= 0) { S.washT = 0.28; burst(S.x, 0.35, hz, 0xE6FBFF, true); }
   }
 
   // Drop water bombs
@@ -594,7 +646,7 @@ function step(dt) {
   }
   // Rings
   for (const g of S.rings) {
-    if (!g.hit && Math.abs(g.z - hz) < 1.5 + S.speed * dt && Math.hypot(g.x - S.x, g.y - S.y) < 3.6) {
+    if (!g.hit && Math.abs(g.z - hz) < 1.5 + S.speed * dt && Math.hypot(g.x - S.x, g.y - (S.y + S.lift)) < 3.6) {
       g.hit = true; S.ringsHit++; S.score += 50;
       g.obj.visible = false;
       burst(g.x, g.y, g.z - 3, 0xFFC928);
@@ -660,25 +712,31 @@ function step(dt) {
 // Behind & above the heli, lags laterally (weight), rolls with the bank.
 const CAM = { back: 8.2, up: 6.4, side: 2.4, lookAhead: 16, lookDown: 0.8 };
 const camPos = V(0, 12, 10), camLook = V(0, 8, -20);
-function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + CAM.up, -S.dist + CAM.back); }
+function camTarget() { return V(S.x * 0.78 + CAM.side, S.y + S.lift * 0.55 + CAM.up, -S.dist + CAM.back); }
 function snapCamera() { camPos.copy(camTarget()); camLook.set(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead); }
 function updateCamera(dt) {
   camPos.lerp(camTarget(), Math.min(1, dt * 5));
-  camLook.lerp(V(S.x * 0.92, S.y - CAM.lookDown, -S.dist - CAM.lookAhead), Math.min(1, dt * 7));
+  camLook.lerp(V(S.x * 0.92, S.y + S.lift * 0.6 - CAM.lookDown, -S.dist - CAM.lookAhead), Math.min(1, dt * 7));
 }
 
 /* ---------------- render ---------------- */
 function render(realDt) {
   const hz = -S.dist;
-  heli.position.set(S.x, S.y + Math.sin(S.time * 2.2) * 0.12, hz);
-  heli.rotation.set(S.pitch, 0, S.bank, "YXZ");
-  heli.userData.rotor.rotation.y += realDt * 40;
-  heli.userData.tail.rotation.x += realDt * 50;
+  // Gentle hover bob + fine engine vibration
+  const vib = Math.sin(S.time * 53) * 0.018 + Math.sin(S.time * 37) * 0.012;
+  heli.position.set(S.x, S.y + S.lift + Math.sin(S.time * 2.2) * 0.1 + vib, hz);
+  heli.rotation.set(S.pitch + S.loopPitch + vib * 0.4, S.yaw, S.bank, "YXZ");
+  const ud = heli.userData;
+  ud.rotor.rotation.y += realDt * 44;
+  ud.rotor.rotation.x = -0.06 - (S.speed - 30) * 0.002;   // rotor disc tips forward with speed
+  ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
+  ud.tail.rotation.x += realDt * 62;
   heli.visible = true;
   shield.visible = S.mode === "play" && S.inv > 0 && S.stage != null && S.hearts < 3;
   shield.position.copy(heli.position);
   shield.material.opacity = 0.12 + Math.abs(Math.sin(S.time * 10)) * 0.18;
   shadow.position.set(S.x, 0.3, hz);
+  shadow.visible = S.lift < 6;
   shadow.scale.set(2.4, 3.4, 1);
   mat.shadow.opacity = Math.max(0, 0.26 - S.y * 0.016);
   const land = predictLanding();
@@ -690,13 +748,14 @@ function render(realDt) {
   camera.lookAt(camLook);
   camera.rotation.z += S.bank * 0.55 + (S.shake > 0 ? (Math.random() - 0.5) * S.shake * 0.12 : 0);
   flashEl.style.opacity = String(Math.max(0, S.flash * S.flash * 0.55 - 0.03));
-  camera.fov = 62 + Math.min(8, S.speed * 0.12);
+  camera.fov = 58 + Math.min(16, S.speed * 0.22);
   camera.updateProjectionMatrix();
   // Speed streaks
   for (let i = 0; i < streaks.length; i++) {
     const s = streaks[i];
     const z = ((i * 37.7 + S.dist * 2.6) % 90);
     s.position.set(S.x + Math.sin(i * 12.9) * 14, S.y + Math.cos(i * 7.3) * 8, hz - 70 + z);
+    s.scale.z = 3 + S.speed * 0.12;
   }
   updateWater(S.time, S.x, hz);
   const fl = S.flash;
@@ -716,7 +775,8 @@ function showBanner(text, sub) {
 function updateHud() {
   if (S.mode !== "play") return;
   $("hud-goals").textContent = t("goals", { f: S.put, ft: S.totals.f, r: S.saved, rt: S.totals.r });
-  $("hud-score").textContent = t("score", { s: GE.num(S.score) });
+  $("hud-score").textContent = t("score", { s: GE.num(S.score) }) + "  " + t("speed", { v: Math.round(S.speed * 5.4) });
+  loopBtn.classList.toggle("empty", S.loopT >= 0 || S.loopCd > 0);
   $("hud-hearts").textContent = "❤️".repeat(Math.max(0, S.hearts)) + "🤍".repeat(Math.max(0, 3 - S.hearts));
   $("hud-tank-fill").style.transform = `scaleX(${(S.tank / TANK_MAX).toFixed(3)})`;
   $("hud-tank-label").textContent = S.refilling ? "💦" : "💧 " + Math.floor(S.tank);
@@ -734,7 +794,7 @@ function renderTitle() {
   document.title = t("title") + " 🚁";
   $("t-title").textContent = t("title");
   $("t-sub").textContent = t("sub");
-  $("t-controls").textContent = t("controls");
+  $("t-controls").textContent = t("controls") + " · " + t("controls2");
   $("t-stages").innerHTML = STAGES.map((st, i) => {
     const open = i < save.unlocked;
     return `<button type="button" class="stage-btn" data-stage="${i}" ${open ? "" : "disabled"}><span class="ico">${st.icon}</span>` +
@@ -764,6 +824,7 @@ function endStage(won) {
       (last ? `<p>${GE.esc(t("winBody"))}</p>` : "") +
       `<div class="big-stars">${stars(n)}</div>` +
       `<div class="stats"><div>${S.put}/${S.totals.f}<small>🔥 ${t("fires")}</small></div><div>${S.saved}/${S.totals.r}<small>🙋 ${t("people")}</small></div><div>${S.ringsHit}/${S.totals.g}<small>✨ ${t("rings")}</small></div></div>` +
+      (S.loops ? `<p>🔄 ${S.loops} ${GE.esc(t("loops"))}</p>` : "") +
       (c ? `<p class="fact">${GE.esc(t("factAbout", { c: GE.L(c.name) }))} ${GE.esc(GE.L(c.fact))}</p>` : "") +
       `<div class="btns">${last ? "" : `<button class="ge-btn ge-btn-primary" id="btn-next" type="button">${t("next")}</button>`}` +
       `<button class="ge-btn ge-btn-ghost" id="btn-again" type="button">${t("again")}</button><button class="ge-btn ge-btn-ghost" id="btn-menu" type="button">${t("menu")}</button></div>`;
@@ -856,6 +917,8 @@ window.__heli = {
   start(n) { startStage(n); },
   bot(on) { bot = !!on; },
   setInput(x, y, drop) { input.x = x; input.y = y; input.drop = !!drop; },
+  loop() { input.loop = true; },
+  get motion() { return { speed: S.speed, loopT: S.loopT, lift: S.lift, loopPitch: S.loopPitch, loops: S.loops, yaw: S.yaw, bank: S.bank, inv: S.inv }; },
   manual(on) { manual = !!on; },
   // Deterministic stepping for tests: n frames of dt, rendering the last one.
   step(seconds, dt = 1 / 60) { const n = Math.round(seconds / dt); for (let i = 0; i < n; i++) step(dt); render(dt); },

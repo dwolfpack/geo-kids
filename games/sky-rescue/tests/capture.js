@@ -68,6 +68,15 @@ async function stitch(page, frames, labels, file) {
   await page.evaluate(() => window.__heli.setInput(0, 0, false));
   await stitch(page, bank, bankL, "strip-bank.png");
 
+  // Loop strip: a full loop-the-loop.
+  await page.evaluate(() => { const h = window.__heli; h.start(0); h.bot(false); h.setInput(0, 0, false); h.step(2); h.loop(); h.step(1 / 60); });
+  const lp = [], lpL = [];
+  for (const [dt, l] of [[0, "loop start"], [0.25, "+0.25s"], [0.35, "+0.6s (top)"], [0.3, "+0.9s"], [0.3, "+1.2s"], [0.4, "+1.6s done"]]) {
+    const m = await page.evaluate((dt) => { const h = window.__heli; if (dt) h.step(dt); return h.motion; }, dt);
+    lp.push(await png(page)); lpL.push(`${l}  pitch ${Math.round(m.loopPitch * 57.3)}° lift ${m.lift.toFixed(1)}`);
+  }
+  await stitch(page, lp, lpL, "strip-loop.png");
+
   // Hit strip
   // Fly straight at the first sea stack of stage 2 and film the real collision.
   const target = await page.evaluate(() => { const h = window.__heli; h.start(1); h.bot(false); return h.stackAhead(); });
