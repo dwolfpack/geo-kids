@@ -90,7 +90,8 @@ const canvas = $("c");
 const flashEl = document.createElement("div");
 flashEl.className = "flash"; document.body.appendChild(flashEl);
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+let pixelRatio = Math.min(window.devicePixelRatio || 1, 1.75);
+renderer.setPixelRatio(pixelRatio);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -105,12 +106,12 @@ scene.add(sun); scene.add(sun.target);
 // Real-time shadow, cast by the helicopter only: a tight box that follows it, so it's cheap on phones.
 const SUN_OFF = new THREE.Vector3(-8, 40, 5);
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
 Object.assign(sun.shadow.camera, { left: -14, right: 14, top: 14, bottom: -14, near: 1, far: 120 });
 sun.shadow.bias = -0.0015;
-sun.shadow.radius = 3;
+sun.shadow.radius = 6; sun.shadow.blurSamples = 12;
 sun.shadow.intensity = 0.55;
 
 function skyTexture(top, bottom) {
@@ -125,18 +126,66 @@ function skyTexture(top, bottom) {
   return tex;
 }
 
+/* ---------------- baked noise textures ---------------- */
+// Tileable fractal noise, generated once. Shaders sample these instead of computing noise per pixel,
+// which keeps the realistic sky and surfaces cheap enough for phones (mipmaps also stop far-away shimmer).
+function tileNoiseTex(size, octaves, period, seed) {
+  const data = new Uint8Array(size * size * 4);
+  const h = (x, y, o) => { const v = Math.sin(x * 127.1 + y * 311.7 + (seed + o) * 74.7) * 43758.5453; return v - Math.floor(v); };
+  for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
+    let v = 0, a = 0.5, norm = 0;
+    for (let o = 0; o < octaves; o++) {
+      const P = period << o, fx = x / size * P, fy = y / size * P, xi = Math.floor(fx), yi = Math.floor(fy);
+      const tx = fx - xi, ty = fy - yi, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+      const x0 = xi % P, y0 = yi % P, x1 = (xi + 1) % P, y1 = (yi + 1) % P;
+      const top = h(x0, y0, o) + (h(x1, y0, o) - h(x0, y0, o)) * sx, bot = h(x0, y1, o) + (h(x1, y1, o) - h(x0, y1, o)) * sx;
+      v += a * (top + (bot - top) * sy); norm += a; a *= 0.5;
+    }
+    const c = Math.round(v / norm * 255), i = (y * size + x) * 4;
+    data[i] = data[i + 1] = data[i + 2] = c; data[i + 3] = 255;
+  }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.LinearFilter; tex.minFilter = THREE.LinearMipmapLinearFilter; tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  return tex;
+}
+const CLOUD_TEX = tileNoiseTex(256, 5, 4, 11), DETAIL_TEX = tileNoiseTex(128, 4, 8, 29);
+
 /* ---------------- materials & shared geometry ---------------- */
-const M = (color, opts = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.75, metalness: 0.05, ...opts });
+// Procedural surface detail: a two-octave 3D noise in world space tints every lit surface a little,
+// so rock, grass, sand and bark read as real materials without any textures or UVs.
+const DETAIL_GLSL = `
+  varying vec3 vDetailPos; uniform float uDetail, uSnow, uShore, uStrata; uniform vec3 uShoreCol; uniform sampler2D tDetail;`;
+function addDetail(m, amount, snow = 0, shore = 0, strata = 0) {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uDetail = { value: amount }; sh.uniforms.uSnow = { value: snow };
+    sh.uniforms.uShore = { value: shore }; sh.uniforms.uStrata = { value: strata }; sh.uniforms.uShoreCol = { value: new THREE.Color(0xE9D6A0) };
+    sh.uniforms.tDetail = { value: DETAIL_TEX };
+    sh.vertexShader = "varying vec3 vDetailPos;\n" + sh.vertexShader.replace("#include <begin_vertex>", "#include <begin_vertex>\n  vDetailPos = (modelMatrix * vec4(transformed, 1.0)).xyz;");
+    sh.fragmentShader = DETAIL_GLSL + "\n" + sh.fragmentShader.replace("#include <color_fragment>",
+      "#include <color_fragment>\n  // three cheap lookups: broad patches from above, streaks down vertical faces, fine grain\n  float dn = texture2D(tDetail, vDetailPos.xz * 0.012).r * 0.5 + texture2D(tDetail, vec2(vDetailPos.x + vDetailPos.z, vDetailPos.y * 2.5) * 0.035).r * 0.3 + texture2D(tDetail, (vDetailPos.xz + vDetailPos.y) * 0.16).r * 0.2;\n  dn = (dn - 0.5) * 1.6 + 0.5;\n  diffuseColor.rgb *= 1.0 + (dn - 0.5) * uDetail;\n  if (uStrata > 0.0) diffuseColor.rgb *= 1.0 + sin(vDetailPos.y * 1.9 + dn * 5.0) * 0.09 * uStrata;\n  if (uShore > 0.0) diffuseColor.rgb = mix(uShoreCol, diffuseColor.rgb, smoothstep(uShore, uShore + 1.4, vDetailPos.y + (dn - 0.5) * 1.2));\n  if (uSnow > 0.0) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.95, 0.99), smoothstep(uSnow - 3.0, uSnow + 3.0, vDetailPos.y + (dn - 0.5) * 16.0));");
+  };
+  m.customProgramCacheKey = () => "detail";
+  return m;
+}
+const M = (color, { detail = 0.45, snow = 0, shore = 0, strata = 0, ...opts } = {}) => {
+  const m = new THREE.MeshStandardMaterial({ color, flatShading: false, roughness: 0.82, metalness: 0, ...opts });
+  return detail ? addDetail(m, detail, snow, shore, strata) : m;
+};
 const mat = {
-  sand: M(0xF1DDA4), rock: M(0x8C7B6B), rockDark: M(0x6E6258), trunk: M(0x8B5A2B), leaf: M(0x3E9E4A),
-  red: M(0xFF5B2E, { roughness: 0.4 }), white: M(0xF7F7F2, { roughness: 0.5 }), glass: M(0x1C4E72, { roughness: 0.15, metalness: 0.3 }),
-  dark: M(0x2B2F36), ring: new THREE.MeshStandardMaterial({ color: 0xFFC400, emissive: 0xFF9E00, emissiveIntensity: 1.1, roughness: 0.3, fog: false }),
+  sand: M(0xF1DDA4), rock: M(0x8C7B6B, { detail: 0.7, strata: 1 }), rockDark: M(0x6E6258, { detail: 0.7, strata: 1 }), trunk: M(0x8B5A2B), leaf: M(0x3E9E4A),
+  red: M(0xFF5B2E, { roughness: 0.4, detail: 0 }), white: M(0xF7F7F2, { roughness: 0.5, detail: 0 }),
+  glass: new THREE.MeshStandardMaterial({ color: 0x0E2F48, roughness: 0.03, metalness: 0.35, envMapIntensity: 1.8 }),
+  dark: M(0x2B2F36, { roughness: 0.35, metalness: 0.6, detail: 0 }),
+  // polished gold: metal reflecting the sky, with a gentle glow so it still reads from far away
+  ring: new THREE.MeshStandardMaterial({ color: 0xFFC44D, metalness: 1, roughness: 0.2, emissive: 0xFF8A00, emissiveIntensity: 0.45, envMapIntensity: 1.6, fog: false }),
   flame: new THREE.MeshBasicMaterial({ color: 0xFF7A1A }), flame2: new THREE.MeshBasicMaterial({ color: 0xFFD54A }),
   smoke: new THREE.MeshStandardMaterial({ color: 0x46413D, transparent: true, opacity: 0.42, flatShading: false, roughness: 1, depthWrite: false }),
   steam: new THREE.MeshStandardMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.7, flatShading: true, depthWrite: false }),
   water: new THREE.MeshStandardMaterial({ color: 0x6FD3F5, transparent: true, opacity: 0.85, roughness: 0.2 }),
-  raft: M(0xFF9E1B), person: M(0xFFCC80), shirt: M(0x3D7BE0), boat: M(0xFFFFFF),
-  bird: M(0xFFFFFF), cloud: M(0x5C6770, { transparent: true, opacity: 0.92 }),
+  raft: M(0xFF9E1B, { roughness: 0.5, detail: 0.1 }), person: M(0xF2B98A, { roughness: 0.6, detail: 0 }), shirt: M(0x3D7BE0, { detail: 0.15 }), boat: M(0xFFFFFF, { detail: 0.1 }),
+  bird: M(0xFFFFFF, { detail: 0 }), cloud: M(0x5C6770, { transparent: true, opacity: 0.92 }),
   shallow: new THREE.MeshBasicMaterial({ color: 0x7FE6E6, transparent: true, opacity: 0.55, depthWrite: false }),
   shadow: new THREE.MeshBasicMaterial({ color: 0x06384A, transparent: true, opacity: 0.22, depthWrite: false }),
   reticle: new THREE.MeshBasicMaterial({ color: 0xBDF3FF, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide }),
@@ -144,17 +193,61 @@ const mat = {
   spray: new THREE.MeshBasicMaterial({ color: 0xE9FCFF, transparent: true, opacity: 0.7, depthWrite: false }),
   flare: new THREE.MeshBasicMaterial({ color: 0xFF2D55, transparent: true, opacity: 0.7, depthWrite: false, fog: false }),
   streak: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.16, depthWrite: false }),
-  mountain: M(0x86A7B4)
+  mountain: M(0x7E9AA8, { snow: 46, detail: 0.5 })
 };
+/* organic shapes: noise-displaced, smooth-shaded geometry (a few variants of each, reused by scale) */
+const nh3 = (x, y, z) => { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); };
+function noise3(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z), xf = x - xi, yf = y - yi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf), L = (a, b, t) => a + (b - a) * t;
+  return L(L(L(nh3(xi, yi, zi), nh3(xi + 1, yi, zi), u), L(nh3(xi, yi + 1, zi), nh3(xi + 1, yi + 1, zi), u), v),
+           L(L(nh3(xi, yi, zi + 1), nh3(xi + 1, yi, zi + 1), u), L(nh3(xi, yi + 1, zi + 1), nh3(xi + 1, yi + 1, zi + 1), u), v), w);
+}
+function fbm3(x, y, z) { let s = 0, a = 0.5; for (let i = 0; i < 4; i++) { s += a * noise3(x, y, z); x = x * 2.03 + 5.1; y = y * 2.03 + 1.7; z = z * 2.03 + 3.3; a *= 0.5; } return s / 0.9375; }
+// Merge duplicate vertices (UV seams, faces) so normals average into a smooth surface.
+function smoothIndexed(g) {
+  const pos = g.attributes.position, src = g.index ? g.index.array : null, n = src ? src.length : pos.count;
+  const map = new Map(), verts = [], idx = [];
+  for (let i = 0; i < n; i++) {
+    const k = src ? src[i] : i, x = pos.getX(k), y = pos.getY(k), z = pos.getZ(k);
+    const key = Math.round(x * 1e4) + "," + Math.round(y * 1e4) + "," + Math.round(z * 1e4);
+    let j = map.get(key);
+    if (j === undefined) { j = verts.length / 3; verts.push(x, y, z); map.set(key, j); }
+    idx.push(j);
+  }
+  const out = new THREE.BufferGeometry();
+  out.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3)); out.setIndex(idx);
+  return out;
+}
+// radial: push out from the y axis (rock pillars, cones); otherwise from the centre (boulders, hills, foliage)
+function organic(base, amp, freq, seed, radial, yMul = 2.2) {
+  const g = smoothIndexed(base), p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const d = 1 + (fbm3(x * freq + seed, y * freq * (radial ? yMul : 1), z * freq - seed) - 0.5) * 2 * amp;
+    if (radial) p.setXYZ(i, x * d, y, z * d); else p.setXYZ(i, x * d, y * d, z * d);
+  }
+  g.computeVertexNormals();
+  return g;
+}
+const variants = (n, make) => { const list = Array.from({ length: n }, (_, i) => make(i * 13.7 + 3)); let k = 0; return () => list[k++ % n]; };
+const rockGeo = variants(6, (sd) => organic(new THREE.IcosahedronGeometry(1, 3), 0.2, 1.4, sd));
+// (a cylinder with a near-zero top: this three.js build drops half the triangles of multi-row ConeGeometry)
+const coneGeo = variants(4, (sd) => organic(new THREE.CylinderGeometry(0.0005, 1, 1, 28, 18), 0.12, 2.6, sd, true, 0.8));
+const pillarGeo = variants(4, (sd) => organic(new THREE.CylinderGeometry(0.55, 1.35, 1, 24, 16), 0.2, 2.2, sd, true));
+const cliffGeo = variants(4, (sd) => organic(new THREE.CylinderGeometry(0.55, 1, 1, 22, 12), 0.14, 2.4, sd, true));
+const capGeo = variants(3, (sd) => organic(new THREE.CylinderGeometry(0.35, 1.02, 1, 22, 4), 0.16, 2.6, sd, true));
+const slabGeo = variants(4, (sd) => organic(new THREE.CylinderGeometry(1, 1.12, 1, 22, 2), 0.2, 1.6, sd, true));
 const geo = {
   box: new THREE.BoxGeometry(1, 1, 1),
-  sphere: new THREE.IcosahedronGeometry(1, 1),
-  sphereLo: new THREE.IcosahedronGeometry(1, 0),
-  cone: new THREE.ConeGeometry(1, 1, 7),
-  cyl: new THREE.CylinderGeometry(1, 1, 1, 8),
-  ring: new THREE.TorusGeometry(3.6, 0.45, 8, 28),
-  disc: new THREE.CircleGeometry(1, 24),
-  reticle: new THREE.RingGeometry(1.1, 1.45, 24)
+  sphere: new THREE.IcosahedronGeometry(1, 3),          // smooth ball (helicopter, heads, lights)
+  get sphereLo() { return rockGeo(); },                  // natural lumpy shapes: hills, rocks, foliage, dunes, ice
+  get cone() { return coneGeo(); },
+  cyl: new THREE.CylinderGeometry(1, 1, 1, 18),
+  ring: new THREE.TorusGeometry(3.6, 0.45, 16, 56),
+  disc: new THREE.CircleGeometry(1, 32),
+  reticle: new THREE.RingGeometry(1.1, 1.45, 32),
+  get pillar() { return pillarGeo(); }, get cliff() { return cliffGeo(); }, get cap() { return capGeo(); }, get slab() { return slabGeo(); }
 };
 
 /* ---------------- soft particles (sprites) ---------------- */
@@ -168,7 +261,21 @@ function softTex(rgb, core = 1) {
 }
 const SP = (rgb, core, extra = {}) => new THREE.SpriteMaterial({ map: softTex(rgb, core), depthWrite: false, ...extra });
 mat.shallow.map = softTex("255,255,255", 1); mat.shallow.opacity = 0.6;  // soft-edged shallows around islands
+// flame tongue: a soft teardrop, bright at the base and fading to a point
+function flameTex() {
+  const c = document.createElement("canvas"); c.width = 64; c.height = 128;
+  const g = c.getContext("2d");
+  g.save(); g.translate(32, 92); g.scale(1, 2.2);
+  const grd = g.createRadialGradient(0, 0, 0, 0, 0, 30);
+  grd.addColorStop(0, "rgba(255,255,255,1)"); grd.addColorStop(0.35, "rgba(255,255,255,0.75)"); grd.addColorStop(1, "rgba(255,255,255,0)");
+  g.fillStyle = grd; g.beginPath(); g.arc(0, 0, 30, 0, Math.PI * 2); g.fill(); g.restore();
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
+}
+const FLAME_TEX = flameTex();
 Object.assign(mat, {
+  flameOuter: new THREE.SpriteMaterial({ map: FLAME_TEX, color: 0xFF5A14, blending: THREE.AdditiveBlending, depthWrite: false }),
+  flameCore: new THREE.SpriteMaterial({ map: FLAME_TEX, color: 0xFFD25A, blending: THREE.AdditiveBlending, depthWrite: false }),
+  ember: SP("255,170,60", 1, { blending: THREE.AdditiveBlending }),
   smoke: SP("62,58,56", 0.55),
   steam: SP("255,255,255", 0.8),
   spray: SP("235,252,255", 0.85),
@@ -197,10 +304,14 @@ const PAINT = {
   blades: [2, 3, 4, 5],
   blade: [0x3A3F47, 0xE53935, 0xFDD835, 0xF7F7F2, 0x1E88E5]
 };
+// fuselage radius along its length (0 = nose .. 1 = where the tail boom starts)
+const fuseR = (s) => { const k = Math.min(1, Math.max(0, (s - 0.55) / 0.45)); return 1.3 * Math.pow(Math.sin(Math.PI * 0.92 * Math.pow(s, 0.8)), 0.5) * (1 - 0.55 * k * k * (3 - 2 * k)); };
 const DEFAULT_LOOK = { body: 0xFF5B2E, trim: 0xF7F7F2, stripes: "bands", blades: 4, blade: 0x3A3F47 };
 const heliMat = {
-  body: M(0xFF5B2E, { roughness: 0.35, metalness: 0.15 }),
-  trim: M(0xF7F7F2, { roughness: 0.45 }),
+  // glossy paint that reflects the sky (single-layer PBR: cheap enough to fill a phone screen)
+  body: new THREE.MeshStandardMaterial({ color: 0xFF5B2E, roughness: 0.2, metalness: 0.12, envMapIntensity: 1.25 }),
+  trim: new THREE.MeshStandardMaterial({ color: 0xF7F7F2, roughness: 0.24, metalness: 0.05, envMapIntensity: 1.2 }),
+  navR: new THREE.MeshBasicMaterial({ color: 0xFF2A2A }), navG: new THREE.MeshBasicMaterial({ color: 0x2BFF6A }),
   blade: new THREE.MeshBasicMaterial({ color: 0x3A3F47, transparent: true, opacity: 0.4, depthWrite: false }),
   tip: new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.6, depthWrite: false }),
   blur: new THREE.MeshBasicMaterial({ map: rotorBlurTex(), transparent: true, depthWrite: false, side: THREE.DoubleSide })
@@ -216,26 +327,41 @@ function buildHeli(look = DEFAULT_LOOK, g = new THREE.Group()) {
   heliMat.blur.color.setHex(dark ? 0xFFFFFF : look.blade);
   const add = (geom, m, sx, sy, sz, x, y, z, rx = 0, rz = 0) => { const o = new THREE.Mesh(geom, m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); o.rotation.set(rx, 0, rz); g.add(o); return o; };
   const R = Math.PI / 2;
-  add(geo.sphere, heliMat.body, 1.35, 1.15, 2.1, 0, 0, 0);
-  add(geo.sphere, heliMat.trim, 1.25, 0.6, 1.9, 0, -0.55, 0);                    // belly
-  add(geo.sphere, mat.glass, 1.05, 0.8, 1.0, 0, 0.25, -1.35);                     // canopy
-  add(geo.cyl, heliMat.body, 0.32, 2.7, 0.32, 0, 0.35, 2.75, R);                   // tail boom
-  add(geo.box, heliMat.body, 0.1, 0.85, 0.65, 0, 0.8, 4.05);                       // fin
-  add(geo.box, heliMat.body, 1.3, 0.07, 0.4, 0, 0.45, 3.7);                        // tail plane
-  add(geo.sphere, heliMat.trim, 0.7, 0.45, 0.5, 0, -0.45, -1.85);                  // nose
+  // Fuselage: a teardrop profile turned on a lathe. Paint, glass and stripes are slices of the same
+  // surface (by length s and angle phi), so they wrap the body exactly like real livery.
+  const hull = (s0, s1, ph0, phLen, grow, m) => {
+    const pts = [];
+    for (let i = 0; i <= 28; i++) { const s = s0 + (s1 - s0) * i / 28; pts.push(new THREE.Vector2(fuseR(s) * grow, -2.35 + s * 4.3)); }
+    const lg = new THREE.LatheGeometry(pts, 40, ph0, phLen); lg.rotateX(R);
+    const o = new THREE.Mesh(lg, m); o.scale.set(0.84, 1.04, 1); g.add(o); return o;
+  };
+  const TOP = Math.PI, BAND = (z) => (z + 2.35) / 4.3;
+  hull(0, 1, 0, Math.PI * 2, 1, heliMat.body);
+  add(geo.sphere, heliMat.body, fuseR(1) * 0.84, fuseR(1) * 1.04, 0.4, 0, 0, 1.95);   // close the rear
+  hull(0.03, 0.97, -1.05, 2.1, 1.008, heliMat.trim);                                 // light belly
+  hull(0.035, 0.4, TOP - 1.3, 2.6, 1.016, mat.glass);                              // wrap-around windscreen
+  for (const sd of [-1, 1]) hull(0.42, 0.6, TOP + sd * 1.05 - 0.3, 0.6, 1.014, mat.glass);   // cabin side windows
+  add(geo.sphere, heliMat.body, 0.5, 0.36, 1.25, 0, 1.12, 0.45);                    // engine cowling
+  add(geo.cyl, mat.dark, 0.13, 0.35, 0.13, 0, 0.9, 1.75, R);                        // exhaust
+  const boom = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.3, 1, 18), heliMat.body); boom.scale.set(1, 2.8, 1); boom.rotation.x = R; boom.position.set(0, 0.2, 3.0); g.add(boom);
+  const fin = add(geo.box, heliMat.body, 0.1, 1.0, 0.6, 0, 0.8, 4.12); fin.rotation.x = -0.35;   // swept fin
+  add(geo.box, heliMat.body, 1.3, 0.06, 0.38, 0, 0.35, 3.75);                        // tail plane
   const st = look.stripes;
   if (st === "bands") {
-    for (const z of [-0.2, 0.9]) add(geo.cyl, heliMat.trim, 1.39, 0.26, 1.19, 0, 0.05, z, R);
-    add(geo.cyl, heliMat.trim, 0.34, 0.5, 0.34, 0, 0.35, 3.1, R);
+    for (const z of [-0.25, 0.85]) hull(BAND(z) - 0.035, BAND(z) + 0.035, 0, Math.PI * 2, 1.02, heliMat.trim);
+    add(geo.cyl, heliMat.trim, 0.3, 0.5, 0.3, 0, 0.3, 3.2, R);
   } else if (st === "racing") {
-    // two stripes nose-to-tail over the top (narrow ellipsoids that just break the skin)
-    for (const x of [-0.36, 0.36]) add(geo.sphere, heliMat.trim, 0.2, 1.19, 2.13, x, 0.02, 0.02);
-    add(geo.box, heliMat.trim, 0.36, 0.36, 2.7, 0, 0.47, 2.75);
+    for (const sd of [-1, 1]) hull(0.02, 0.98, TOP + sd * 0.34 - 0.07, 0.14, 1.02, heliMat.trim);
+    add(geo.box, heliMat.trim, 0.3, 0.3, 2.6, 0, 0.44, 2.9);
   } else if (st === "tail") {
-    for (let i = 0; i < 4; i++) add(geo.cyl, heliMat.trim, 0.34, 0.26, 0.34, 0, 0.35, 1.9 + i * 0.55, R);
-    add(geo.box, heliMat.trim, 0.12, 0.5, 0.66, 0, 1.0, 4.05);
-    add(geo.cyl, heliMat.trim, 1.39, 0.26, 1.19, 0, 0.05, 0.9, R);
+    for (let i = 0; i < 4; i++) add(geo.cyl, heliMat.trim, 0.3 - i * 0.02, 0.26, 0.3 - i * 0.02, 0, 0.3, 2.0 + i * 0.55, R);
+    const tf = add(geo.box, heliMat.trim, 0.12, 0.5, 0.64, 0, 1.05, 4.2); tf.rotation.x = -0.35;
+    hull(BAND(0.85) - 0.035, BAND(0.85) + 0.035, 0, Math.PI * 2, 1.02, heliMat.trim);
   }
+  // navigation lights (red port, green starboard) and a red beacon on top
+  add(geo.sphere, heliMat.navR, 0.055, 0.055, 0.055, -0.66, 0.35, 3.75);
+  add(geo.sphere, heliMat.navG, 0.055, 0.055, 0.055, 0.66, 0.35, 3.75);
+  add(geo.sphere, heliMat.navR, 0.11, 0.08, 0.11, 0, 1.47, 0.95);
   const tail = new THREE.Group(); tail.position.set(0.22, 0.85, 4.1);
   for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(geo.box, heliMat.trim); b.scale.set(0.05, 0.9, 0.12); b.rotation.x = i * R; tail.add(b); }
   g.add(tail);
@@ -248,13 +374,13 @@ function buildHeli(look = DEFAULT_LOOK, g = new THREE.Group()) {
   const n = look.blades;
   for (let i = 0; i < n; i++) {
     const arm = new THREE.Group(); arm.rotation.y = i * Math.PI * 2 / n;
-    const b = new THREE.Mesh(geo.box, heliMat.blade); b.scale.set(0.3, 0.05, 4.4); b.position.z = 2.2; arm.add(b);
-    const tip = new THREE.Mesh(geo.box, heliMat.tip); tip.scale.set(0.32, 0.06, 0.8); tip.position.z = 4.8; arm.add(tip);
+    const b = new THREE.Mesh(geo.box, heliMat.blade); b.scale.set(0.26, 0.05, 3.5); b.position.z = 1.75; arm.add(b);
+    const tip = new THREE.Mesh(geo.box, heliMat.tip); tip.scale.set(0.28, 0.06, 0.6); tip.position.z = 3.8; arm.add(tip);
     rotor.add(arm);
   }
   const hub = new THREE.Mesh(geo.sphere, heliMat.body); hub.scale.set(0.35, 0.2, 0.35); rotor.add(hub);
   const blur = new THREE.Mesh(geo.disc, heliMat.blur);
-  blur.scale.setScalar(5.2); blur.rotation.x = -R; rotor.add(blur);
+  blur.scale.setScalar(4.2); blur.rotation.x = -R; rotor.add(blur);
   g.add(rotor);
   g.userData = { rotor, tail };
   g.traverse((o) => { if (o.isMesh && o.material !== heliMat.blur && o.material !== heliMat.blade && o.material !== heliMat.tip) o.castShadow = true; });
@@ -263,49 +389,90 @@ function buildHeli(look = DEFAULT_LOOK, g = new THREE.Group()) {
 }
 
 /* ---------------- world objects ---------------- */
+// Palm: a leaning, curving trunk with ring bands, drooping fronds and coconuts.
+const frondGeo = (() => {
+  const g = new THREE.PlaneGeometry(1, 1, 1, 8); const p = g.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    const t = p.getY(i) + 0.5;                       // 0 at the trunk .. 1 at the tip
+    const w = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.5 + 0.08;   // leaf outline, pointed tip
+    p.setXYZ(i, p.getX(i) * w * (p.getX(i) > 0 ? 1 : 1), -t * t * 0.55, t);  // droop under its own weight
+  }
+  g.computeVertexNormals(); return g;
+})();
+const palmMat = { leaf: M(0x3E9E4A, { side: THREE.DoubleSide, roughness: 0.7, detail: 0.35 }), leafDark: M(0x2F7F3A, { side: THREE.DoubleSide, roughness: 0.7, detail: 0.35 }), nut: M(0x6B4A22, { detail: 0.2 }) };
+function palm(rng, h = 4.2) {
+  const p = new THREE.Group();
+  const lean = (rng() - 0.5) * 0.5, segs = 5; let x = 0, y = 0;
+  for (let i = 0; i < segs; i++) {
+    const seg = new THREE.Mesh(geo.cyl, mat.trunk);
+    const sh = h / segs, ang = lean * (i + 1) / segs;
+    seg.scale.set(0.2 - i * 0.015, sh * 1.05, 0.2 - i * 0.015); seg.rotation.z = -ang;
+    seg.position.set(x + Math.sin(ang) * sh / 2, y + Math.cos(ang) * sh / 2, 0); p.add(seg);
+    x += Math.sin(ang) * sh; y += Math.cos(ang) * sh;
+  }
+  const n = 8 + Math.floor(rng() * 3);
+  for (let k = 0; k < n; k++) {
+    const f = new THREE.Mesh(frondGeo, k % 2 ? palmMat.leaf : palmMat.leafDark);
+    const len = 2.6 + rng() * 0.9;
+    f.scale.set(len * 0.45, len, len);
+    f.position.set(x, y, 0);
+    f.rotation.set(-0.25 - rng() * 0.35, (k / n) * Math.PI * 2 + rng() * 0.3, 0, "YXZ");
+    p.add(f);
+  }
+  for (let k = 0; k < 3; k++) { const c = new THREE.Mesh(geo.sphere, palmMat.nut); c.scale.setScalar(0.17); c.position.set(x + Math.cos(k * 2.1) * 0.22, y - 0.25, Math.sin(k * 2.1) * 0.22); p.add(c); }
+  p.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+  return p;
+}
 function buildIsland(rng, tint, big, flat) {
   const g = new THREE.Group();
   const r = (big ? 16 : 9) + rng() * (big ? 10 : 6);
-  const shallow = new THREE.Mesh(geo.disc, mat.shallow); shallow.scale.setScalar(r * 1.55); shallow.rotation.x = -Math.PI / 2; shallow.position.y = 0.15; g.add(shallow);
-  const sand = new THREE.Mesh(geo.cyl, mat.sand); sand.scale.set(r, 1.4, r * (0.8 + rng() * 0.4)); sand.position.y = 0.2; g.add(sand);
+  const shallow = new THREE.Mesh(geo.disc, mat.shallow); shallow.scale.setScalar(r * 1.6); shallow.rotation.x = -Math.PI / 2; shallow.position.y = 0.35; g.add(shallow);
+  // a low, gently sloping beach rather than a drum
+  const sand = new THREE.Mesh(geo.sphereLo, mat.sand); sand.scale.set(r, 1.7, r * (0.8 + rng() * 0.4)); sand.position.y = -0.2; g.add(sand);
   const hills = flat ? 0 : 1 + Math.floor(rng() * 3);
-  const green = M(tint);
+  const green = islandMat(tint);
   for (let i = 0; i < hills; i++) {
     const h = new THREE.Mesh(geo.sphereLo, green);
     const s = r * (0.45 + rng() * 0.35);
-    h.scale.set(s, s * (0.5 + rng() * 0.6), s);
-    h.position.set((rng() - 0.5) * r * 0.6, 0.8, (rng() - 0.5) * r * 0.6);
+    h.scale.set(s, s * (0.45 + rng() * 0.5), s);
+    h.position.set((rng() - 0.5) * r * 0.55, -s * 0.12, (rng() - 0.5) * r * 0.55);
+    h.rotation.y = rng() * 6;
     g.add(h);
+    if (rng() < 0.5) { const rk = new THREE.Mesh(geo.sphereLo, mat.rock); rk.scale.set(s * 0.3, s * 0.25, s * 0.3); rk.position.set(h.position.x + s * 0.5, 0.8, h.position.z); g.add(rk); }
   }
   const palms = 2 + Math.floor(rng() * 4);
   for (let i = 0; i < palms; i++) {
-    const p = new THREE.Group();
-    const trunk = new THREE.Mesh(geo.cyl, mat.trunk); trunk.scale.set(0.25, 4, 0.25); trunk.position.y = 2; trunk.rotation.z = (rng() - 0.5) * 0.4; p.add(trunk);
-    for (let k = 0; k < 5; k++) { const lf = new THREE.Mesh(geo.cone, mat.leaf); lf.scale.set(0.5, 2.6, 0.2); lf.position.y = 4; lf.rotation.set(1.2, (k / 5) * Math.PI * 2, 0, "YXZ"); p.add(lf); }
-    const a = rng() * Math.PI * 2, d = r * (0.7 + rng() * 0.2);
-    p.position.set(Math.cos(a) * d, 0.8, Math.sin(a) * d);
+    const p = palm(rng, 3.6 + rng() * 1.6);
+    const a = rng() * Math.PI * 2, d = r * (0.62 + rng() * 0.2);
+    p.position.set(Math.cos(a) * d, 0.9, Math.sin(a) * d);
+    p.rotation.y = rng() * 6;
     g.add(p);
   }
   g.userData = { r, top: 3 };
   return g;
 }
+const islandMats = new Map();
+function islandMat(tint) { if (!islandMats.has(tint)) islandMats.set(tint, M(tint, { detail: 0.6, roughness: 0.9, shore: 1.1 })); return islandMats.get(tint); }
 function buildStack(rng) {
   const g = new THREE.Group();
   const h = 18 + rng() * 16, r = 2.6 + rng() * 1.8;
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.75, r * 1.2, h, 6), rng() < 0.5 ? mat.rock : mat.rockDark);
+  const body = new THREE.Mesh(geo.pillar, rng() < 0.5 ? mat.rock : mat.rockDark); body.scale.set(r, h, r);
   body.position.y = h / 2 - 1; body.rotation.y = rng() * 3; g.add(body);
   const cap = new THREE.Mesh(geo.sphereLo, mat.leaf); cap.scale.set(r * 0.9, r * 0.4, r * 0.9); cap.position.y = h - 1; g.add(cap);
   const foam = new THREE.Mesh(geo.disc, mat.shallow); foam.scale.setScalar(r * 2); foam.rotation.x = -Math.PI / 2; foam.position.y = 0.2; g.add(foam);
-  g.userData = { r: r * 1.05, h };
+  g.userData = { r: r * 1.2, h };   // matches the wider, eroded base
   return g;
 }
 function buildFire() {
   const g = new THREE.Group();
   const flames = [];
-  for (let i = 0; i < 5; i++) {
-    const f = new THREE.Mesh(geo.cone, i % 2 ? mat.flame2 : mat.flame);
-    f.position.set((i - 2) * 1.5, 3, (i % 2 ? 1 : -0.9));
-    f.scale.set(2.5, 7, 2.5);
+  // layered, additive flame sprites: wide orange tongues behind, hot yellow cores in front
+  for (let i = 0; i < 7; i++) {
+    const core = i >= 4;
+    const f = new THREE.Sprite(core ? mat.flameCore : mat.flameOuter);
+    const bx = core ? (i - 5) * 1.4 : (i - 1.5) * 1.9;
+    f.userData = { bx, w: core ? 2.6 : 4.2, h: core ? 5.5 : 9, ph: i * 1.9 };
+    f.position.set(bx, 3, core ? 0.8 : 0);
     g.add(f); flames.push(f);
   }
   const halo = new THREE.Sprite(mat.glowF); halo.scale.set(16, 12, 1); halo.position.y = 4; g.add(halo); flames.push(halo);
@@ -357,13 +524,14 @@ function buildCloud(rng, cmat) {
 
 /* ---------------- worlds (stages 4–7) ---------------- */
 const W = {
-  snow: M(0xF4F8FB), ice: M(0xCFE8F3, { roughness: 0.35 }), iceDeep: M(0x9FCBE0, { roughness: 0.3 }),
+  snow: M(0xF4F8FB, { detail: 0.14, roughness: 0.7 }), ice: M(0xCFE8F3, { roughness: 0.25, detail: 0.18 }), iceDeep: M(0x9FCBE0, { roughness: 0.2, detail: 0.2 }),
   granite: M(0x98A3AE), graniteDark: M(0x7A8591), pine: M(0x2F5D40), sandstone: M(0xD9A45E), sandDark: M(0xC98F48),
   dune: M(0xEDC98A), stone: M(0xB8A98A), moss: M(0x6E8B55), jungle1: M(0x2E7A3A), jungle2: M(0x3F9447), jungle3: M(0x25612F),
-  bark: M(0x6B4A2E), camel: M(0xC9975B), cloth: M(0x2E6FD0), sail: M(0xFBF6E9), parka: M(0xE53935), barrel: M(0xC62828),
+  bark: M(0x6B4A2E), camel: M(0xC9975B), cloth: M(0x2E6FD0), sail: M(0xFBF6E9, { flatShading: true, detail: 0.1 }), pyramid: M(0xD9A45E, { flatShading: true, detail: 0.5 }), parka: M(0xE53935), barrel: M(0xC62828),
   canoe: M(0x8D5A34), helmet: M(0xFF8F00), dust: new THREE.MeshStandardMaterial({ color: 0xE3C08A, transparent: true, opacity: 0.55, depthWrite: false }),
   flake: new THREE.MeshBasicMaterial({ color: 0xFFFFFF }), mist: new THREE.MeshBasicMaterial({ color: 0xF2F7F2, transparent: true, opacity: 0.22, depthWrite: false })
 };
+const trunkGeo = new THREE.CylinderGeometry(0.55, 1, 1, 12), pyramidGeo = new THREE.ConeGeometry(1, 1, 4), sailGeo = new THREE.ConeGeometry(1, 1, 3);
 const mesh = (g, m, sx, sy, sz, x = 0, y = 0, z = 0) => { const o = new THREE.Mesh(g, m); o.scale.set(sx, sy, sz); o.position.set(x, y, z); return o; };
 function pineTree(h) {
   const g = new THREE.Group();
@@ -374,9 +542,16 @@ function pineTree(h) {
 }
 function jungleTree(rng, h) {
   const g = new THREE.Group();
-  g.add(mesh(geo.cyl, W.bark, 0.5, h, 0.5, 0, h / 2, 0));
+  g.add(mesh(trunkGeo, W.bark, 0.5, h, 0.5, 0, h / 2, 0));
   const mats = [W.jungle1, W.jungle2, W.jungle3];
-  for (let i = 0; i < 3; i++) g.add(mesh(geo.sphereLo, mats[i % 3], 3 + rng() * 2.5, 2 + rng() * 1.5, 3 + rng() * 2.5, (rng() - 0.5) * 3, h + (rng() - 0.3) * 2, (rng() - 0.5) * 3));
+  // layered canopy: a big crown plus smaller clumps below and around it, on short branches
+  for (let i = 0; i < 6; i++) {
+    const top = i < 2, a = rng() * 6.3, d = top ? rng() * 1.2 : 1.6 + rng() * 1.6;
+    const cx = Math.cos(a) * d, cz = Math.sin(a) * d, cy = h + (top ? 0.6 + rng() : -0.8 - rng() * 1.8);
+    const w = top ? 3.4 + rng() * 1.6 : 1.8 + rng() * 1.2;
+    g.add(mesh(geo.sphereLo, mats[i % 3], w, w * 0.62, w, cx, cy, cz));
+    if (!top) { const br = mesh(geo.cyl, W.bark, 0.14, d * 1.2, 0.14, cx / 2, cy - 0.4, cz / 2); br.rotation.set(Math.sin(a) * 1.1, 0, -Math.cos(a) * 1.1); g.add(br); }
+  }
   return g;
 }
 function camel() {
@@ -404,9 +579,9 @@ function buildSides(theme, rng, L) {
       const x0 = side * (30 + rng() * 8);
       if (theme === "canyon") {
         const h = 45 + rng() * 45, w = 18 + rng() * 10;
-        const cliff = mesh(new THREE.CylinderGeometry(w * 0.55, w, h, 6), rng() < 0.5 ? W.granite : W.graniteDark, 1, 1, 1, x0 + side * w * 0.6, h / 2 - 2, z);
+        const cliff = mesh(geo.cliff, rng() < 0.5 ? W.granite : W.graniteDark, w, h, w, x0 + side * w * 0.6, h / 2 - 2, z);
         cliff.rotation.y = rng() * 3; world.add(cliff);
-        world.add(mesh(new THREE.CylinderGeometry(w * 0.2, w * 0.57, h * 0.42, 6), W.snow, 1, 1, 1, cliff.position.x, h - 2 + h * 0.19, z));
+        world.add(mesh(geo.cap, W.snow, w * 0.57, h * 0.42, w * 0.57, cliff.position.x, h - 2 + h * 0.19, z));
         for (let i = 0; i < 3; i++) if (rng() < 0.7) { const t = pineTree(5 + rng() * 3); t.position.set(x0 - side * (1 + rng() * 5), 0.9, z + rng() * 22); world.add(t); }
       } else if (theme === "desert") {
         world.add(mesh(geo.box, W.dune, 26, 2.4, 44, x0 + side * 12, 0.6, z));
@@ -433,16 +608,16 @@ function buildSides(theme, rng, L) {
     }
     if (theme === "arctic") {
       // flat ice floes drifting across the whole sea (decoration)
-      for (let i = 0; i < 2; i++) { const f = mesh(new THREE.CylinderGeometry(1, 1, 1, 6), rng() < 0.5 ? W.snow : W.ice, 3 + rng() * 6, 0.6, 3 + rng() * 5, (rng() < 0.5 ? -1 : 1) * (18 + rng() * 45), 0.25, z + rng() * 30); f.rotation.y = rng() * 3; world.add(f); }
+      for (let i = 0; i < 2; i++) { const f = mesh(geo.slab, rng() < 0.5 ? W.snow : W.ice, 3 + rng() * 6, 0.6, 3 + rng() * 5, (rng() < 0.5 ? -1 : 1) * (18 + rng() * 45), 0.25, z + rng() * 30); f.rotation.y = rng() * 3; world.add(f); }
     }
     if (theme === "jungle" && rng() < 0.4) { const m = mesh(geo.sphere, W.mist, 16, 3, 10, (rng() * 2 - 1) * 14, 2 + rng() * 2, z); world.add(m); }
   }
   // far horizon
   for (let i = 0; i < 14; i++) {
     const zf = -rng() * L - 200, sx = (rng() < 0.5 ? -1 : 1) * (150 + rng() * 120);
-    if (theme === "desert") { const h = 30 + rng() * 40; const py = mesh(new THREE.ConeGeometry(1, 1, 4), W.sandstone, h * 1.1, h, h * 1.1, sx, h / 2 - 1, zf); py.rotation.y = Math.PI / 4; world.add(py); }
+    if (theme === "desert") { const h = 30 + rng() * 40; const py = mesh(pyramidGeo, W.pyramid, h * 1.1, h, h * 1.1, sx, h / 2 - 1, zf); py.rotation.y = Math.PI / 4; world.add(py); }
     else if (theme === "jungle") world.add(mesh(geo.sphereLo, W.jungle3, 70 + rng() * 40, 30 + rng() * 30, 60, sx, 0, zf));
-    else { const h = 60 + rng() * 70; world.add(mesh(geo.cone, mat.mountain, 55 + rng() * 40, h, 45, sx, h / 2 - 2, zf)); world.add(mesh(geo.cone, W.snow, 20, h * 0.35, 16, sx, h * 0.83, zf)); }
+    else { const h = 60 + rng() * 70; world.add(mesh(geo.cone, mat.mountain, 55 + rng() * 40, h, 45, sx, h / 2 - 2, zf)); }
   }
 }
 // Little patch of land in the corridor that holds a fire.
@@ -450,7 +625,7 @@ function buildFireHost(theme, rng, tint) {
   if (theme === "island" || !theme) return buildIsland(rng, tint, false, true);
   const g = new THREE.Group(), r = 7 + rng() * 3;
   const base = { canyon: W.granite, desert: W.dune, jungle: W.jungle3, arctic: W.snow }[theme];
-  g.add(mesh(new THREE.CylinderGeometry(1, 1.15, 1, 7), base, r, 1.6, r * 0.9, 0, 0.2, 0));
+  g.add(mesh(geo.slab, base, r, 1.6, r * 0.9, 0, 0.2, 0));
   if (theme !== "arctic") { const sh = mesh(geo.disc, mat.shallow, r * 1.5, r * 1.5, 1, 0, 0.15, 0); sh.rotation.x = -Math.PI / 2; g.add(sh); }
   for (let i = 0; i < 3; i++) {
     const a = rng() * 6.3, d = r * 0.7;
@@ -469,9 +644,9 @@ function buildRescue(theme) {
   if (!theme || theme === "island") return buildRaft();
   const g = new THREE.Group(), people = [];
   if (theme === "canyon") { g.add(mesh(geo.sphereLo, W.granite, 3, 1.6, 2.6, 0, 0.4, 0)); const p = person(W.parka); p.scale.setScalar(1.6); p.position.set(0, 1.3, 0); p.add(mesh(geo.sphere, W.helmet, 0.46, 0.3, 0.46, 0, 2.3, 0)); g.add(p); people.push(p); }
-  else if (theme === "desert") { g.add(mesh(geo.box, W.canoe, 1.8, 0.8, 5, 0, 0.3, 0)); const sail = mesh(new THREE.ConeGeometry(1, 1, 3), W.sail, 2.2, 6, 0.1, 0, 4, 0.3); sail.rotation.z = 0.15; g.add(sail); const p = person(W.cloth); p.position.set(0, 0.5, -1.4); g.add(p); people.push(p); }
+  else if (theme === "desert") { g.add(mesh(geo.box, W.canoe, 1.8, 0.8, 5, 0, 0.3, 0)); const sail = mesh(sailGeo, W.sail, 2.2, 6, 0.1, 0, 4, 0.3); sail.rotation.z = 0.15; g.add(sail); const p = person(W.cloth); p.position.set(0, 0.5, -1.4); g.add(p); people.push(p); }
   else if (theme === "jungle") { g.add(mesh(geo.box, W.canoe, 1.3, 0.6, 6, 0, 0.25, 0)); for (const z of [-1.4, 1.2]) { const p = person(z < 0 ? W.cloth : mat.shirt); p.position.set(0, 0.2, z); g.add(p); people.push(p); } }
-  else { g.add(mesh(new THREE.CylinderGeometry(1, 1, 1, 6), W.snow, 4.5, 0.8, 4, 0, 0.3, 0)); for (const x of [-1.2, 1.2]) { const p = person(W.parka); p.scale.setScalar(1.8); p.position.set(x, 0.6, 0); g.add(p); people.push(p); } }
+  else { g.add(mesh(geo.slab, W.snow, 4.5, 0.8, 4, 0, 0.3, 0)); for (const x of [-1.2, 1.2]) { const p = person(W.parka); p.scale.setScalar(1.8); p.position.set(x, 0.6, 0); g.add(p); people.push(p); } }
   const arm = mesh(geo.cyl, mat.person, 0.13, 1, 0.13, 0.5, 2.1, 0); people[0].add(arm);
   const beacon = mesh(geo.sphere, new THREE.MeshBasicMaterial({ color: 0xFF3B30 }), 0.3, 0.3, 0.3, -1.4, 1.2, 0); g.add(beacon);
   const pole = mesh(geo.cyl, mat.white, 0.08, 3.2, 0.08, 1.6, 2.2, 0); g.add(pole);
@@ -485,7 +660,7 @@ function buildObstacle(theme, rng) {
   if (!theme || theme === "island") return buildStack(rng);
   const g = new THREE.Group();
   const h = 20 + rng() * 14, r = 2.6 + rng() * 1.6;
-  if (theme === "canyon") { g.add(mesh(new THREE.CylinderGeometry(r * 0.7, r * 1.2, h, 6), W.iceDeep, 1, 1, 1, 0, h / 2 - 1, 0)); g.add(mesh(geo.cone, W.snow, r, 2.5, r, 0, h, 0)); }
+  if (theme === "canyon") { g.add(mesh(geo.pillar, W.iceDeep, r * 0.95, h, r * 0.95, 0, h / 2 - 1, 0)); g.add(mesh(geo.cone, W.snow, r, 2.5, r, 0, h, 0)); }
   else if (theme === "desert") { for (let i = 0; i < 3; i++) g.add(mesh(geo.sphereLo, i % 2 ? W.sandstone : W.sandDark, r * (1.1 - i * 0.15), h / 5, r * (1.1 - i * 0.15), 0, h * (0.18 + i * 0.3), 0)); g.add(mesh(geo.cyl, W.sandDark, r * 0.6, h, r * 0.6, 0, h / 2 - 1, 0)); }
   else if (theme === "jungle") { g.add(mesh(geo.cyl, W.bark, r * 0.6, h, r * 0.6, 0, h / 2 - 1, 0)); g.add(mesh(geo.sphereLo, W.jungle2, r * 3, r * 1.6, r * 3, 0, h, 0)); }
   else { const b = mesh(geo.sphereLo, W.snow, r * 1.6, h * 0.6, r * 1.4, 0, h * 0.25, 0); b.rotation.y = rng() * 3; g.add(b); g.add(mesh(geo.sphereLo, W.ice, r * 1.2, h * 0.3, r, 0.5, h * 0.55, 0)); }
@@ -511,18 +686,15 @@ const skyU = {
   top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() },
   sunDir: { value: SKY_SUN }, sunCol: { value: new THREE.Color() },
   cloudCol: { value: new THREE.Color() }, cloudShade: { value: new THREE.Color() },
-  cover: { value: 0.45 }, time: { value: 0 }, sunSize: { value: 1 }
+  cover: { value: 0.45 }, time: { value: 0 }, sunSize: { value: 1 }, tCloud: { value: CLOUD_TEX }
 };
 const skyMat = new THREE.ShaderMaterial({
   uniforms: skyU, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
   vertexShader: `varying vec3 vDir;
     void main() { vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`,
-  fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, cloudCol, cloudShade; uniform float cover, time, sunSize;
+  fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, cloudCol, cloudShade; uniform float cover, time, sunSize; uniform sampler2D tCloud;
     varying vec3 vDir;
-    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    float noise(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }
-    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return v; }
+    float fbm(vec2 p) { return (texture2D(tCloud, p * 0.3).r - 0.5) * 1.5 + 0.5; }
     void main() {
       vec3 d = normalize(vDir);
       float h = clamp(d.y, 0.0, 1.0);
@@ -585,19 +757,19 @@ function setSky(st, storm) {
 /* ---------------- water ---------------- */
 // Smooth rolling swell (vertex waves) + a tiling ripple normal map for small-scale glitter,
 // on a physically based surface (IOR 1.33) that reflects the sky: dark straight down, bright towards the horizon.
-const WATER_W = 520, WATER_D = 760, RIPPLE_TILE = 52, RIPPLE_TILE2 = 17;
+const WATER_W = 520, WATER_D = 760, RIPPLE_TILE = 44;
 function rippleNormalTex(seed, tile) {
-  const N = 256, c = document.createElement("canvas"); c.width = c.height = N;
+  const N = 512, c = document.createElement("canvas"); c.width = c.height = N;
   const g = c.getContext("2d"), img = g.createImageData(N, N), d = img.data;
   const rng = GE.rng(seed), waves = [];
-  for (let i = 0; i < 22; i++) {
-    const kx = Math.round((rng() * 2 - 1) * (2 + i)), ky = Math.round((rng() * 2 - 1) * (2 + i)) || 1;
-    waves.push({ kx, ky, a: 1 / (1 + i * 0.6), ph: rng() * 6.283 });
+  for (let i = 0; i < 26; i++) {
+    const k = 2 + i * 1.6, kx = Math.round((rng() * 2 - 1) * k), ky = Math.round((rng() * 2 - 1) * k) || 1;
+    waves.push({ kx, ky, a: 1 / (1 + i * 0.45), ph: rng() * 6.283 });
   }
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     let dx = 0, dy = 0;
     for (const w of waves) { const t = 6.283 * (w.kx * x + w.ky * y) / N + w.ph, c2 = Math.cos(t) * w.a; dx += c2 * w.kx; dy += c2 * w.ky; }
-    const nx = -dx * 0.05, ny = -dy * 0.05, l = Math.hypot(nx, ny, 1), o = (y * N + x) * 4;
+    const nx = -dx * 0.028, ny = -dy * 0.028, l = Math.hypot(nx, ny, 1), o = (y * N + x) * 4;
     d[o] = (nx / l * 0.5 + 0.5) * 255; d[o + 1] = (ny / l * 0.5 + 0.5) * 255; d[o + 2] = (1 / l * 0.5 + 0.5) * 255; d[o + 3] = 255;
   }
   g.putImageData(img, 0, 0);
@@ -610,12 +782,10 @@ function rippleNormalTex(seed, tile) {
 const waterGeo = new THREE.PlaneGeometry(WATER_W, WATER_D, 64, 96);
 waterGeo.rotateX(-Math.PI / 2);
 const waterBase = Float32Array.from(waterGeo.attributes.position.array);
-const rippleTex = rippleNormalTex(42, RIPPLE_TILE), rippleTex2 = rippleNormalTex(7, RIPPLE_TILE2);
-const waterMat = new THREE.MeshPhysicalMaterial({
-  color: 0xD2D2D2, vertexColors: true, roughness: 0.08, metalness: 0, ior: 1.33,
-  normalMap: rippleTex, normalScale: new THREE.Vector2(0.24, 0.24), envMapIntensity: 1.1,
-  // a second, finer ripple layer (different scale + drift) so the surface never reads as a tiled pattern
-  clearcoat: 0.45, clearcoatRoughness: 0.05, clearcoatNormalMap: rippleTex2, clearcoatNormalScale: new THREE.Vector2(0.3, 0.3)
+const rippleTex = rippleNormalTex(42, RIPPLE_TILE);
+const waterMat = new THREE.MeshStandardMaterial({
+  color: 0xD2D2D2, vertexColors: true, roughness: 0.07, metalness: 0,
+  normalMap: rippleTex, normalScale: new THREE.Vector2(0.3, 0.3), envMapIntensity: 1.2
 });
 waterGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(waterGeo.attributes.position.count * 3), 3));
 const seaCol = new THREE.Color(0x1FB5C7), seaDeep = new THREE.Color(0x118CA6), seaCrest = new THREE.Color(0xCFF6F4), tmpCol = new THREE.Color();
@@ -627,7 +797,6 @@ function updateWater(time, cx, cz) {
   const sx = Math.round(cx / 8) * 8, sz = Math.round((cz - WATER_D * 0.38) / 8) * 8;
   water.position.set(sx, 0, sz);
   rippleTex.offset.set((sx / RIPPLE_TILE + time * 0.014) % 1, (-sz / RIPPLE_TILE + time * 0.022) % 1);
-  rippleTex2.offset.set((sx / RIPPLE_TILE2 - time * 0.05) % 1, (-sz / RIPPLE_TILE2 + time * 0.031) % 1);
   const p = waterGeo.attributes.position.array, col = waterGeo.attributes.color.array;
   for (let i = 0; i < p.length; i += 3) {
     const x = waterBase[i] + sx, z = waterBase[i + 2] + sz;
@@ -815,6 +984,9 @@ function startStage(n) {
   S.totals = { f: S.fires.length, r: S.rafts.length, g: S.rings.length };
   world.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
   snapCamera();
+  // compile every shader now, while the stage loads, so the first seconds of flight never stutter
+  camera.position.copy(camPos); camera.lookAt(camLook);
+  try { renderer.compile(scene, camera); } catch (e) { /* optional warm-up */ }
   showBanner(t("stage", { n: n + 1 }) + " · " + t(st.key), t("go"));
   setScreen(null);
   $("hud").hidden = false;
@@ -1064,7 +1236,13 @@ function step(dt) {
   // Fires: flicker + smoke
   for (const f of S.fires) {
     if (f.out) continue;
-    f.obj.userData.flames.forEach((fl, i) => { if (fl.isSprite) { fl.scale.x = 15 + Math.sin(S.time * 9) * 1.5; return; } fl.scale.y = 6.6 + Math.sin(S.time * 12 + i * 1.7) * 1.8; fl.position.y = fl.scale.y / 2 + 0.2; });
+    f.obj.userData.flames.forEach((fl) => {
+      const u = fl.userData;
+      if (!u.h) { fl.scale.x = 15 + Math.sin(S.time * 9) * 1.5; return; }   // glow halo
+      const k = 1 + Math.sin(S.time * 11 + u.ph) * 0.18 + Math.sin(S.time * 23 + u.ph * 2) * 0.1;
+      fl.scale.set(u.w * (1.1 - k * 0.1), u.h * k, 1); fl.position.set(u.bx + Math.sin(S.time * 7 + u.ph) * 0.25, u.h * k / 2 - 0.3, fl.position.z);
+    });
+    if (Math.abs(f.z - hz) < 200 && Math.random() < dt * 14) spawn(mat.ember, V(f.x + (Math.random() - 0.5) * 4, 3 + Math.random() * 3, f.z + (Math.random() - 0.5) * 3), V((Math.random() - 0.5) * 3, 7 + Math.random() * 6, (Math.random() - 0.5) * 2), 0.9, 0.35);
     f.obj.userData.glow.intensity = 26 + Math.sin(S.time * 17) * 8;
     f.smokeT -= dt;
     if (f.smokeT <= 0 && Math.abs(f.z - hz) < 380) {
@@ -1110,7 +1288,7 @@ function render(realDt) {
   heli.rotation.set(S.pitch + S.loopPitch + vib * 0.4, S.yaw, S.bank, "YXZ");
   const ud = heli.userData;
   ud.rotor.rotation.y += realDt * 44;
-  heliMat.blade.opacity = S.mode === "hangar" ? 0.45 : 0.14; heliMat.tip.opacity = S.mode === "hangar" ? 0.7 : 0.3;
+  heliMat.blade.opacity = S.mode === "hangar" ? 0.45 : 0.1; heliMat.tip.opacity = S.mode === "hangar" ? 0.7 : 0.22;
   ud.rotor.rotation.x = -0.06 - (S.speed - 30) * 0.002;   // rotor disc tips forward with speed
   ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
   ud.tail.rotation.x += realDt * 62;
@@ -1120,6 +1298,7 @@ function render(realDt) {
   shadow.visible = S.lift < 6;
   shadow.scale.set(2.4, 3.4, 1);
   mat.shadow.opacity = Math.max(0, 0.12 - S.y * 0.008); // soft contact darkening under the real shadow
+  sun.shadow.intensity = Math.max(0.12, 0.42 - (S.y + S.lift) * 0.02);   // higher up = fainter, more diffuse shadow
   const land = predictLanding();
   reticle.visible = S.mode === "play" && S.tank >= 1;
   reticle.position.set(land.x, 3, land.z);
@@ -1322,7 +1501,12 @@ function frame(now) {
   if (!manual) {
     step(realDt);
     render(realDt);
-    fpsAcc += realDt; fpsN++; if (fpsAcc > 1) { window.__fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0; }
+    fpsAcc += realDt; fpsN++;
+    if (fpsAcc > 2) {
+      window.__fps = fpsN / fpsAcc; fpsAcc = 0; fpsN = 0;
+      // dynamic resolution: if a phone can't hold ~40 fps, render fewer pixels (never below 1x)
+      if (S.mode === "play" && window.__fps < 40 && pixelRatio > 1) { pixelRatio = Math.max(1, pixelRatio - 0.25); renderer.setPixelRatio(pixelRatio); resize(); }
+    }
   }
   requestAnimationFrame(frame);
 }
@@ -1341,6 +1525,7 @@ window.__heli = {
   get motion() { return { speed: S.speed, loopT: S.loopT, lift: S.lift, loopPitch: S.loopPitch, loops: S.loops, yaw: S.yaw, bank: S.bank, inv: S.inv }; },
   manual(on) { manual = !!on; },
   get look() { return { ...look }; },
+  get _dbg() { return { renderer, scene, sun, world, skyDome, water, camera, heli }; },
   get hitLog() { return S.hitLog.slice(); },
   hazardsNear(z, w = 40) { return S.stacks.concat(S.birds, S.clouds).filter((h) => Math.abs(h.z - z) < w).map((h) => ({ x: +h.x.toFixed(1), z: Math.round(h.z), r: +(h.r || 0).toFixed(1), y: h.y, h: h.h && +h.h.toFixed(0) })); },
   // Deterministic stepping for tests: n frames of dt, rendering the last one.

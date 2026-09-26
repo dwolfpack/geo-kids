@@ -193,8 +193,10 @@ async function noOverflow(page, label) {
   await pd.waitForFunction(() => window.__heli);
   await pd.click("[data-stage='0']");
   const dx0 = (await st(pd)).x;
+  // hold the key until the live loop has flown ~20 m (software GL in CI can be very slow per frame)
+  const d0 = (await st(pd)).dist;
   await pd.keyboard.down("ArrowLeft");
-  await pd.waitForTimeout(700);
+  await pd.waitForFunction((d) => window.__heli.state.dist > d + 20, d0, { timeout: 60000 });
   await pd.keyboard.up("ArrowLeft");
   const ds = await st(pd);
   check(ds.x < dx0 - 1 && ds.dist > 5, `arrow keys steer in real time (x ${dx0.toFixed(1)} → ${ds.x.toFixed(1)}, flew ${ds.dist.toFixed(0)}m)`);
