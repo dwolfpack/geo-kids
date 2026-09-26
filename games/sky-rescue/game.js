@@ -167,6 +167,7 @@ function softTex(rgb, core = 1) {
   const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; return tex;
 }
 const SP = (rgb, core, extra = {}) => new THREE.SpriteMaterial({ map: softTex(rgb, core), depthWrite: false, ...extra });
+mat.shallow.map = softTex("255,255,255", 1); mat.shallow.opacity = 0.6;  // soft-edged shallows around islands
 Object.assign(mat, {
   smoke: SP("62,58,56", 0.55),
   steam: SP("255,255,255", 0.8),
@@ -502,58 +503,141 @@ function weather(theme, dt) {
   }
 }
 
-/* ---------------- sky: distant cumulus clouds ---------------- */
-// Far, fog-free puffs that ride along with the camera (so they sit at the horizon, like real sky).
-const skyDecor = new THREE.Group(); scene.add(skyDecor);
-const skyCloudMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, fog: false, emissive: 0xC9D6E3, emissiveIntensity: 0.7 });
-function buildSkyDecor(rng, theme, storm) {
-  for (const c of [...skyDecor.children]) skyDecor.remove(c);
-  skyCloudMat.color.setHex(storm ? 0xC9D2DB : theme === "desert" ? 0xFFF4E4 : 0xFFFFFF);
-  skyCloudMat.emissive.setHex(storm ? 0x55606B : theme === "desert" ? 0xC9A77A : 0x9FB4C8);
-  const n = storm ? 16 : theme === "desert" ? 5 : 11;
-  for (let i = 0; i < n; i++) {
-    const g = new THREE.Group();
-    // a cumulus: a row of round puffs, biggest in the middle, flat-ish bottom
-    const puffs = 5 + Math.floor(rng() * 4), w = 18 + rng() * 26;
-    for (let k = 0; k < puffs; k++) {
-      const p = new THREE.Mesh(geo.sphere, skyCloudMat);
-      const mid = 1 - Math.abs(k / (puffs - 1) - 0.5) * 1.2;
-      const r = w * (0.22 + mid * 0.32 + rng() * 0.08);
-      p.scale.set(r * 1.2, r * 0.85, r);
-      p.position.set((k - (puffs - 1) / 2) * w * 0.3, r * 0.45, (rng() - 0.5) * 8);
-      g.add(p);
-    }
-    g.scale.y = 0.8;
-    const a = (rng() - 0.5) * 2.6;          // spread across the view ahead
-    const d = 560 + rng() * 200;
-    g.position.set(Math.sin(a) * d, 30 + rng() * 55, -Math.cos(a) * d);
-    skyDecor.add(g);
-  }
+/* ---------------- sky: physically-inspired dome ---------------- */
+// Gradient atmosphere + sun disc/halo + drifting fbm clouds projected on a cloud plane.
+// The same dome is baked into an environment map, so the water and every object reflect the sky.
+const SKY_SUN = new THREE.Vector3(-0.42, 0.2, -1).normalize();   // visible sun, ahead-left, low
+const skyU = {
+  top: { value: new THREE.Color() }, horizon: { value: new THREE.Color() },
+  sunDir: { value: SKY_SUN }, sunCol: { value: new THREE.Color() },
+  cloudCol: { value: new THREE.Color() }, cloudShade: { value: new THREE.Color() },
+  cover: { value: 0.45 }, time: { value: 0 }, sunSize: { value: 1 }
+};
+const skyMat = new THREE.ShaderMaterial({
+  uniforms: skyU, side: THREE.BackSide, depthWrite: false, depthTest: false, fog: false,
+  vertexShader: `varying vec3 vDir;
+    void main() { vDir = position; vec4 p = projectionMatrix * modelViewMatrix * vec4(position, 1.0); gl_Position = p.xyww; }`,
+  fragmentShader: `uniform vec3 top, horizon, sunDir, sunCol, cloudCol, cloudShade; uniform float cover, time, sunSize;
+    varying vec3 vDir;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), u.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + vec2(1.0, 1.0)), u.x), u.y); }
+    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * noise(p); p = p * 2.03 + vec2(1.7, 9.2); a *= 0.5; } return v; }
+    void main() {
+      vec3 d = normalize(vDir);
+      float h = clamp(d.y, 0.0, 1.0);
+      vec3 col = mix(horizon, top, 1.0 - exp(-h * 9.0));        // pale haze only in a thin band above the horizon
+      col = mix(col, horizon * 1.04, exp(-h * 30.0) * 0.5);             // bright haze band at the horizon
+      float sd = max(dot(d, sunDir), 0.0);
+      vec3 sunLight = sunCol * (pow(sd, 4000.0 / sunSize) * 12.0 + pow(sd, 220.0) * 0.3 + pow(sd, 10.0) * 0.06);
+      if (d.y > 0.004) {
+        vec2 uv = d.xz / (d.y + 0.14) * 0.42 + vec2(time * 0.008, time * 0.003);
+        float n = fbm(uv);
+        float c = smoothstep(1.0 - cover, 1.0 - cover + 0.16, n);
+        float toward = fbm(uv + sunDir.xz * 0.12);                        // denser toward the sun = shaded
+        float lit = clamp(0.85 - (toward - n) * 4.0 + (n - 0.6) * 1.2, 0.0, 1.0);
+        vec3 cc = mix(cloudShade, cloudCol, lit) + sunCol * pow(sd, 10.0) * 0.5 * (1.0 - c * 0.6);
+        float fade = smoothstep(0.02, 0.2, d.y);
+        col = mix(col + sunLight, cc, c * fade * 0.96);
+      } else col += sunLight;
+      gl_FragColor = vec4(col, 1.0);
+      #include <tonemapping_fragment>
+      #include <colorspace_fragment>
+    }`
+});
+const skyDome = new THREE.Mesh(new THREE.SphereGeometry(500, 48, 24), skyMat);
+skyDome.renderOrder = -1000; skyDome.frustumCulled = false;
+scene.add(skyDome);
+// A warm rim light from the visible sun (no shadows): back-lights edges and makes the sun path glint on the water.
+const rimSun = new THREE.DirectionalLight(0xFFE2B8, 0.9);
+rimSun.position.copy(SKY_SUN).multiplyScalar(100); scene.add(rimSun);
+const pmrem = new THREE.PMREMGenerator(renderer);
+const envScene = new THREE.Scene(), envDome = new THREE.Mesh(skyDome.geometry, skyMat);
+envScene.add(envDome);
+let envRT = null;
+const SKY_LOOK = {
+  island: { cover: 0.36, cloud: 0xFFFFFF, shade: 0xB8C4D2 },
+  storm: { cover: 0.82, cloud: 0xC4CCD4, shade: 0x5E6873 },
+  canyon: { cover: 0.4, cloud: 0xFFFFFF, shade: 0xAFBBC8 },
+  desert: { cover: 0.16, cloud: 0xFFF6E8, shade: 0xD8C0A0 },
+  jungle: { cover: 0.42, cloud: 0xF4F8F4, shade: 0xA9B8B0 },
+  arctic: { cover: 0.38, cloud: 0xFFFFFF, shade: 0xB3C3D3 }
+};
+function setSky(st, storm) {
+  const L = SKY_LOOK[storm ? "storm" : st.theme || "island"];
+  skyU.top.value.set(st.sky[0]);
+  if (!storm) skyU.top.value.lerp(new THREE.Color(0x3F93E6), 0.6);   // deeper, truer blue overhead
+  // horizon = the stage haze nudged towards sky blue; fog uses the same colour so distance melts into the sky
+  skyU.horizon.value.setHex(st.fog).lerp(new THREE.Color(st.sky[0]), storm ? 0.1 : 0.5);
+  if (scene.fog) scene.fog.color.copy(skyU.horizon.value);
+  skyU.sunCol.value.setHex(st.sun).multiplyScalar(storm ? 0.35 : 1);
+  skyU.cloudCol.value.setHex(L.cloud); skyU.cloudShade.value.setHex(L.shade);
+  skyU.cover.value = L.cover; skyU.sunSize.value = storm ? 0.4 : 1;
+  rimSun.intensity = storm ? 0.25 : 0.9;
+  // bake the sky into an environment map for reflections + soft image-based light
+  if (envRT) envRT.dispose();
+  envRT = pmrem.fromScene(envScene, 0, 0.1, 1000);
+  scene.environment = envRT.texture;
+  scene.environmentIntensity = 0.6;
+  scene.background = null;
 }
 
 /* ---------------- water ---------------- */
-const WATER_W = 520, WATER_D = 760;
-const waterGeo = new THREE.PlaneGeometry(WATER_W, WATER_D, 52, 76);
+// Smooth rolling swell (vertex waves) + a tiling ripple normal map for small-scale glitter,
+// on a physically based surface (IOR 1.33) that reflects the sky: dark straight down, bright towards the horizon.
+const WATER_W = 520, WATER_D = 760, RIPPLE_TILE = 52, RIPPLE_TILE2 = 17;
+function rippleNormalTex(seed, tile) {
+  const N = 256, c = document.createElement("canvas"); c.width = c.height = N;
+  const g = c.getContext("2d"), img = g.createImageData(N, N), d = img.data;
+  const rng = GE.rng(seed), waves = [];
+  for (let i = 0; i < 22; i++) {
+    const kx = Math.round((rng() * 2 - 1) * (2 + i)), ky = Math.round((rng() * 2 - 1) * (2 + i)) || 1;
+    waves.push({ kx, ky, a: 1 / (1 + i * 0.6), ph: rng() * 6.283 });
+  }
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let dx = 0, dy = 0;
+    for (const w of waves) { const t = 6.283 * (w.kx * x + w.ky * y) / N + w.ph, c2 = Math.cos(t) * w.a; dx += c2 * w.kx; dy += c2 * w.ky; }
+    const nx = -dx * 0.05, ny = -dy * 0.05, l = Math.hypot(nx, ny, 1), o = (y * N + x) * 4;
+    d[o] = (nx / l * 0.5 + 0.5) * 255; d[o + 1] = (ny / l * 0.5 + 0.5) * 255; d[o + 2] = (1 / l * 0.5 + 0.5) * 255; d[o + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(WATER_W / tile, WATER_D / tile);
+  tex.anisotropy = 4;
+  return tex;
+}
+const waterGeo = new THREE.PlaneGeometry(WATER_W, WATER_D, 64, 96);
 waterGeo.rotateX(-Math.PI / 2);
 const waterBase = Float32Array.from(waterGeo.attributes.position.array);
-const waterMat = new THREE.MeshStandardMaterial({ color: 0xFFFFFF, vertexColors: true, flatShading: true, roughness: 0.18, metalness: 0.2 });
+const rippleTex = rippleNormalTex(42, RIPPLE_TILE), rippleTex2 = rippleNormalTex(7, RIPPLE_TILE2);
+const waterMat = new THREE.MeshPhysicalMaterial({
+  color: 0xD2D2D2, vertexColors: true, roughness: 0.08, metalness: 0, ior: 1.33,
+  normalMap: rippleTex, normalScale: new THREE.Vector2(0.24, 0.24), envMapIntensity: 1.1,
+  // a second, finer ripple layer (different scale + drift) so the surface never reads as a tiled pattern
+  clearcoat: 0.45, clearcoatRoughness: 0.05, clearcoatNormalMap: rippleTex2, clearcoatNormalScale: new THREE.Vector2(0.3, 0.3)
+});
 waterGeo.setAttribute("color", new THREE.BufferAttribute(new Float32Array(waterGeo.attributes.position.count * 3), 3));
-const seaCol = new THREE.Color(0x1FB5C7), seaDeep = new THREE.Color(0x118CA6), seaCrest = new THREE.Color(0xB5F4F7), tmpCol = new THREE.Color();
+const seaCol = new THREE.Color(0x1FB5C7), seaDeep = new THREE.Color(0x118CA6), seaCrest = new THREE.Color(0xCFF6F4), tmpCol = new THREE.Color();
 const water = new THREE.Mesh(waterGeo, waterMat);
 water.receiveShadow = true;
 scene.add(water);
 function updateWater(time, cx, cz) {
-  // Snap to a grid so facets don't swim, then displace.
-  const sx = Math.round(cx / 10) * 10, sz = Math.round((cz - WATER_D * 0.38) / 10) * 10;
+  // Snap to a grid (so vertices don't swim) and keep the ripple texture anchored to the world.
+  const sx = Math.round(cx / 8) * 8, sz = Math.round((cz - WATER_D * 0.38) / 8) * 8;
   water.position.set(sx, 0, sz);
+  rippleTex.offset.set((sx / RIPPLE_TILE + time * 0.014) % 1, (-sz / RIPPLE_TILE + time * 0.022) % 1);
+  rippleTex2.offset.set((sx / RIPPLE_TILE2 - time * 0.05) % 1, (-sz / RIPPLE_TILE2 + time * 0.031) % 1);
   const p = waterGeo.attributes.position.array, col = waterGeo.attributes.color.array;
   for (let i = 0; i < p.length; i += 3) {
     const x = waterBase[i] + sx, z = waterBase[i + 2] + sz;
-    const h = Math.sin(x * 0.09 + time * 1.4) * 0.35 + Math.cos(z * 0.07 + time * 1.1) * 0.35 + Math.sin((x + z) * 0.21 + time * 2.2) * 0.12;
+    // a few crossing swells, sharpened at the crests like real waves
+    const s1 = Math.sin(x * 0.075 + z * 0.02 + time * 1.3), s2 = Math.sin(z * 0.06 - x * 0.03 + time * 1.05), s3 = Math.sin((x + z) * 0.17 + time * 2.1);
+    const h = (1 - Math.abs(s1)) * -0.5 + s1 * 0.12 + s2 * 0.32 + s3 * 0.1;
     p[i + 1] = h;
-    const k = (h + 0.82) / 1.64; // 0 trough .. 1 crest
-    if (k > 0.86) tmpCol.copy(seaCol).lerp(seaCrest, (k - 0.86) / 0.14 * 0.8);
-    else tmpCol.copy(seaDeep).lerp(seaCol, Math.min(1, k * 1.4));
+    const k = Math.min(1, Math.max(0, (h + 0.75) / 1.3));   // 0 trough .. 1 crest
+    tmpCol.copy(seaDeep).lerp(seaCol, Math.pow(k, 1.3));
+    if (k > 0.9) tmpCol.lerp(seaCrest, (k - 0.9) * 3);        // thin foamy caps
     col[i] = tmpCol.r; col[i + 1] = tmpCol.g; col[i + 2] = tmpCol.b;
   }
   waterGeo.attributes.color.needsUpdate = true;
@@ -653,13 +737,12 @@ function startStage(n) {
   Object.assign(S, { mode: "play", stage: n, time: 0, dist: 0, speed: st.speed, x: 0, y: 9, vx: 0, vy: 0, bank: 0, pitch: 0,
     hearts: 3, hits: 0, inv: 0, tank: TANK_MAX, score: 0, dropCd: 0, put: 0, saved: 0, ringsHit: 0, shake: 0, flash: 0, slow: 0, ended: false,
     hitLog: [], bankV: 0, yaw: 0, loopT: -1, loopCd: 0, loops: 0, lift: 0, loopPitch: 0, speedStep: 0, washT: 0 });
-  scene.background = skyTexture(st.sky[0], st.sky[1]);
-  scene.fog = new THREE.Fog(st.fog, 90, 430);
+  scene.fog = new THREE.Fog(st.fog, 110, 540);
   seaCol.setHex(st.sea); seaDeep.setHex(st.deep);
   sun.color.setHex(st.sun);
-  buildSkyDecor(GE.rng(500 + n), st.theme || "island", n === 2);
-  sun.intensity = n === 2 ? 1.7 : 2.1;
-  hemi.intensity = n === 2 ? 1.0 : 1.1;
+  setSky(st, n === 2);
+  sun.intensity = n === 2 ? 1.5 : 2.0;
+  hemi.intensity = n === 2 ? 0.5 : 0.45;   // the sky environment map now provides most of the ambient light
 
   const L = st.length;
   const theme = st.theme || "island";
@@ -1032,7 +1115,6 @@ function render(realDt) {
   ud.rotor.rotation.z = -S.vx * 0.006;                     // and into sideways moves
   ud.tail.rotation.x += realDt * 62;
   heli.visible = true;
-  skyDecor.position.set(camera.position.x, 0, camera.position.z);
   sun.position.copy(heli.position).add(SUN_OFF); sun.target.position.copy(heli.position);
   shadow.position.set(S.x, 0.3, hz);
   shadow.visible = S.lift < 6;
@@ -1050,6 +1132,7 @@ function render(realDt) {
     camera.lookAt(heli.position.x, heli.position.y - (portraitView ? 4.5 : 3), heli.position.z);
     camera.fov = 50; camera.updateProjectionMatrix();
     updateWater(hangarT, heli.position.x, hz);
+    skyDome.position.copy(camera.position); skyU.time.value = hangarT + S.time;
     renderer.render(scene, camera);
     return;
   }
@@ -1070,6 +1153,7 @@ function render(realDt) {
   updateWater(S.time, S.x, hz);
   const fl = S.flash;
   renderer.toneMappingExposure = 1.05 + fl * 0.8;
+  skyDome.position.copy(camera.position); skyU.time.value = S.time;
   renderer.render(scene, camera);
   updateHud();
 }
