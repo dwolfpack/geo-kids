@@ -10,6 +10,9 @@ const WORK = __dirname;
 const FFMPEG = process.env.FFMPEG;
 const PORT = 8765;
 const FPS = 30;
+const VERT = process.argv.includes("vertical");
+const VW = VERT ? 1080 : 1920, VH = VERT ? 1920 : 1080;
+const SUF = VERT ? "-vertical" : "";
 
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml",
   ".woff2": "font/woff2", ".woff": "font/woff", ".png": "image/png", ".jpg": "image/jpeg", ".json": "application/json" };
@@ -25,7 +28,7 @@ const server = http.createServer((req, res) => {
 (async () => {
   await new Promise(r => server.listen(PORT, r));
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   page.on("console", m => { if (m.type() === "error") console.log("console:", m.text()); });
   page.on("pageerror", e => console.log("pageerror:", e.message));
 
@@ -42,7 +45,7 @@ const server = http.createServer((req, res) => {
     let s = 12345; Math.random = () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
   });
 
-  await page.goto(`http://localhost:${PORT}/brag-output/work/comp.html`);
+  await page.goto(`http://localhost:${PORT}/brag-output/work/comp.html${VERT ? "?format=vertical" : ""}`);
   await page.evaluate(() => window.setup());
   const total = await page.evaluate(() => window.T.total);
 
@@ -55,12 +58,12 @@ const server = http.createServer((req, res) => {
     const last = Math.max(...want);
     for (let f = 0; f <= last; f++) {
       await page.evaluate(t => window.renderAt(t), f / FPS);
-      if (want.has(f)) await page.screenshot({ path: path.join(WORK, "stills", `t${(f / FPS).toFixed(2)}.jpg`), quality: 85, type: "jpeg" });
+      if (want.has(f)) await page.screenshot({ path: path.join(WORK, "stills", `${SUF}t${(f / FPS).toFixed(2)}.jpg`), quality: 85, type: "jpeg" });
     }
   } else {
     const n = Math.round(total * FPS);
     const ff = spawn(FFMPEG, ["-y", "-f", "image2pipe", "-framerate", String(FPS), "-c:v", "mjpeg", "-i", "-",
-      "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", path.join(WORK, "video.mp4")],
+      "-c:v", "libx264", "-preset", "slow", "-crf", "16", "-pix_fmt", "yuv420p", path.join(WORK, `video${SUF}.mp4`)],
       { stdio: ["pipe", "ignore", "inherit"] });
     for (let f = 0; f < n; f++) {
       await page.evaluate(t => window.renderAt(t), f / FPS);

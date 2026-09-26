@@ -92,6 +92,20 @@
   #rail.top { top: 70px; } #rail2 { position: absolute; left: 0; width: 100%; top: 944px; height: 96px; }
   #rail2 img { position: absolute; top: 0; height: 66px; border-radius: 8px; border: 5px solid #fff; box-shadow: 0 6px 16px rgba(20,35,33,.16); }
 
+  /* vertical 9:16 layout */
+  html.v, html.v body { width: 1080px; height: 1920px; }
+  .v #win { height: 904px; }
+  .v #screens, .v #screens iframe { height: 860px; }
+  .v .cap { left: 90px; width: 900px; top: 200px; height: 340px; gap: 18px; }
+  .v .line { font-size: 74px; letter-spacing: -1px; }
+  .v .kicker { font-size: 28px; }
+  .v #end { gap: 26px; }
+  .v #end h1 { font-size: 104px; max-width: 960px; }
+  .v #end .he { font-size: 72px; }
+  .v #end .url { font-size: 40px; }
+  .v #rail.top { top: 250px; }
+  .v #rail2 { top: 1560px; }
+
   #confetti { position: absolute; inset: 0; pointer-events: none; }
   #confetti i { position: absolute; top: 0; left: 0; border-radius: 3px; }
 </style>
@@ -150,6 +164,13 @@
 </div>
 
 <script>
+/* ---------- format ---------- */
+const V = new URLSearchParams(location.search).get("format") === "vertical";
+if (V) document.documentElement.classList.add("v");
+const L = V
+  ? { W: 1080, H: 1920, ax: 540, ay: 960, wx: 540, wy: 560 + 904 * 1.1 / 2, wfy: 452, s: 1.1, hook: [1.3, 1.2, 1.22] }
+  : { W: 1920, H: 1080, ax: 960, ay: 540, wx: 930 + 440, wy: 38 + 502, wfy: 502, s: 1, hook: [1.75, 1.4, 1.6] };
+
 /* ---------- timeline (seconds) ---------- */
 const T = {
   hookTap: 1.5, hookEnd: 4.0, camEnd: 4.55,
@@ -323,16 +344,16 @@ function camera(t) {
   const qc = rectIn(d, d.getElementById("question-card"));
   const opts = rectIn(d, d.getElementById("options"));
   const fa = d.querySelector(".fact-bubble") ? rectIn(d, d.querySelector(".fact-bubble")) : { bottom: opts.bottom + 200 };
-  let ax = 960, ay = 540;
-  let s = 1.75, fx = 440, fy = flag.cy + 44 - 30;
+  let ax = L.ax, ay = L.ay;
+  let s = L.hook[0], fx = 440, fy = flag.cy + 44 - 30;
   const k1 = easeInOut(prog(t, .1, .9));
-  s = lerp(s, 1.4, k1); fy = lerp(fy, (qc.top + opts.bottom) / 2 + 44, k1);
+  s = lerp(s, L.hook[1], k1); fy = lerp(fy, (qc.top + opts.bottom) / 2 + 44, k1);
   const k2 = easeInOut(prog(t, 1.65, .6));
-  s = lerp(s, 1.6, k2); fy = lerp(fy, (opts.top + fa.bottom) / 2 + 44, k2);
+  s = lerp(s, L.hook[2], k2); fy = lerp(fy, (opts.top + fa.bottom) / 2 + 44, k2);
   // pull back into the layout
   const k3 = easeInOut(prog(t, T.hookEnd, T.camEnd - T.hookEnd));
-  s = lerp(s, 1, k3); fx = lerp(fx, 440, k3); fy = lerp(fy, 502, k3);
-  ax = lerp(ax, 930 + 440, k3); ay = lerp(ay, 38 + 502, k3);
+  s = lerp(s, L.s, k3); fx = lerp(fx, 440, k3); fy = lerp(fy, L.wfy, k3);
+  ax = lerp(ax, L.wx, k3); ay = lerp(ay, L.wy, k3);
   // exit to end card
   const k4 = easeInOut(prog(t, T.end, .4));
   ax += k4 * 1300;
