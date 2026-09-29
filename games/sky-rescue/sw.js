@@ -1,6 +1,6 @@
 /* Sky Rescue service worker — cache-first for the game's static files.
  * Bump VERSION whenever any cached file changes so old caches are dropped. */
-var VERSION = "sky-rescue-v4";
+var VERSION = "sky-rescue-v5";
 var FILES = [
   "./",
   "./index.html",

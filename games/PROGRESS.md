@@ -69,6 +69,14 @@ All games share these properties:
   - **Objects:** organic smooth shapes with baked-noise surface detail, rock strata, shore blending and snow lines. The helicopter has a lathe-turned fuselage with wrap-around livery, and fires are made of flame sprites.
   - **Critics:** blind A/B critics chose the new water and sky in 6/6 pairs and the new objects in 7/7, scoring realism 6.5 against 4.
   - **Performance:** noise is baked into textures, materials are single-layer PBR, shaders compile when a stage loads, and dynamic resolution guards phone frame rate.
+- **Level validation (the user reported that level 2 looked like level 1):**
+  - Levels 1–3 now each have their own world:
+    - **Greek Islands:** a deep-blue Aegean sea, dry hills, whitewashed villages with blue-domed chapels, olive and cypress trees, and limestone stacks.
+    - **Norway's Fjords:** dark rock walls with snowy tops, green shores, waterfalls, red cabins and dark water.
+    - **Caribbean Storm:** rain, lightning bolts, green volcanic peaks and palms.
+  - **Other worlds:** the Himalaya gets prayer flags, stupas and visible snowfall. The Nile gets meandering banks with papyrus and an obelisk obstacle. The Amazon gets a dense rainforest wall, more temples and mist. The Arctic's clouds become white fog.
+  - **Bug fix:** at top speed the water bombs landed further apart than a fire's hit radius, so late fires could be missed even when flown straight over. The drop rate now scales with speed.
+  - `tests/levels.js` checks that every fire and every rescue on all 7 levels is reachable.
 - Snapshots of rounds r1, r8 and r9 (JPEG) are in `games/sky-rescue/tests/rounds/`.
 
 ## How to run the gauntlet for a game
@@ -76,5 +84,6 @@ All games share these properties:
 python3 -m http.server 8080 &                          # from repo root
 node games/<name>/tests/sim.js                         # economy
 NODE_PATH=$(npm root -g) node games/<name>/tests/e2e.js # Playwright, needs server on :8080
+NODE_PATH=$(npm root -g) node games/sky-rescue/tests/levels.js # Sky Rescue: every fire/rescue reachable
 node scripts/validate-countries-data.js --levels
 ```
