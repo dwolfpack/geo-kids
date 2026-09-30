@@ -391,8 +391,14 @@
   GE.registerSW = function (path) {
     if (!("serviceWorker" in navigator)) return;
     if (location.protocol !== "https:" && location.hostname !== "localhost" && location.hostname !== "127.0.0.1") return;
+    var hadController = !!navigator.serviceWorker.controller, reloaded = false;
+    // A new version of the game took over: reload once so the player sees it now, not on the next visit.
+    navigator.serviceWorker.addEventListener("controllerchange", function () {
+      if (!hadController || reloaded) return;
+      reloaded = true; location.reload();
+    });
     window.addEventListener("load", function () {
-      navigator.serviceWorker.register(path || "sw.js").catch(function () { /* offline support is optional */ });
+      navigator.serviceWorker.register(path || "sw.js", { updateViaCache: "none" }).then(function (reg) { reg.update(); }).catch(function () { /* offline support is optional */ });
     });
   };
 
