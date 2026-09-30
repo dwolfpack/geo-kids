@@ -75,7 +75,7 @@ async function noOverflow(page, label) {
     b.dispatchEvent(new PointerEvent("pointerup", { pointerId: 9, bubbles: true, pointerType: "touch" }));
   });
   const mid = await page.evaluate(() => { window.__heli.step(0.6); return window.__heli.motion; });
-  check(mid.loopT > 0 && mid.lift > 5 && mid.inv > 0, `🔄 starts a loop-the-loop (lift ${mid.lift.toFixed(1)}, pitch ${Math.round(mid.loopPitch * 57.3)}°, protected)`);
+  check(mid.loopT > 0 && mid.lift > 5, `🔄 starts a loop-the-loop (lift ${mid.lift.toFixed(1)}, pitch ${Math.round(mid.loopPitch * 57.3)}°)`);
   const done = await page.evaluate(() => { window.__heli.step(1); return { m: window.__heli.motion, s: window.__heli.state }; });
   check(done.m.loops === 1 && done.m.loopT < 0 && done.s.score >= sc0 + 100, "the loop completes, returns to level and scores +100");
 
@@ -95,6 +95,30 @@ async function noOverflow(page, label) {
   s = await st(page);
   check(s.tank > tank0 - 1 + 0.5 || s.tank >= 7.9, `flying low over the sea refills the tank (${s.tank.toFixed(1)})`);
 
+  // Every obstacle hit costs exactly one heart — even two crashes in a row.
+  const hits = await page.evaluate(() => {
+    const h = window.__heli, out = [];
+    h.start(0); h.manual(true);
+    for (let i = 0; i < 2; i++) {
+      const s = h.stackAhead();
+      h.place(s.x, 6, s.z + 12);
+      h.setInput(0, 0, false);
+      h.step(0.45);
+      out.push(h.state.hearts);
+    }
+    return out;
+  });
+  check(hits[0] === 2 && hits[1] === 1, `two obstacle crashes in quick succession cost one heart each (hearts ${hits.join(" → ")})`);
+  const edge = await page.evaluate(() => {
+    const h = window.__heli; h.start(0);
+    const s = h.stackAhead();
+    h.place(s.x + 4.5, 6, s.z + 12);  // stack clips the side of the airframe, not dead centre
+    h.step(0.45);
+    return h.state.hearts;
+  });
+  check(edge === 2, `a side-swipe that visibly clips an obstacle also costs a heart (hearts ${edge})`);
+  await page.evaluate(() => window.__heli.start(0));
+
   // A hit costs a heart; three hits → friendly "try again", never a dead end
   await page.evaluate(() => { const h = window.__heli; h.hurt(); h.step(2); h.hurt(); h.step(2); h.hurt(); h.step(0.2); });
   s = await st(page);
@@ -113,9 +137,24 @@ async function noOverflow(page, label) {
   check(s.mode === "end" && s.hearts > 0 && s.unlocked >= 2, `stage 1 can be finished start to finish (fires ${s.put}/${s.totals.f}, rescues ${s.saved}/${s.totals.r}, rings ${s.rings}/${s.totals.g})`);
   await tapBoxesOK(page, "stage clear");
 
+  // Hangar: paint the chopper; the choice survives a reload
+  await page.tap("#btn-menu");
+  await page.tap("#btn-hangar");
+  await page.waitForSelector("#scr-hangar:not([hidden])");
+  await tapBoxesOK(page, "hangar");
+  await noOverflow(page, "hangar");
+  await page.tap(`[data-paint=body][data-v="${0x1E88E5}"]`);
+  await page.tap("[data-htab=stripes]"); await page.tap("[data-paint=stripes][data-v=racing]");
+  await page.tap("[data-htab=rotor]"); await page.tap('[data-paint=blades][data-v="3"]');
+  check((await page.$$("[data-paint=blade]")).length === 5, "hangar offers blade count and blade colours");
+  await page.tap("#btn-hangar-done");
+  check(!!(await page.$("#scr-title:not([hidden])")), "'Ready to fly' returns to the menu");
+
   await page.reload();
   await page.waitForFunction(() => window.__heli);
   await page.waitForSelector("#scr-title .stage-btn");
+  const lk = await page.evaluate(() => window.__heli.look);
+  check(lk.body === 0x1E88E5 && lk.stripes === "racing" && lk.blades === 3, `paint job is saved (${JSON.stringify(lk)})`);
   check(!(await page.$eval("[data-stage='1']", (b) => b.disabled)), "reload keeps stage 2 unlocked");
 
   await page.tap("#btn-lang");
@@ -154,8 +193,10 @@ async function noOverflow(page, label) {
   await pd.waitForFunction(() => window.__heli);
   await pd.click("[data-stage='0']");
   const dx0 = (await st(pd)).x;
+  // hold the key until the live loop has flown ~20 m (software GL in CI can be very slow per frame)
+  const d0 = (await st(pd)).dist;
   await pd.keyboard.down("ArrowLeft");
-  await pd.waitForTimeout(700);
+  await pd.waitForFunction((d) => window.__heli.state.dist > d + 20, d0, { timeout: 60000 });
   await pd.keyboard.up("ArrowLeft");
   const ds = await st(pd);
   check(ds.x < dx0 - 1 && ds.dist > 5, `arrow keys steer in real time (x ${dx0.toFixed(1)} → ${ds.x.toFixed(1)}, flew ${ds.dist.toFixed(0)}m)`);

@@ -66,3 +66,19 @@ body { touch-action: none; -webkit-user-select: none; user-select: none; }
 .loopbtn.on { transform: scale(.92); }
 .loopbtn.empty { filter: grayscale(.7); opacity: .7; }
 @media (pointer: fine) { .loopbtn { bottom: calc(112px + var(--safe-bottom)); right: calc(24px + var(--safe-right)); width: 56px; height: 56px; font-size: 1.4rem; } }
+
+/* Hangar: paint the helicopter. The card sits low so the 3D preview shows above it. */
+.hangar-open { width: 100%; margin-top: 8px; background: linear-gradient(180deg, #FFB74D, #FF7A1A); color: #fff; }
+.screen.hangar { align-items: end; background: linear-gradient(180deg, rgba(255,255,255,0) 40%, rgba(14,94,115,.35)); }
+.screen.hangar .card { max-height: none; overflow: visible; padding: 10px 14px; }
+.screen.hangar { overflow-y: auto; }
+.screen.hangar h1 { font-size: 1.3rem; }
+.paint-row { margin: 6px 0; text-align: start; }
+.paint-row > b { display: block; font-size: .85rem; color: var(--ink-soft); margin-bottom: 4px; }
+.swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.sw { min-width: 44px; height: 44px; border-radius: 12px; border: 3px solid #fff; box-shadow: 0 0 0 2px var(--line); cursor: pointer; font-weight: 900; background: #fff; padding: 0 8px; }
+.sw.on { box-shadow: 0 0 0 3px #FF7A1A; transform: scale(1.06); }
+.htabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 8px 0 4px; }
+.htab { min-height: 44px; border-radius: 12px; border: 2px solid var(--line); background: #fff; font-weight: 800; cursor: pointer; }
+.htab.on { background: #FFE9D2; border-color: #FF7A1A; }
+.hdone { width: 100%; margin-top: 6px; }
