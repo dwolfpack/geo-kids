@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1116">
+<title>שושלות סין ב-30 שניות</title>
+<style>
+  @font-face { font-family: "Heebo"; font-weight: 100 900; font-display: block;
+    src: url(fonts/heebo-hebrew.woff2) format("woff2");
+    unicode-range: U+0307-0308, U+0590-05FF, U+200C-2010, U+20AA, U+25CC, U+FB1D-FB4F; }
+  @font-face { font-family: "Heebo"; font-weight: 100 900; font-display: block;
+    src: url(fonts/heebo-latin-ext.woff2) format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+  @font-face { font-family: "Heebo"; font-weight: 100 900; font-display: block;
+    src: url(fonts/heebo-latin.woff2) format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+  @font-face { font-family: "Dynasty Serif"; font-weight: 900; font-display: block;
+    src: url(fonts/noto-serif-sc-dynasties.woff2) format("woff2"); }
+
+  :root {
+    --bg: #0E1116; --panel: #171B22; --ink: #F3EAD8; --ink-soft: #A39A8A;
+    --gold: #E8B34B; --red: #C8372D; --line: #2A303A;
+    --font: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font); color: var(--ink); background: var(--bg);
+    min-height: 100vh; overflow-x: hidden;
+  }
+  .wrap {
+    max-width: 1280px; margin: 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+  .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .pill {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    min-height: 44px; min-width: 44px; padding: 0 16px;
+    background: var(--panel); border: 2px solid var(--line); border-radius: 999px;
+    color: var(--ink); text-decoration: none; font: 700 .95rem var(--font);
+    cursor: pointer; touch-action: manipulation;
+  }
+  .pill:focus-visible, input:focus-visible { outline: 3px solid var(--gold); outline-offset: 3px; }
+  .stage {
+    position: relative; width: 100%; aspect-ratio: 16 / 9;
+    max-height: calc(100vh - 150px); margin: 0 auto;
+    border-radius: 18px; overflow: hidden; background: #000;
+    box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  }
+  canvas { display: block; width: 100%; height: 100%; }
+  .big-play {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    background: transparent; border: 0; cursor: pointer;
+  }
+  .big-play span {
+    width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+    background: rgba(200,55,45,.92); color: #fff; font-size: 2.6rem; padding-inline-start: 6px;
+    box-shadow: 0 0 0 8px rgba(232,179,75,.35), 0 10px 30px rgba(0,0,0,.5);
+  }
+  .big-play[hidden] { display: none; }
+  .controls { display: flex; align-items: center; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .controls input[type=range] { flex: 1 1 200px; accent-color: var(--red); min-height: 44px; direction: ltr; }
+  .time { font: 700 .95rem var(--font); color: var(--ink-soft); min-width: 54px; text-align: center; direction: ltr; }
+  .note { color: var(--ink-soft); font-size: .85rem; margin-top: 12px; text-align: center; }
+  @media (max-width: 520px) { .pill { padding: 0 12px; font-size: .88rem; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="pill" id="back" href="../../geo-kids/">🌍 <span id="back-label">מסע סביב העולם</span></a>
+    <button class="pill" id="lang" type="button">English</button>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-label=""></canvas>
+    <button class="big-play" id="bigplay" type="button" aria-label="Play"><span>▶</span></button>
+  </div>
+  <div class="controls">
+    <button class="pill" id="play" type="button" aria-label="Play">▶</button>
+    <button class="pill" id="restart" type="button" aria-label="Restart">⟲</button>
+    <input type="range" id="scrub" min="0" max="30" step="0.01" value="0" aria-label="Time">
+    <span class="time" id="time">0:00</span>
+    <button class="pill" id="speed" type="button">1×</button>
+    <button class="pill" id="sound" type="button">🔊</button>
+  </div>
+  <p class="note" id="note"></p>
+</div>
+
+<script src="map-data.js"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- data ----------
+  // Years are astronomical-ish: negative = BCE. Territories are hand-drawn,
+  // approximate outlines (14 points each, same order so they can morph) and
+  // are clipped to real coastlines when drawn.
+  var DYN = [
+    { id: "shang", ch: "商", py: "Shāng", from: -1600, to: -1046, w: 2.1, col: "#D08B47",
+      name: { en: "Shang Dynasty", he: "שושלת שָׁאנְג" },
+      cap: [{ at: 0, ll: [114.35, 36.1], en: "Yin (Anyang)", he: "יִין (אָנְיָאנְג)" }],
+      facts: { en: ["🦴|Oracle bones: the oldest Chinese writing", "🏺|Master bronze casters — ~4,500 different characters found"],
+               he: ["🦴|עצמות אורקל: הכתב הסיני העתיק ביותר", "🏺|אמני ברונזה — נמצאו כ-4,500 סימני כתב שונים"] },
+      poly: [[110.5,37.5],[112,38.3],[114,38.6],[116.5,38.2],[118.5,37.4],[119,36],[118,34.5],[116.5,33.6],[114,33.2],[112,33.4],[110.5,34],[109.8,35],[110,36],[110.2,36.8]] },
+    { id: "zhou", ch: "周", py: "Zhōu", from: -1046, to: -256, w: 2.3, col: "#6FB07C",
+      name: { en: "Zhou Dynasty", he: "שושלת ג׳וֹאוּ" },
+      cap: [{ at: 0, ll: [108.9, 34.25], en: "Haojing (Xi'an)", he: "האוֹגִ׳ינְג (שִׁיאָן)" },
+            { at: 0.35, ll: [112.45, 34.62], en: "Luoyang", he: "לוּאוֹיָאנְג" }],
+      facts: { en: ["👑|The longest dynasty ever: 790 years", "🧘|Confucius teaches (551–479 BCE)"],
+               he: ["👑|השושלת הארוכה ביותר: 790 שנה", "🧘|קונפוציוס מלמד (551–479 לפנה״ס)"] },
+      poly: [[105.5,37],[108,38.5],[112,40],[116,40.3],[119.5,39.5],[121.5,37.2],[120.5,34.5],[119,32.5],[116,31],[112,30.5],[108.5,31.5],[105.5,32.5],[104.5,34],[104.8,35.5]] },
+    { id: "qin", ch: "秦", py: "Qín", from: -221, to: -206, w: 2.1, col: "#9AA7B8", overlay: "unify",
+      name: { en: "Qin Dynasty", he: "שושלת צִ׳ין" },
+      cap: [{ at: 0, ll: [108.7, 34.33], en: "Xianyang", he: "שְׁיֶאנְיָאנְג" }],
+      facts: { en: ["⚡|Shortest: just 15 years — but it united China for the first time", "🗿|Terracotta Army: ~8,000 clay soldiers"],
+               he: ["⚡|הקצרה ביותר: 15 שנה בלבד — אבל איחדה את סין לראשונה", "🗿|צבא הטרקוטה: כ-8,000 חיילי חימר"] },
+      poly: [[103,38.5],[107,40.5],[112,41.2],[118,41.5],[122,40.8],[122,37],[121,32],[120,28],[116.5,23],[110,21],[106.5,23],[103,26],[101.5,30],[101.5,35]] },
+    { id: "han", ch: "汉", py: "Hàn", from: -206, to: 220, w: 2.4, col: "#E0544E", overlay: "silk", pop: 58,
+      name: { en: "Han Dynasty", he: "שושלת הַאן" },
+      cap: [{ at: 0, ll: [108.95, 34.27], en: "Chang'an", he: "צ׳אנג-אן" }],
+      facts: { en: ["🐫|The Silk Road opens to the West", "📄|Paper is invented"],
+               he: ["🐫|דרך המשי נפתחת אל המערב", "📄|הנייר מומצא"] },
+      poly: [[76,40.5],[90,43],[105,41.5],[116,42],[125,41.5],[127,39],[122,36.5],[121.5,31],[118,24],[106,16.5],[103,22],[98,25],[101,32],[80,36.5]] },
+    { div: true, from: 220, to: 589, w: 1.0, col: "#7A7F88",
+      name: { en: "Age of Division", he: "תקופת הפילוג" },
+      facts: { en: ["⚔️|Three Kingdoms and rival states — 369 years without one ruler"],
+               he: ["⚔️|שלוש הממלכות ומדינות יריבות — 369 שנה בלי שליט אחד"] } },
+    { id: "sui", ch: "隋", py: "Suí", from: 581, to: 618, w: 1.9, col: "#4FB8B4", overlay: "canal",
+      name: { en: "Sui Dynasty", he: "שושלת סוּאִי" },
+      cap: [{ at: 0, ll: [108.95, 34.27], en: "Daxing (Xi'an)", he: "דָּאשִׁינְג (שִׁיאָן)" }],
+      facts: { en: ["🚣|The Grand Canal joins north and south", "📝|Imperial exams: government jobs by test, not by birth"],
+               he: ["🚣|התעלה הגדולה מחברת צפון ודרום", "📝|מבחני הקיסר: עבודה בממשלה לפי מבחן, לא לפי משפחה"] },
+      poly: [[96,39],[104,41],[112,41],[119,41.5],[124,41],[122.5,37],[121.8,31],[119,25],[110,18],[106,18],[103,22.5],[99,25],[101,31],[97,36]] },
+    { id: "tang", ch: "唐", py: "Táng", from: 618, to: 907, w: 2.4, col: "#F0B43C", overlay: "silk", pop: 80,
+      name: { en: "Tang Dynasty", he: "שושלת טָאנְג" },
+      cap: [{ at: 0, ll: [108.95, 34.27], en: "Chang'an · ~1,000,000 people", he: "צ׳אנג-אן · כמיליון תושבים" }],
+      facts: { en: ["🏙️|Chang'an is the biggest city in the world", "✒️|Golden age of poetry: ~49,000 poems survive"],
+               he: ["🏙️|צ׳אנג-אן היא העיר הגדולה בעולם", "✒️|תור הזהב של השירה: שרדו כ-49,000 שירים"] },
+      poly: [[70,42],[88,46],[102,48],[115,47],[126,44],[127,39],[122.5,37],[121.8,31],[118.5,24.5],[108,16],[103,22],[99,25],[95,31],[75,36]] },
+    { div: true, from: 907, to: 960, w: 0.6, col: "#7A7F88",
+      name: { en: "Five Dynasties", he: "חמש השושלות" },
+      facts: { en: ["⚔️|Five Dynasties and Ten Kingdoms — 53 years of chaos"],
+               he: ["⚔️|חמש שושלות ועשר ממלכות — 53 שנות מהומה"] } },
+    { id: "song", ch: "宋", py: "Sòng", from: 960, to: 1279, w: 2.2, col: "#6EA9E0", pop: 120,
+      name: { en: "Song Dynasty", he: "שושלת סוֹנְג" },
+      cap: [{ at: 0, ll: [114.3, 34.8], en: "Kaifeng", he: "קָאיפֶנְג" },
+            { at: 0.52, ll: [120.15, 30.25], en: "Hangzhou", he: "הָאנְגְג׳וֹאוּ" }],
+      facts: { en: ["🧭|Compass, gunpowder and movable-type printing", "💵|The world's first paper money"],
+               he: ["🧭|מצפן, אבק שריפה ודפוס באותיות נפרדות", "💵|שטרות הכסף הראשונים בעולם"] },
+      poly: [[101,36],[105,37],[110,38.8],[115,39],[118.5,39],[119.5,37.5],[121.8,31.5],[119.5,25.5],[110,18],[106.5,21.5],[103.5,23],[101,26],[102,30],[102.5,34]] },
+    { id: "yuan", ch: "元", py: "Yuán", from: 1271, to: 1368, w: 2.0, col: "#B07FD6", overlay: "mongol",
+      name: { en: "Yuan Dynasty", he: "שושלת יוּאֶן" },
+      cap: [{ at: 0, ll: [116.4, 39.9], en: "Dadu (Beijing)", he: "דָּאדוּ (בֵּייגִ׳ינְג)" }],
+      facts: { en: ["🐎|Kublai Khan's Mongols rule China", "🌍|Part of the biggest land empire ever: ~24 million km²"],
+               he: ["🐎|המונגולים של קובלאי חאן שולטים בסין", "🌍|חלק מהאימפריה היבשתית הגדולה בהיסטוריה: כ-24 מיליון קמ״ר"] },
+      poly: [[73,46],[90,52],[105,53],[120,53.5],[135,48],[131,42.5],[122.5,38],[122,30.5],[119,24],[107,17.5],[98,21.5],[92,27],[80,30],[73,39]] },
+    { id: "ming", ch: "明", py: "Míng", from: 1368, to: 1644, w: 2.4, col: "#E8694A", overlay: "ming", pop: 160,
+      name: { en: "Ming Dynasty", he: "שושלת מִינְג" },
+      cap: [{ at: 0, ll: [118.8, 32.06], en: "Nanjing", he: "נָאנְגִ׳ינְג" },
+            { at: 0.19, ll: [116.4, 39.9], en: "Beijing · Forbidden City", he: "בייג׳ינג · העיר האסורה" }],
+      facts: { en: ["🧱|The Great Wall is rebuilt: ~8,850 km", "⛵|Zheng He's fleets sail as far as Africa"],
+               he: ["🧱|החומה הסינית נבנית מחדש: כ-8,850 ק״מ", "⛵|הצי של ג׳נג חה מפליג עד אפריקה"] },
+      poly: [[97,40],[105,41.5],[113,42],[120,42.5],[125,43],[125,40],[122,36.8],[121.8,31],[119,24.5],[108,17.5],[102,21],[97.5,24],[98.5,30],[100,36]] },
+    { id: "qing", ch: "清", py: "Qīng", from: 1644, to: 1912, w: 2.2, col: "#F5D76E", pop: 430,
+      name: { en: "Qing Dynasty", he: "שושלת צִ׳ינְג" },
+      cap: [{ at: 0, ll: [116.4, 39.9], en: "Beijing", he: "בייג׳ינג" }],
+      facts: { en: ["🗺️|Biggest Chinese empire: ~13 million km²", "👶|The last emperor, Puyi, steps down at age 6 (1912)"],
+               he: ["🗺️|האימפריה הסינית הגדולה ביותר: כ-13 מיליון קמ״ר", "👶|הקיסר האחרון, פּוּ-יִי, מוותר על הכס בגיל 6 (1912)"] },
+      poly: [[73,47],[88,50],[100,52],[118,53],[135,48],[133,42.5],[124,39.5],[122,30.5],[119.5,23.5],[109,18],[99,21.5],[87,27.5],[78,32],[73.5,39]] }
+  ];
+
+  var TXT = {
+    he: {
+      title: "שושלות סין", title2: "3,500 שנה ב-30 שניות", sub: "מהכתב הראשון ועד הקיסר האחרון",
+      bce: "לפנה״ס", ce: "לספירה", years: "שנים", yearsLong: function (n) { return n + " שנה"; },
+      pop: function (n) { return "כ-" + n + " מיליון אנשים"; }, popNote: "הערכה",
+      capital: "בירה", yellow: "הנהר הצהוב", yangtze: "היאנגצה", cradle: "ערש התרבות הסינית",
+      silk: "דרך המשי", canal: "התעלה הגדולה", wall: "החומה הסינית", zheng: "אל אפריקה ←", mongol: "← האימפריה המונגולית",
+      finaleQ: "מי שלטה הכי הרבה זמן?", today: "היום: הרפובליקה העממית של סין · 1.4 מיליארד אנשים",
+      end1: "יותר מ-2,100 שנה של קיסרים — עד 1912", end2: "התאריכים, הגבולות והמספרים הם הערכות. מפה: Natural Earth",
+      page: "שושלות סין ב-30 שניות", back: "מסע סביב העולם", other: "English",
+      note: "רוצים לקרוא בנחת? לחצו על 1× כדי להאט, או גררו את הסרגל.", slow: "½×", fast: "1×"
+    },
+    en: {
+      title: "China's Dynasties", title2: "3,500 years in 30 seconds", sub: "From the first writing to the last emperor",
+      bce: "BCE", ce: "CE", years: "years", yearsLong: function (n) { return n + " years"; },
+      pop: function (n) { return "≈ " + n + " million people"; }, popNote: "estimate",
+      capital: "Capital", yellow: "Yellow River", yangtze: "Yangtze", cradle: "cradle of Chinese civilization",
+      silk: "Silk Road", canal: "Grand Canal", wall: "Great Wall", zheng: "← to Africa", mongol: "← Mongol Empire",
+      finaleQ: "Who ruled the longest?", today: "Today: People's Republic of China · 1.4 billion people",
+      end1: "Over 2,100 years of emperors — until 1912", end2: "Dates, borders and numbers are approximate. Map: Natural Earth",
+      page: "China's Dynasties in 30 Seconds", back: "Around the World", other: "עברית",
+      note: "Want time to read? Tap 1× to slow down, or drag the slider.", slow: "½×", fast: "1×"
+    }
+  };
+
+  // Routes (lon, lat)
+  var SILK = [[108.9,34.3],[103.8,36.05],[102.6,37.9],[98.5,39.7],[94.7,40.1],[89.2,42.9],[82.9,41.7],[76,39.5],[66,39.6]];
+  var CANAL = [[120.17,30.25],[120.6,31.3],[119.4,32.35],[118.5,33.0],[115.6,34.4],[114.3,34.8],[113.9,35.3],[114.5,36.6],[116.3,37.4],[117.2,39.1],[116.4,39.9]];
+  var CANAL_STUB = [[114.3,34.8],[112.45,34.62]];
+  var WALL = [[98.2,39.8],[100.4,38.9],[102.6,37.9],[104,37.4],[106.2,38.5],[107.8,37.9],[109.7,38.3],[110.5,38.9],[111.5,39.4],[113.3,40.3],[114.9,40.8],[116,40.35],[117.3,40.7],[119.75,40.0]];
+  var ZHENG = [[118.8,32.06],[121.8,30.6],[120.5,25.5],[115.5,21.3],[110.5,15.5],[106.5,9],[101.5,3.5],[97.5,4.5],[90,8.5],[80,6.5],[66,10]];
+  var STATES = [[118,36.5],[113,30.5],[116,39.7],[114.5,37],[113.2,34.9],[112.3,35.6]];
+
+  // ---------- timing ----------
+  var DURATION = 30, T_INTRO = 2.6, T_FINALE = 25.5;
+  (function () {
+    var total = 0; DYN.forEach(function (d) { total += d.w; });
+    var t = T_INTRO, k = (T_FINALE - T_INTRO) / total;
+    DYN.forEach(function (d) { d.t0 = t; d.dur = d.w * k; t += d.dur; d.t1 = t; d.years = d.to - d.from - (d.from < 0 && d.to > 0 ? 1 : 0); });
+  })();
+  var REAL = DYN.filter(function (d) { return !d.div; });
+  var MAXY = 790, MAXPOP = 430;
+
+  // ---------- geometry ----------
+  var W = 1920, H = 1080;
+  var MAP = { x: 50, y: 150, w: 1150, h: 760 };
+  var LON0 = 66, LON1 = 142, LAT0 = 12, LAT1 = 56, KX = Math.cos(34 * Math.PI / 180);
+  var SC = Math.min(MAP.w / ((LON1 - LON0) * KX), MAP.h / (LAT1 - LAT0));
+  var OX = MAP.x + (MAP.w - (LON1 - LON0) * KX * SC) / 2, OY = MAP.y + (MAP.h - (LAT1 - LAT0) * SC) / 2;
+  function P(ll) { return [OX + (ll[0] - LON0) * KX * SC, OY + (LAT1 - ll[1]) * SC]; }
+  function ringPath(flat, path) {
+    for (var i = 0; i < flat.length; i += 2) {
+      var p = P([flat[i], flat[i + 1]]);
+      if (i === 0) path.moveTo(p[0], p[1]); else path.lineTo(p[0], p[1]);
+    }
+    path.closePath();
+  }
+  var LAND = new Path2D(), CHINA = new Path2D();
+  MAP_DATA.land.forEach(function (r) { ringPath(r, LAND); });
+  MAP_DATA.china.forEach(function (r) { ringPath(r, CHINA); });
+  function linePath(flat) {
+    var p = new Path2D();
+    for (var i = 0; i < flat.length; i += 2) { var q = P([flat[i], flat[i + 1]]); if (i === 0) p.moveTo(q[0], q[1]); else p.lineTo(q[0], q[1]); }
+    return p;
+  }
+  var RIVERS = { yellow: MAP_DATA.rivers.yellow.map(linePath), yangtze: MAP_DATA.rivers.yangtze.map(linePath) };
+  var MAPCLIP = new Path2D(); roundRectPath(MAPCLIP, MAP.x, MAP.y, MAP.w, MAP.h, 26);
+  var TL = { x: 110, y: 968, w: 1700, h: 26, y0: -1600, y1: 1912 };
+  function tlx(year) { return TL.x + (year - TL.y0) / (TL.y1 - TL.y0) * TL.w; }
+
+  // ---------- helpers ----------
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+  function seg(t, a, b) { return clamp((t - a) / (b - a), 0, 1); }
+  function ease(u) { return u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2; }
+  function easeOut(u) { return 1 - Math.pow(1 - u, 3); }
+  function back(u) { var c = 1.7; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); }
+  function lerp(a, b, u) { return a + (b - a) * u; }
+  function lerpPoly(a, b, u) { return a.map(function (p, i) { return [lerp(p[0], b[i][0], u), lerp(p[1], b[i][1], u)]; }); }
+  function scalePoly(poly, s) {
+    var cx = 0, cy = 0; poly.forEach(function (p) { cx += p[0]; cy += p[1]; }); cx /= poly.length; cy /= poly.length;
+    return poly.map(function (p) { return [cx + (p[0] - cx) * s, cy + (p[1] - cy) * s]; });
+  }
+  function smoothPath(pts) {
+    var p = new Path2D(), n = pts.length;
+    var q = pts.map(P);
+    p.moveTo((q[0][0] + q[1][0]) / 2, (q[0][1] + q[1][1]) / 2);
+    for (var i = 1; i <= n; i++) {
+      var a = q[i % n], b = q[(i + 1) % n];
+      p.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    }
+    p.closePath();
+    return p;
+  }
+  function roundRectPath(p, x, y, w, h, r) {
+    p.moveTo(x + r, y); p.arcTo(x + w, y, x + w, y + h, r); p.arcTo(x + w, y + h, x, y + h, r);
+    p.arcTo(x, y + h, x, y, r); p.arcTo(x, y, x + w, y, r); p.closePath();
+  }
+  function rr(ctx, x, y, w, h, r) { ctx.beginPath(); if (w <= 0) return; r = Math.min(r, w / 2, h / 2); roundRectPath(ctx, x, y, w, h, r); }
+  function hexA(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    return "rgba(" + (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + a + ")";
+  }
+  // Partial polyline (u in 0..1 of total length), returns the end point.
+  function drawRoute(ctx, pts, u) {
+    var q = pts.map(P), len = 0, L = [];
+    for (var i = 1; i < q.length; i++) { var d = Math.hypot(q[i][0] - q[i - 1][0], q[i][1] - q[i - 1][1]); L.push(d); len += d; }
+    var target = len * u, acc = 0, end = q[0];
+    ctx.beginPath(); ctx.moveTo(q[0][0], q[0][1]);
+    for (i = 1; i < q.length; i++) {
+      if (acc + L[i - 1] >= target) {
+        var f = (target - acc) / L[i - 1];
+        end = [lerp(q[i - 1][0], q[i][0], f), lerp(q[i - 1][1], q[i][1], f)];
+        ctx.lineTo(end[0], end[1]); break;
+      }
+      acc += L[i - 1]; ctx.lineTo(q[i][0], q[i][1]); end = q[i];
+    }
+    ctx.stroke();
+    return end;
+  }
+  function F(size, weight) { return (weight || 800) + " " + size + "px Heebo, system-ui, sans-serif"; }
+  function FSC(size) { return "900 " + size + "px 'Dynasty Serif', serif"; }
+  function wrap(ctx, text, maxW) {
+    var words = text.split(" "), lines = [], line = "";
+    words.forEach(function (w) {
+      var test = line ? line + " " + w : w;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = w; } else line = test;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+  function fmtYear(y, T) {
+    y = Math.round(y);
+    if (y < 0) return { n: String(-y), s: T.bce };
+    return { n: String(Math.max(1, y)), s: T.ce };
+  }
+
+  // ---------- state ----------
+  var lang = "he";
+  try { lang = localStorage.getItem("geo-lang") === "en" ? "en" : "he"; } catch (e) {}
+
+  function currentIndex(t) {
+    for (var i = 0; i < DYN.length; i++) if (t < DYN[i].t1) return i;
+    return DYN.length - 1;
+  }
+  function prevReal(i) { for (var j = i - 1; j >= 0; j--) if (!DYN[j].div) return DYN[j]; return null; }
+  function yearAt(t) {
+    if (t <= T_INTRO) return DYN[0].from;
+    if (t >= T_FINALE) return 1912;
+    var d = DYN[currentIndex(t)];
+    return lerp(d.from, d.to, ease(seg(t, d.t0, d.t1 - 0.05)));
+  }
+
+  // ---------- drawing ----------
+  var dust = []; (function () { var s = 7; function r() { s = (s * 16807) % 2147483647; return s / 2147483647; }
+    for (var i = 0; i < 70; i++) dust.push([r() * W, r() * H, 0.5 + r() * 1.8, r() * 6.28, 0.2 + r() * 0.6]); })();
+
+  function drawBackground(ctx, t) {
+    var g = ctx.createRadialGradient(W * 0.32, H * 0.45, 100, W * 0.5, H * 0.5, W * 0.8);
+    g.addColorStop(0, "#1A1F28"); g.addColorStop(1, "#0A0C10");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // drifting gold dust
+    dust.forEach(function (d) {
+      var y = (d[1] - t * 12 * d[4] + H) % H, x = d[0] + Math.sin(t * 0.6 + d[3]) * 14;
+      ctx.fillStyle = "rgba(232,179,75," + (0.08 + 0.12 * d[4]) + ")";
+      ctx.beginPath(); ctx.arc(x, y, d[2], 0, 6.283); ctx.fill();
+    });
+  }
+
+  function drawMap(ctx, t, T) {
+    var show = easeOut(seg(t, 0.2, 1.4));
+    ctx.save();
+    ctx.globalAlpha = show;
+    ctx.clip(MAPCLIP);
+    var sea = ctx.createLinearGradient(0, MAP.y, 0, MAP.y + MAP.h);
+    sea.addColorStop(0, "#111821"); sea.addColorStop(1, "#0D1A24");
+    ctx.fillStyle = sea; ctx.fillRect(MAP.x, MAP.y, MAP.w, MAP.h);
+    // graticule
+    ctx.strokeStyle = "rgba(255,255,255,0.035)"; ctx.lineWidth = 1;
+    for (var lo = 70; lo <= 140; lo += 10) { var a = P([lo, LAT1]), b = P([lo, LAT0]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    for (var la = 15; la <= 55; la += 10) { a = P([LON0, la]); b = P([LON1, la]); ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    ctx.fillStyle = "#222A35"; ctx.fill(LAND);
+    ctx.strokeStyle = "#2F3946"; ctx.lineWidth = 1.2; ctx.stroke(LAND);
+
+    drawTerritory(ctx, t, T);
+
+    // rivers
+    var glowY = t < DYN[0].t1 ? seg(t, T_INTRO - 0.2, T_INTRO + 0.6) * (1 - seg(t, DYN[0].t1 - 0.5, DYN[0].t1)) : 0;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ["yangtze", "yellow"].forEach(function (k) {
+      RIVERS[k].forEach(function (p) {
+        ctx.strokeStyle = "rgba(110,170,210,0.55)"; ctx.lineWidth = 2.2; ctx.stroke(p);
+      });
+    });
+    if (glowY > 0) {
+      ctx.save(); ctx.shadowColor = "#F2C14E"; ctx.shadowBlur = 18;
+      ctx.strokeStyle = hexA("#F2C14E", glowY); ctx.lineWidth = 4.5;
+      RIVERS.yellow.forEach(function (p) { ctx.stroke(p); });
+      ctx.restore();
+      var lp = P([108.5, 40.6]);
+      label(ctx, T.yellow, lp[0], lp[1] - 14, "#F2C14E", glowY, 28);
+      label(ctx, T.cradle, lp[0], lp[1] + 16, "#E8DCC2", glowY * 0.9, 21, 500);
+    }
+
+    // finale: modern borders
+    var fin = seg(t, T_FINALE + 0.2, T_FINALE + 1.4);
+    if (fin > 0) {
+      ctx.save(); ctx.globalAlpha = show * fin;
+      ctx.setLineDash([8, 6]); ctx.lineDashOffset = -t * 20;
+      ctx.strokeStyle = "#F3EAD8"; ctx.lineWidth = 2.2; ctx.stroke(CHINA);
+      ctx.restore();
+    }
+    ctx.restore();
+
+    // frame
+    ctx.save(); ctx.globalAlpha = show;
+    ctx.strokeStyle = "rgba(232,179,75,0.35)"; ctx.lineWidth = 2; ctx.stroke(MAPCLIP);
+    ctx.restore();
+  }
+
+  function label(ctx, text, x, y, col, alpha, size, weight) {
+    if (alpha <= 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    ctx.font = F(size, weight || 800); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    ctx.direction = lang === "he" ? "rtl" : "ltr";
+    ctx.lineWidth = 6; ctx.strokeStyle = "rgba(10,12,16,0.85)"; ctx.lineJoin = "round";
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = col; ctx.fillText(text, x, y);
+    ctx.restore();
+  }
+
+  function drawTerritory(ctx, t, T) {
+    if (t < DYN[0].t0 - 0.2) return;
+    var i = currentIndex(t), d = DYN[i];
+    var poly, col, alpha = 1, u;
+    if (t >= T_FINALE) {
+      // layered history: every dynasty faintly, Qing on top
+      ctx.save(); ctx.clip(LAND);
+      var f = seg(t, T_FINALE, T_FINALE + 1.2);
+      REAL.forEach(function (r, k) {
+        var pp = smoothPath(r.poly);
+        ctx.fillStyle = hexA(r.col, 0.10 * f + (k === REAL.length - 1 ? 0.45 * (1 - f) : 0));
+        ctx.fill(pp);
+        ctx.strokeStyle = hexA(r.col, 0.55 * f); ctx.lineWidth = 1.5; ctx.stroke(pp);
+      });
+      ctx.restore();
+      return;
+    }
+    u = seg(t, d.t0, d.t1);
+    if (d.div) {
+      var pr = prevReal(i);
+      poly = scalePoly(pr.poly, lerp(1, 0.82, easeOut(seg(u, 0, 0.4))));
+      col = d.col; alpha = 0.7;
+      var pp = smoothPath(poly);
+      ctx.save(); ctx.clip(LAND);
+      ctx.fillStyle = hexA(col, 0.22 * alpha); ctx.fill(pp);
+      // cracks: the land splits into rival states
+      ctx.strokeStyle = "rgba(10,12,16,0.85)"; ctx.lineWidth = 3;
+      var c = P([111, 33]), k = easeOut(seg(u, 0.1, 0.6));
+      [[-150, -160], [170, -110], [140, 170], [-160, 130], [-30, 210]].forEach(function (v) {
+        ctx.beginPath(); ctx.moveTo(c[0], c[1]);
+        ctx.lineTo(c[0] + v[0] * 0.5 * k + Math.sin(v[1]) * 12, c[1] + v[1] * 0.5 * k);
+        ctx.lineTo(c[0] + v[0] * k, c[1] + v[1] * k); ctx.stroke();
+      });
+      ctx.setLineDash([6, 6]); ctx.strokeStyle = hexA(col, 0.9); ctx.lineWidth = 2; ctx.stroke(pp);
+      ctx.restore();
+      return;
+    }
+    var from = prevReal(i);
+    var m = ease(seg(t, d.t0, d.t0 + 0.55));
+    if (from) {
+      var fromPoly = DYN[i - 1].div ? scalePoly(from.poly, 0.82) : from.poly;
+      poly = lerpPoly(fromPoly, d.poly, m);
+    } else {
+      poly = scalePoly(d.poly, lerp(0.2, 1, easeOut(seg(t, d.t0 - 0.2, d.t0 + 0.6))));
+    }
+    col = d.col;
+    var path = smoothPath(poly);
+    ctx.save(); ctx.clip(LAND);
+    var pulse = 0.5 + 0.06 * Math.sin(t * 4);
+    ctx.fillStyle = hexA(col, 0.42 * pulse + 0.18); ctx.fill(path);
+    ctx.shadowColor = col; ctx.shadowBlur = 22;
+    ctx.strokeStyle = hexA(col, 0.95); ctx.lineWidth = 3; ctx.stroke(path);
+    ctx.restore();
+    drawOverlay(ctx, t, d, u, T);
+    drawCapital(ctx, t, d, u, T);
+  }
+
+  function drawCapital(ctx, t, d, u, T) {
+    var caps = d.cap, ci = 0;
+    for (var k = 0; k < caps.length; k++) if (u >= caps[k].at) ci = k;
+    var c = caps[ci], pos = P(c.ll);
+    if (ci > 0) {
+      var mv = ease(seg(u, caps[ci].at, caps[ci].at + 0.12)), a = P(caps[ci - 1].ll);
+      pos = [lerp(a[0], pos[0], mv), lerp(a[1], pos[1], mv)];
+    }
+    var appear = back(seg(t, d.t0 + 0.15, d.t0 + 0.5));
+    if (appear <= 0) return;
+    var ripple = seg(t, d.t0 + 0.15, d.t0 + 1.1);
+    ctx.save();
+    if (ripple < 1) {
+      ctx.strokeStyle = hexA("#FFFFFF", 0.6 * (1 - ripple)); ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(pos[0], pos[1], 10 + ripple * 90, 0, 6.283); ctx.stroke();
+    }
+    var r = (10 + 2 * Math.sin(t * 6)) * appear;
+    ctx.fillStyle = "#C8372D"; ctx.shadowColor = "#FF6B5B"; ctx.shadowBlur = 16;
+    ctx.beginPath(); ctx.arc(pos[0], pos[1], r, 0, 6.283); ctx.fill();
+    ctx.shadowBlur = 0; ctx.fillStyle = "#FFF4DE";
+    ctx.beginPath(); ctx.arc(pos[0], pos[1], r * 0.4, 0, 6.283); ctx.fill();
+    ctx.restore();
+    var big = d.id === "tang";
+    label(ctx, "★ " + c[lang], pos[0], pos[1] + 34, "#FFF4DE", seg(t, d.t0 + 0.3, d.t0 + 0.6), big ? 26 : 24);
+  }
+
+  function drawOverlay(ctx, t, d, u, T) {
+    ctx.save(); ctx.lineCap = "round"; ctx.lineJoin = "round";
+    if (d.overlay === "unify") {
+      // the six rival states fly into Qin's capital
+      var cap = P(d.cap[0].ll), k = ease(seg(u, 0.05, 0.45));
+      STATES.forEach(function (s, j) {
+        var p = P(s), x = lerp(p[0], cap[0], k), y = lerp(p[1], cap[1], k);
+        ctx.globalAlpha = 1 - seg(u, 0.4, 0.5);
+        ctx.fillStyle = ["#E0544E", "#6FB07C", "#6EA9E0", "#F0B43C", "#B07FD6", "#4FB8B4"][j];
+        ctx.beginPath(); ctx.arc(x, y, 11, 0, 6.283); ctx.fill();
+        ctx.strokeStyle = "#0A0C10"; ctx.lineWidth = 2; ctx.stroke();
+      });
+    }
+    if (d.overlay === "silk") {
+      var su = ease(seg(u, 0.08, 0.7));
+      ctx.setLineDash([10, 8]); ctx.lineDashOffset = -t * 30;
+      ctx.strokeStyle = "#F5E2B8"; ctx.lineWidth = 3.5;
+      var end = drawRoute(ctx, SILK, su);
+      ctx.setLineDash([]);
+      if (su > 0 && su < 1) { ctx.font = "34px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("🐫", end[0], end[1] - 18); }
+      var lp = P([86, 44.6]);
+      label(ctx, T.silk, lp[0], lp[1], "#F5E2B8", seg(u, 0.25, 0.4), 26);
+    }
+    if (d.overlay === "canal") {
+      var cu = ease(seg(u, 0.1, 0.65));
+      ctx.shadowColor = "#7FE3F0"; ctx.shadowBlur = 12;
+      ctx.strokeStyle = "#7FE3F0"; ctx.lineWidth = 5;
+      drawRoute(ctx, CANAL, cu); drawRoute(ctx, CANAL_STUB, cu);
+      ctx.shadowBlur = 0;
+      var cp = P([124.6, 35.2]);
+      label(ctx, T.canal, cp[0], cp[1], "#7FE3F0", seg(u, 0.3, 0.45), 26);
+    }
+    if (d.overlay === "mongol") {
+      var mu = seg(u, 0.15, 0.45), ap = P([80, 50]);
+      label(ctx, T.mongol, ap[0] + (lang === "he" ? 0 : -20 * (1 - mu)), ap[1], "#D9B8F2", mu, 28);
+    }
+    if (d.overlay === "ming") {
+      var wu = ease(seg(u, 0.08, 0.55));
+      ctx.shadowColor = "#FFB27A"; ctx.shadowBlur = 10;
+      ctx.strokeStyle = "#FFD1A8"; ctx.lineWidth = 6;
+      drawRoute(ctx, WALL, wu);
+      ctx.shadowBlur = 0; ctx.strokeStyle = "#7A2E1C"; ctx.lineWidth = 2; ctx.setLineDash([3, 5]);
+      drawRoute(ctx, WALL, wu); ctx.setLineDash([]);
+      var wp = P([106.5, 42.6]);
+      label(ctx, "🧱 " + T.wall, wp[0], wp[1], "#FFD1A8", seg(u, 0.25, 0.4), 26);
+      var zu = ease(seg(u, 0.4, 0.92));
+      ctx.setLineDash([2, 10]); ctx.lineDashOffset = -t * 25; ctx.strokeStyle = "#BFE6FF"; ctx.lineWidth = 4;
+      var ze = drawRoute(ctx, ZHENG, zu); ctx.setLineDash([]);
+      if (zu > 0 && zu < 1) { ctx.font = "34px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText("⛵", ze[0], ze[1] - 16); }
+      var zp = P([88, 13.6]);
+      label(ctx, T.zheng, zp[0], zp[1], "#BFE6FF", seg(u, 0.75, 0.9), 26);
+    }
+    ctx.restore();
+  }
+
+  // ---------- year + header ----------
+  function drawHeader(ctx, t, T) {
+    var a = seg(t, T_INTRO - 0.3, T_INTRO + 0.2);
+    if (a <= 0) return;
+    var y = fmtYear(yearAt(t), T);
+    ctx.save(); ctx.globalAlpha = a;
+    ctx.textBaseline = "alphabetic"; ctx.direction = "ltr"; ctx.textAlign = "left";
+    ctx.font = F(104, 900); ctx.fillStyle = "#F3EAD8";
+    var x = MAP.x + 10;
+    if (t >= T_FINALE) {
+      ctx.fillText("1912", x, 128);
+      var w = ctx.measureText("1912").width;
+      ctx.font = F(44, 800); ctx.fillStyle = "#E8B34B";
+      ctx.fillText(lang === "he" ? "→ היום" : "→ today", x + w + 22, 120);
+    } else {
+      ctx.fillText(y.n, x, 128);
+      var w2 = ctx.measureText(y.n).width;
+      ctx.font = F(44, 800); ctx.fillStyle = "#E8B34B";
+      ctx.direction = lang === "he" ? "rtl" : "ltr"; ctx.textAlign = lang === "he" ? "right" : "left";
+      var sx = x + w2 + 20;
+      ctx.fillText(y.s, lang === "he" ? sx + ctx.measureText(y.s).width : sx, 120);
+    }
+    ctx.restore();
+  }
+
+  // ---------- timeline ----------
+  function drawTimeline(ctx, t, T) {
+    var a = seg(t, 0.6, 1.6);
+    if (a <= 0) return;
+    var yr = yearAt(t);
+    ctx.save(); ctx.globalAlpha = a;
+    rr(ctx, TL.x, TL.y, TL.w, TL.h, 13); ctx.fillStyle = "#1B2029"; ctx.fill();
+    ctx.save(); rr(ctx, TL.x, TL.y, TL.w, TL.h, 13); ctx.clip();
+    DYN.forEach(function (d) {
+      if (yr <= d.from) return;
+      var x0 = tlx(d.from), x1 = tlx(Math.min(d.to, yr));
+      ctx.fillStyle = d.div ? "#3A3F47" : d.col; ctx.fillRect(x0, TL.y, Math.max(1.5, x1 - x0), TL.h);
+      if (!d.div) { ctx.fillStyle = "rgba(255,255,255,0.18)"; ctx.fillRect(x0, TL.y, Math.max(1.5, x1 - x0), 6); }
+    });
+    ctx.restore();
+    // dynasty glyphs above blocks
+    REAL.forEach(function (d) {
+      if (yr <= d.from) return;
+      var cx = (tlx(d.from) + tlx(d.to)) / 2, cur = t >= d.t0 && t < d.t1;
+      ctx.font = FSC(cur ? 38 : 28); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+      ctx.fillStyle = cur ? d.col : hexA(d.col, 0.75);
+      ctx.fillText(d.ch, cx, TL.y - 12);
+    });
+    // ticks
+    ctx.font = F(19, 600); ctx.fillStyle = "#8C8576"; ctx.textAlign = "center"; ctx.textBaseline = "top";
+    ctx.direction = lang === "he" ? "rtl" : "ltr";
+    [-1500, -1000, -500, 1, 500, 1000, 1500, 1900].forEach(function (y) {
+      var f = fmtYear(y, T), x = tlx(y);
+      ctx.fillText(y === 1 ? (lang === "he" ? "שנה 1" : "1 CE") : f.n + " " + f.s, x, TL.y + TL.h + 10);
+      ctx.fillRect(x - 0.5, TL.y + TL.h + 2, 1, 6);
+    });
+    // playhead
+    var px = tlx(yr);
+    ctx.shadowColor = "#FFF"; ctx.shadowBlur = 12; ctx.fillStyle = "#FFF4DE";
+    rr(ctx, px - 3, TL.y - 8, 6, TL.h + 16, 3); ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------- right panel ----------
+  var PX = 1250, PW = 620;
+  function drawPanel(ctx, t, T) {
+    if (t < T_INTRO - 0.2 || t >= T_FINALE) return;
+    var i = currentIndex(t), d = DYN[i], rtl = lang === "he";
+    var lt = t - d.t0;
+    var outA = 1 - seg(t, d.t1 - 0.12, d.t1);
+    function X(x) { return rtl ? 2 * PX + PW - x : x; }
+    ctx.save(); ctx.globalAlpha = outA;
+    ctx.direction = rtl ? "rtl" : "ltr";
+    var al = rtl ? "right" : "left";
+
+    // seal stamp
+    var st = seg(lt, 0, 0.28), s = lerp(1.7, 1, easeOut(st));
+    var sx = rtl ? PX + PW - 190 : PX, sy = 52;
+    ctx.save();
+    ctx.globalAlpha *= st;
+    ctx.translate(sx + 95, sy + 95); ctx.rotate(-0.05 * (1 - st) - 0.02); ctx.scale(s, s);
+    rr(ctx, -95, -95, 190, 190, 22);
+    ctx.fillStyle = d.div ? "#4A4E56" : "#C8372D"; ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 24; ctx.fill();
+    ctx.shadowBlur = 0; ctx.strokeStyle = "rgba(255,240,220,0.75)"; ctx.lineWidth = 4;
+    rr(ctx, -82, -82, 164, 164, 14); ctx.stroke();
+    ctx.fillStyle = "#FFF1DC"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.direction = "ltr";
+    if (d.div) { ctx.font = "96px serif"; ctx.fillText("⚔️", 0, 6); }
+    else { ctx.font = FSC(128); ctx.fillText(d.ch, 0, 8); }
+    ctx.restore();
+
+    // name, pinyin, years
+    var tx = X(PX + 222), nm = seg(lt, 0.12, 0.4);
+    ctx.save(); ctx.globalAlpha *= nm; ctx.translate((rtl ? -1 : 1) * 24 * (1 - easeOut(nm)), 0);
+    ctx.textAlign = al; ctx.textBaseline = "alphabetic";
+    ctx.font = F(d.name[lang].length > 13 ? 48 : 56, 900); ctx.fillStyle = d.div ? "#C9CDD3" : d.col;
+    ctx.fillText(d.name[lang], tx, 112, 400);
+    ctx.font = F(30, 600); ctx.fillStyle = "#E8DCC2";
+    if (!d.div) ctx.fillText(d.py, tx, 160);
+    var f1 = fmtYear(d.from, T), f2 = fmtYear(d.to, T);
+    var yrs = d.from < 0 && d.to < 0 ? f1.n + "–" + f2.n + " " + T.bce
+      : d.from < 0 ? f1.n + " " + T.bce + " – " + f2.n + " " + T.ce : f1.n + "–" + f2.n + " " + T.ce;
+    if (rtl) yrs = yrs.replace(/(\d+)–(\d+)/, "\u2066$1–$2\u2069");
+    ctx.font = F(30, 700); ctx.fillStyle = "#A39A8A";
+    ctx.fillText(yrs, tx, d.div ? 162 : 210);
+    ctx.restore();
+
+    // duration bar
+    var bu = easeOut(seg(lt, 0.3, 0.9)), by = 300;
+    ctx.save(); ctx.globalAlpha *= seg(lt, 0.25, 0.4);
+    ctx.textAlign = al; ctx.textBaseline = "alphabetic"; ctx.font = F(36, 900); ctx.fillStyle = "#F3EAD8";
+    var shown = Math.round(d.years * bu);
+    ctx.fillText("⏳ " + T.yearsLong(shown.toLocaleString("en-US")), X(PX), by);
+    rr(ctx, PX, by + 18, PW, 20, 10); ctx.fillStyle = "#232933"; ctx.fill();
+    var bw = Math.max(20, PW * d.years / MAXY * bu);
+    rr(ctx, rtl ? PX + PW - bw : PX, by + 18, bw, 20, 10); ctx.fillStyle = d.div ? "#6B7079" : d.col; ctx.fill();
+    // ticks for scale: 100-year marks
+    ctx.fillStyle = "rgba(10,12,16,0.55)";
+    for (var yy = 100; yy < MAXY; yy += 100) { var tx2 = PX + PW * yy / MAXY; ctx.fillRect(rtl ? 2 * PX + PW - tx2 : tx2, by + 18, 2, 20); }
+    ctx.restore();
+
+    // facts
+    var fy = 405;
+    d.facts[lang].forEach(function (fact, k) {
+      var parts = fact.split("|"), fa = seg(lt, 0.45 + k * 0.38, 0.75 + k * 0.38);
+      if (fa <= 0) return;
+      ctx.save(); ctx.globalAlpha *= fa;
+      ctx.translate(0, 18 * (1 - easeOut(fa)));
+      rr(ctx, PX, fy - 4, PW, 104, 18); ctx.fillStyle = "rgba(255,255,255,0.045)"; ctx.fill();
+      ctx.fillStyle = hexA(d.col, 0.9); rr(ctx, rtl ? PX + PW - 6 : PX, fy - 4, 6, 104, 3); ctx.fill();
+      ctx.font = "50px serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.direction = "ltr";
+      ctx.fillText(parts[0], X(PX + 50), fy + 48);
+      ctx.direction = rtl ? "rtl" : "ltr"; ctx.textAlign = al; ctx.textBaseline = "middle"; ctx.font = F(31, 700); ctx.fillStyle = "#F3EAD8";
+      var lines = wrap(ctx, parts[1], PW - 120);
+      if (lines.length > 2) { ctx.font = F(27, 700); lines = wrap(ctx, parts[1], PW - 120); }
+      lines.slice(0, 3).forEach(function (ln, j) { ctx.fillText(ln, X(PX + 96), fy + 48 + (j - (Math.min(lines.length, 3) - 1) / 2) * 38); });
+      ctx.restore();
+      fy += 122;
+    });
+
+    // population
+    if (d.pop) {
+      var pa = seg(lt, 1.15, 1.45), pu = easeOut(seg(lt, 1.2, 1.8)), py = 690;
+      ctx.save(); ctx.globalAlpha *= pa;
+      ctx.textAlign = al; ctx.textBaseline = "alphabetic"; ctx.font = F(32, 800); ctx.fillStyle = "#F3EAD8";
+      ctx.fillText("👥 " + T.pop(Math.round(d.pop * pu)), X(PX), py);
+      ctx.font = F(20, 600); ctx.fillStyle = "#8C8576";
+      ctx.textAlign = rtl ? "left" : "right"; ctx.fillText(T.popNote, X(PX + PW), py);
+      rr(ctx, PX, py + 16, PW, 16, 8); ctx.fillStyle = "#232933"; ctx.fill();
+      var pw = Math.max(16, PW * d.pop / MAXPOP * pu);
+      rr(ctx, rtl ? PX + PW - pw : PX, py + 16, pw, 16, 8); ctx.fillStyle = "#E8DCC2"; ctx.fill();
+      // little people dots: one per 10 million
+      var n = Math.round(d.pop / 10 * pu);
+      for (var q = 0; q < n; q++) {
+        var col = q % 43, row = Math.floor(q / 43);
+        ctx.fillStyle = hexA(d.col, 0.85);
+        ctx.beginPath(); ctx.arc(X(PX + 7 + col * 14.2), py + 52 + row * 14, 4.6, 0, 6.283); ctx.fill();
+      }
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  // ---------- intro & finale ----------
+  function drawIntro(ctx, t, T) {
+    if (t > T_INTRO + 0.1) return;
+    var a = seg(t, 0, 0.5) * (1 - seg(t, T_INTRO - 0.45, T_INTRO));
+    var rise = easeOut(seg(t, 0, 0.8));
+    ctx.save(); ctx.globalAlpha = a;
+    var g = ctx.createRadialGradient(W / 2, H / 2, 50, W / 2, H / 2, 900);
+    g.addColorStop(0, "rgba(10,12,16,0.85)"); g.addColorStop(1, "rgba(10,12,16,0.35)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // the ten dynasty glyphs fan out
+    REAL.forEach(function (d, k) {
+      var gu = back(seg(t, 0.25 + k * 0.07, 0.6 + k * 0.07));
+      if (gu <= 0) return;
+      var x = W / 2 + (k - 4.5) * 132, y = 300;
+      ctx.save(); ctx.translate(x, y); ctx.scale(gu, gu);
+      rr(ctx, -54, -54, 108, 108, 16); ctx.fillStyle = d.col; ctx.fill();
+      ctx.fillStyle = "#14161B"; ctx.font = FSC(72); ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText(d.ch, 0, 4); ctx.restore();
+    });
+    ctx.direction = lang === "he" ? "rtl" : "ltr";
+    ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+    ctx.translate(0, 30 * (1 - rise));
+    ctx.font = F(124, 900); ctx.fillStyle = "#F3EAD8"; ctx.fillText(T.title, W / 2, 520);
+    ctx.font = F(68, 800); ctx.fillStyle = "#E8B34B"; ctx.fillText(T.title2, W / 2, 615);
+    ctx.font = F(36, 500); ctx.fillStyle = "#C9C0AE"; ctx.globalAlpha *= seg(t, 0.7, 1.2);
+    ctx.fillText(T.sub, W / 2, 690);
+    ctx.restore();
+  }
+
+  function drawFinale(ctx, t, T) {
+    if (t < T_FINALE) return;
+    var rtl = lang === "he";
+    function X(x) { return rtl ? 2 * PX + PW - x : x; }
+    var a = seg(t, T_FINALE, T_FINALE + 0.35);
+    ctx.save(); ctx.globalAlpha = a; ctx.direction = rtl ? "rtl" : "ltr";
+    ctx.textAlign = rtl ? "right" : "left"; ctx.textBaseline = "alphabetic";
+    ctx.font = F(52, 900); ctx.fillStyle = "#F3EAD8"; ctx.fillText("🏆 " + T.finaleQ, X(PX), 112, PW);
+    var sorted = REAL.slice().sort(function (p, q) { return q.years - p.years; });
+    sorted.forEach(function (d, k) {
+      var y = 160 + k * 60, u = easeOut(seg(t, T_FINALE + 0.2 + k * 0.1, T_FINALE + 0.9 + k * 0.1));
+      if (u <= 0) return;
+      ctx.save(); ctx.globalAlpha *= Math.min(1, u * 2);
+      ctx.font = FSC(36); ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillStyle = d.col; ctx.direction = "ltr";
+      ctx.fillText(d.ch, X(PX + 22), y + 22);
+      var maxW = PW - 290, bw = Math.max(8, maxW * d.years / MAXY * u), bx = PX + 56;
+      rr(ctx, rtl ? 2 * PX + PW - bx - bw : bx, y + 6, bw, 32, 8); ctx.fillStyle = d.col; ctx.fill();
+      ctx.direction = rtl ? "rtl" : "ltr"; ctx.textAlign = rtl ? "right" : "left";
+      ctx.font = F(26, 800); ctx.fillStyle = "#F3EAD8";
+      ctx.fillText(Math.round(d.years * u) + " " + T.years + "  " + (lang === "he" ? d.name.he.replace("שושלת ", "") : d.py), X(bx + bw + 12), y + 23);
+      ctx.restore();
+    });
+    // closing lines
+    var e = seg(t, T_FINALE + 1.9, T_FINALE + 2.4);
+    ctx.globalAlpha = a * e;
+    ctx.textAlign = rtl ? "right" : "left"; ctx.textBaseline = "alphabetic";
+    ctx.font = F(30, 800); ctx.fillStyle = "#E8B34B"; ctx.fillText("👑 " + T.end1, X(PX), 800, PW);
+    ctx.font = F(26, 700); ctx.fillStyle = "#F3EAD8"; ctx.fillText("🇨🇳 " + T.today, X(PX), 846, PW);
+    ctx.font = F(18, 500); ctx.fillStyle = "#8C8576"; ctx.fillText(T.end2, X(PX), 884, PW);
+    ctx.restore();
+  }
+
+  function vignette(ctx) {
+    var g = ctx.createRadialGradient(W / 2, H / 2, H * 0.45, W / 2, H / 2, H * 1.05);
+    g.addColorStop(0, "rgba(0,0,0,0)"); g.addColorStop(1, "rgba(0,0,0,0.45)");
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  }
+
+  function render(ctx, t) {
+    var T = TXT[lang];
+    ctx.save();
+    drawBackground(ctx, t);
+    drawMap(ctx, t, T);
+    drawHeader(ctx, t, T);
+    drawPanel(ctx, t, T);
+    drawFinale(ctx, t, T);
+    drawTimeline(ctx, t, T);
+    drawIntro(ctx, t, T);
+    vignette(ctx);
+    ctx.restore();
+  }
+
+  // ---------- sound (synthesized, no files) ----------
+  var PENTA = [293.66, 349.23, 392.0, 440.0, 523.25, 587.33, 698.46, 783.99, 880.0];
+  var CUES = [{ t: 0.05, k: "gong" }];
+  DYN.forEach(function (d, i) {
+    if (d.div) CUES.push({ t: d.t0, k: "drum" });
+    else { CUES.push({ t: d.t0, k: "pluck", f: PENTA[i % 5 + 2] }); CUES.push({ t: d.t0 + 0.18, k: "pluck", f: PENTA[i % 5 + 4] }); }
+  });
+  CUES.push({ t: T_FINALE, k: "gong" });
+  REAL.forEach(function (d, k) { CUES.push({ t: T_FINALE + 0.2 + k * 0.1, k: "pluck", f: PENTA[8 - (k % 9)], soft: true }); });
+  window.__CUES = CUES;
+
+  var actx = null, soundOn = true;
+  try { soundOn = localStorage.getItem("geo-sound") !== "off"; } catch (e) {}
+  function playCue(c) {
+    if (!actx || !soundOn) return;
+    var now = actx.currentTime, o, g, i;
+    if (c.k === "pluck") {
+      for (i = 1; i <= 3; i++) {
+        o = actx.createOscillator(); g = actx.createGain();
+        o.type = i === 1 ? "triangle" : "sine"; o.frequency.value = c.f * i;
+        var v = (c.soft ? 0.06 : 0.12) / i;
+        g.gain.setValueAtTime(v, now); g.gain.exponentialRampToValueAtTime(0.0001, now + 1.2 / i);
+        o.connect(g).connect(actx.destination); o.start(now); o.stop(now + 1.3);
+      }
+    } else if (c.k === "gong") {
+      [1, 1.48, 2.03, 2.74, 3.6].forEach(function (m, j) {
+        o = actx.createOscillator(); g = actx.createGain();
+        o.frequency.value = 98 * m; o.type = "sine";
+        g.gain.setValueAtTime(0.0001, now); g.gain.exponentialRampToValueAtTime(0.16 / (j + 1), now + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 3.2 - j * 0.4);
+        o.connect(g).connect(actx.destination); o.start(now); o.stop(now + 3.3);
+      });
+    } else if (c.k === "drum") {
+      o = actx.createOscillator(); g = actx.createGain();
+      o.frequency.setValueAtTime(140, now); o.frequency.exponentialRampToValueAtTime(50, now + 0.3);
+      g.gain.setValueAtTime(0.35, now); g.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+      o.connect(g).connect(actx.destination); o.start(now); o.stop(now + 0.6);
+    }
+  }
+
+  // ---------- player ----------
+  var cv = document.getElementById("cv"), ctx = cv.getContext("2d");
+  var t = 0, playing = false, speed = 1, last = 0, dpr = 1;
+  var EXPORT = /[?&]export\b/.test(location.search);
+
+  function resize() {
+    dpr = EXPORT ? 1 : Math.min(2, window.devicePixelRatio || 1);
+    var w = EXPORT ? W : cv.clientWidth * dpr;
+    cv.width = Math.round(w); cv.height = Math.round(w * 9 / 16);
+    draw();
+  }
+  function draw() {
+    ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+    render(ctx, t);
+    var s = Math.floor(t);
+    document.getElementById("time").textContent = "0:" + (s < 10 ? "0" : "") + s;
+    document.getElementById("scrub").value = t;
+  }
+  function frame(now) {
+    if (!playing) return;
+    var dt = Math.min(0.1, (now - last) / 1000); last = now;
+    var nt = Math.min(DURATION, t + dt * speed);
+    CUES.forEach(function (c) { if (c.t > t && c.t <= nt) playCue(c); });
+    t = nt; draw();
+    if (t >= DURATION) { setPlaying(false); return; }
+    requestAnimationFrame(frame);
+  }
+  function setPlaying(p) {
+    playing = p;
+    document.getElementById("play").textContent = p ? "❚❚" : "▶";
+    document.getElementById("bigplay").hidden = EXPORT || p || (t > 0 && t < DURATION);
+    if (p) {
+      if (!actx && soundOn) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+      if (actx && actx.state === "suspended") actx.resume();
+      if (t >= DURATION) t = 0;
+      if (t === 0) playCue(CUES[0]);
+      last = performance.now(); requestAnimationFrame(frame);
+    }
+  }
+  function applyLang() {
+    var T = TXT[lang];
+    document.documentElement.lang = lang; document.documentElement.dir = lang === "he" ? "rtl" : "ltr";
+    document.title = T.page;
+    document.getElementById("back-label").textContent = T.back;
+    document.getElementById("lang").textContent = T.other;
+    document.getElementById("note").textContent = T.note;
+    cv.setAttribute("aria-label", T.page);
+    draw();
+  }
+
+  document.getElementById("play").onclick = function () { setPlaying(!playing); };
+  document.getElementById("bigplay").onclick = function () { setPlaying(true); };
+  document.getElementById("restart").onclick = function () { t = 0; setPlaying(true); };
+  document.getElementById("scrub").oninput = function (e) { t = +e.target.value; draw(); if (!playing) document.getElementById("bigplay").hidden = true; };
+  document.getElementById("speed").onclick = function (e) { speed = speed === 1 ? 0.5 : 1; e.target.textContent = speed === 1 ? "1×" : "½×"; };
+  document.getElementById("sound").onclick = function (e) {
+    soundOn = !soundOn; e.target.textContent = soundOn ? "🔊" : "🔇";
+    try { localStorage.setItem("geo-sound", soundOn ? "on" : "off"); } catch (er) {}
+  };
+  document.getElementById("sound").textContent = soundOn ? "🔊" : "🔇";
+  document.getElementById("lang").onclick = function () {
+    lang = lang === "he" ? "en" : "he";
+    try { localStorage.setItem("geo-lang", lang); } catch (e) {}
+    applyLang();
+  };
+  document.addEventListener("keydown", function (e) {
+    if (e.code === "Space" && e.target === document.body) { e.preventDefault(); setPlaying(!playing); }
+  });
+  window.addEventListener("resize", resize);
+
+  // Hooks for the video exporter (tools/export-video.js).
+  window.__render = function (time, l) { if (l) lang = l; t = time; draw(); };
+  window.__duration = DURATION;
+
+  var params = new URLSearchParams(location.search);
+  if (params.get("lang") === "en" || params.get("lang") === "he") lang = params.get("lang");
+  var fontsReady = Promise.all([
+    document.fonts.load(F(40, 900), "אבג abc"), document.fonts.load(F(40, 500), "אבג āō"), document.fonts.load(FSC(40), "商周秦汉隋唐宋元明清")
+  ]).catch(function () {});
+  fontsReady.then(function () {
+    window.__ready = true;
+    if (EXPORT) document.getElementById("bigplay").hidden = true;
+    applyLang(); resize();
+    if (params.has("t")) { t = +params.get("t"); draw(); document.getElementById("bigplay").hidden = true; }
+  });
+})();
+</script>
+</body>
+</html>
