@@ -1,10 +1,10 @@
 # Progress
 
-This is the resume point. When a session resumes, it fetches `games/foundation`, reads this file, and continues from **Next step**.
+Build log for the trading games and Sky Rescue. Everything below is merged into `main`; the feature branches have been retired.
 
 ## Status
 
-| Game | Branch | Status | PR |
+| Game | Branch (retired) | Status | PR |
 |---|---|---|---|
 | Foundation (docs + hub) | `games/foundation` | ✅ done | [#5](https://github.com/dwolfpack/geo-kids/pull/5) |
 | Pirate Trader | `game/pirate-trader` | ✅ gauntlet passed | [#6](https://github.com/dwolfpack/geo-kids/pull/6) |
@@ -12,13 +12,10 @@ This is the resume point. When a session resumes, it fetches `games/foundation`,
 | Lemonade Empire | `game/lemonade-empire` | ✅ gauntlet passed | [#8](https://github.com/dwolfpack/geo-kids/pull/8) |
 | Island Shop | `game/island-shop` | ✅ gauntlet passed | [#9](https://github.com/dwolfpack/geo-kids/pull/9) |
 | Kids Market | `game/kids-market` | ✅ gauntlet passed | [#10](https://github.com/dwolfpack/geo-kids/pull/10) |
-| Sky Rescue (3D) | `game/sky-rescue` | ✅ Gauntlet Loop: critic said YES in round 8 | _PR pending_ |
+| Sky Rescue (3D) | `game/sky-rescue` | ✅ Gauntlet Loop: critic said YES in round 8 | [#11](https://github.com/dwolfpack/geo-kids/pull/11)–[#13](https://github.com/dwolfpack/geo-kids/pull/13) |
 
 ## Next step
-**All five games are done.** What's left is review and merging:
-1. Merge [#5](https://github.com/dwolfpack/geo-kids/pull/5), the foundation, first. It adds the `/games/` hub and the geo-kids "Trading Games" card.
-2. Merge the game PRs in any order: [#6](https://github.com/dwolfpack/geo-kids/pull/6), [#7](https://github.com/dwolfpack/geo-kids/pull/7), [#8](https://github.com/dwolfpack/geo-kids/pull/8), [#9](https://github.com/dwolfpack/geo-kids/pull/9) and [#10](https://github.com/dwolfpack/geo-kids/pull/10).
-   Each game is self-contained under `games/<name>/`.
+All games are merged and live. Nothing is pending.
 
 ## Final summary
 
