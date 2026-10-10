@@ -9,3 +9,6 @@ Thumbs.db
 *.log
 .idea/
 .vscode/
+
+# Sky Rescue social-media recordings (tests/record-clips.js)
+games/sky-rescue/tests/clips/
